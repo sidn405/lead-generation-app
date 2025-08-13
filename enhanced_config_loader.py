@@ -118,6 +118,14 @@ class ConfigLoader:
             return True
         return False
 
+def patch_stripe_credentials(config):
+    """Add environment variables to config after loading"""
+    config["stripe_secret_key"] = os.environ.get("STRIPE_SECRET_KEY", "")
+    if "stripe" in config:
+        config["stripe"]["secret_key"] = os.environ.get("STRIPE_SECRET_KEY", "")
+        config["stripe"]["publishable_key"] = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+    return config
+
 def should_exclude_account(username, handle, platform, config_loader):
     excluded_accounts = config_loader.get_excluded_accounts(platform)
     if not excluded_accounts:
