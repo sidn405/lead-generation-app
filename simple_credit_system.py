@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple, List
 import hashlib
 
+
+
 class CreditSystem:
     """Simple credit-based lead system with anti-abuse protection"""
     
@@ -15,7 +17,15 @@ class CreditSystem:
     
     def load_data(self):
         """Load user credits and transaction data"""
-        # Load users with credits
+        # Check if we're on Railway (fresh deployment)
+        is_railway = os.environ.get("RAILWAY_ENVIRONMENT") is not None
+        
+        if is_railway:
+            print("🚂 Railway deployment detected - starting with fresh database")
+            self.users = {}
+            self.usage_data = {}
+            return
+            # Load users with credits
         if os.path.exists(self.users_file):
             with open(self.users_file, 'r') as f:
                 self.users = json.load(f)
