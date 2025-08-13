@@ -8110,14 +8110,14 @@ if MULTILINGUAL_AVAILABLE:
         
     st.dataframe(comparison_data, use_container_width=True)   
 
-st.markdown(
-    '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
-    'padding:12px 16px;border-radius:25px;'
-    'background:linear-gradient(135deg,#0066cc,#4dabf7);'
-    'color:white;font-weight:bold;text-decoration:none;'
-    'z-index:9999;">⬆️ Top</a>',
-    unsafe_allow_html=True,
-)
+    st.markdown(
+        '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
+        'padding:12px 16px;border-radius:25px;'
+        'background:linear-gradient(135deg,#0066cc,#4dabf7);'
+        'color:white;font-weight:bold;text-decoration:none;'
+        'z-index:9999;">⬆️ Top</a>',
+        unsafe_allow_html=True,
+    )
     
 
 with tab6:  # Settings tab
