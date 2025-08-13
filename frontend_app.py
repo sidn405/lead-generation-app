@@ -66,8 +66,15 @@ try:
     from dm_csv_exporter import export_dms_detailed, create_campaign_summary
     MULTILINGUAL_AVAILABLE = True
 except ImportError:
-    MULTILINGUAL_AVAILABLE = False
-    print("⚠️ Multilingual features not available - using English-only mode")
+    MULTILINGUAL_AVAILABLE = True  # ← Force it to True anyway
+    print("⚠️ Multilingual imports failed but keeping features available")
+    
+    # Create dummy functions if imports failed
+    def detect_user_language(text): return "english"
+    def generate_multilingual_dm(*args): return "Multilingual feature temporarily unavailable"
+    def generate_multilingual_batch(*args): return []
+    LANGUAGE_KEYWORDS = {}
+    PLATFORM_LANGUAGE_STYLES = {}
 
 from payment_auth_recovery import (
     restore_payment_authentication,
@@ -939,8 +946,8 @@ try:
     from dm_csv_exporter import export_dms_detailed, create_campaign_summary
     MULTILINGUAL_AVAILABLE = True
 except ImportError:
-    MULTILINGUAL_AVAILABLE = False
-    print("⚠️ Multilingual features not available - using English-only mode")
+    MULTILINGUAL_AVAILABLE = True  # ← Force it to True anyway
+    print("⚠️ Multilingual imports failed but keeping features available")
 
 # Page config
 st.set_page_config(
@@ -3603,11 +3610,15 @@ with st.sidebar:
 
 
 # 🌍 NEW: Enhanced tabs with multilingual support
-if MULTILINGUAL_AVAILABLE:
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🚀 Empire Scraper", "📊 Lead Results", "🌍 Multilingual DMs", "💳 Pricing Plans", "📦 Lead Packages", "⚙️ Settings"])
-else:
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🚀 Empire Scraper", "📊 Lead Results", "💳 Pricing Plans", "📦 Lead Packages", "⚙️ Settings"])
-
+# Always create 6 tabs - much simpler!
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "🚀 Empire Scraper", 
+    "📊 Lead Results", 
+    "🌍 Multilingual DMs", 
+    "💳 Pricing Plans", 
+    "📦 Lead Packages", 
+    "⚙️ Settings"
+])
 # 🎯 QUICK FIX: Replace your tab1 content with this
 
 with tab1:
@@ -7816,225 +7827,225 @@ if MULTILINGUAL_AVAILABLE:
             if not targeting_complete:
                 st.warning("⚠️ Please complete your targeting selections above before purchasing")
         
+st.markdown("---")
+        
+# Lead package bundles with targeting integration
+package_col1, package_col2, package_col3 = st.columns(3)
+
+with package_col1:
+    st.markdown("### 🎯 Niche Starter Pack")
+    st.info("🎯 STARTER")
+    st.markdown("## $97")
     st.markdown("---")
-            
-    # Lead package bundles with targeting integration
-    package_col1, package_col2, package_col3 = st.columns(3)
+    
+    st.markdown("**📦 What's Included:**")
+    st.markdown("""
+    - **500 targeted leads** in your chosen industry
+    - 2-3 platforms included
+    - Basic filtering applied
+    - CSV + Google Sheets delivery
+    - 48-hour delivery
+    """)
+    
+    st.info("**Perfect for:** Testing a new niche, quick campaigns")
+    
+    if user_authenticated and config.get("stripe_secret_key"):
+        # ✅ Agree to terms checkbox
+        agree_key = "agree_starter_pack"
+        agreed = st.checkbox(
+            "✅ Agree to terms",
+            key=agree_key,
+            help="I agree to the Terms of Service & No-Refund Policy"
+        )
 
-    with package_col1:
-        st.markdown("### 🎯 Niche Starter Pack")
-        st.info("🎯 STARTER")
-        st.markdown("## $97")
-        st.markdown("---")
-        
-        st.markdown("**📦 What's Included:**")
-        st.markdown("""
-        - **500 targeted leads** in your chosen industry
-        - 2-3 platforms included
-        - Basic filtering applied
-        - CSV + Google Sheets delivery
-        - 48-hour delivery
-        """)
-        
-        st.info("**Perfect for:** Testing a new niche, quick campaigns")
-        
-        if user_authenticated and config.get("stripe_secret_key"):
-            # ✅ Agree to terms checkbox
-            agree_key = "agree_starter_pack"
-            agreed = st.checkbox(
-                "✅ Agree to terms",
-                key=agree_key,
-                help="I agree to the Terms of Service & No-Refund Policy"
-            )
-
-            # Disable if targeting not done OR terms not agreed
-            button_disabled = not targeting_complete or not agreed
-            if not targeting_complete:
-                button_help = "Complete targeting selections above"
-            elif not agreed:
-                button_help = "Please agree to terms"
-            else:
-                button_help = "Purchase Niche Starter Pack"
-            
-            if st.button("🎯 Buy Starter Pack", use_container_width=True, 
-                        key="starter_package_buy_btn",
-                        disabled=button_disabled, help=button_help):
-                if targeting_complete:
-                    try:
-                        from payment_auth_recovery import create_package_stripe_session
-                        import stripe
-                        
-                        current_username = st.session_state.get('username', 'unknown')
-                        
-                        session = create_package_stripe_session(
-                            stripe,
-                            current_username,
-                            "starter",
-                            97,
-                            f"Lead Empire - Niche Starter Pack ({final_industry})",
-                            final_industry,
-                            final_location
-                        )
-                        
-                        st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
-                        st.success(f"🚀 Redirecting to checkout...")
-                        st.stop()
-                        
-                    except Exception as e:
-                        st.error(f"❌ Payment setup error: {str(e)}")
-        elif user_authenticated:
-            st.button("🎯 Buy Starter Pack", disabled=True, help="Stripe not configured", 
-                    use_container_width=True, key="starter_package_disabled_btn")
+        # Disable if targeting not done OR terms not agreed
+        button_disabled = not targeting_complete or not agreed
+        if not targeting_complete:
+            button_help = "Complete targeting selections above"
+        elif not agreed:
+            button_help = "Please agree to terms"
         else:
-            if st.button("🔑 Sign In to Buy", use_container_width=True, 
-                        key="starter_package_signin_btn"):
-                st.session_state.show_login = True
-                st.rerun()
+            button_help = "Purchase Niche Starter Pack"
+        
+        if st.button("🎯 Buy Starter Pack", use_container_width=True, 
+                    key="starter_package_buy_btn",
+                    disabled=button_disabled, help=button_help):
+            if targeting_complete:
+                try:
+                    from payment_auth_recovery import create_package_stripe_session
+                    import stripe
+                    
+                    current_username = st.session_state.get('username', 'unknown')
+                    
+                    session = create_package_stripe_session(
+                        stripe,
+                        current_username,
+                        "starter",
+                        97,
+                        f"Lead Empire - Niche Starter Pack ({final_industry})",
+                        final_industry,
+                        final_location
+                    )
+                    
+                    st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
+                    st.success(f"🚀 Redirecting to checkout...")
+                    st.stop()
+                    
+                except Exception as e:
+                    st.error(f"❌ Payment setup error: {str(e)}")
+    elif user_authenticated:
+        st.button("🎯 Buy Starter Pack", disabled=True, help="Stripe not configured", 
+                use_container_width=True, key="starter_package_disabled_btn")
+    else:
+        if st.button("🔑 Sign In to Buy", use_container_width=True, 
+                    key="starter_package_signin_btn"):
+            st.session_state.show_login = True
+            st.rerun()
 
-    # PACKAGE 2: DEEP DIVE (package_col2)
-    with package_col2:
-        st.markdown("### 🔥 Industry Deep Dive")
-        st.success("💎 MOST POPULAR")
-        st.markdown("## $297")
-        st.markdown("---")
-        
-        st.markdown("**📦 What's Included:**")
-        st.markdown("""
-        - **2,000 highly-targeted leads** in your industry
-        - Comprehensive industry research
-        - All 8 platforms
-        - Advanced relevance filtering
-        - Social media profiles included
-        - DMs pre-generated for your industry
-        - 72-hour delivery
-        """)
-        
-        st.info("**Perfect for:** Serious campaigns, market research")
-        
-        if user_authenticated and config.get("stripe_secret_key"):
-            # ✅ Agree to terms checkbox
-            agree_key = "agree_deep_dive_pack"
-            agreed = st.checkbox(
-                "✅ Agree to terms",
-                key=agree_key,
-                help="I agree to the Terms of Service & No-Refund Policy"
-            )
+# PACKAGE 2: DEEP DIVE (package_col2)
+with package_col2:
+    st.markdown("### 🔥 Industry Deep Dive")
+    st.success("💎 MOST POPULAR")
+    st.markdown("## $297")
+    st.markdown("---")
+    
+    st.markdown("**📦 What's Included:**")
+    st.markdown("""
+    - **2,000 highly-targeted leads** in your industry
+    - Comprehensive industry research
+    - All 8 platforms
+    - Advanced relevance filtering
+    - Social media profiles included
+    - DMs pre-generated for your industry
+    - 72-hour delivery
+    """)
+    
+    st.info("**Perfect for:** Serious campaigns, market research")
+    
+    if user_authenticated and config.get("stripe_secret_key"):
+        # ✅ Agree to terms checkbox
+        agree_key = "agree_deep_dive_pack"
+        agreed = st.checkbox(
+            "✅ Agree to terms",
+            key=agree_key,
+            help="I agree to the Terms of Service & No-Refund Policy"
+        )
 
-            # Disable if targeting not done OR terms not agreed
-            button_disabled = not targeting_complete or not agreed
-            if not targeting_complete:
-                button_help = "Complete targeting selections above"
-            elif not agreed:
-                button_help = "Please agree to terms"
-            else:
-                button_help = "Purchase Industry Deep Dive"
-            
-            if st.button("🔥 Buy Deep Dive", type="primary", use_container_width=True, 
-                        key="deep_dive_package_buy_btn",
-                        disabled=button_disabled, help=button_help):
-                if targeting_complete:
-                    try:
-                        from payment_auth_recovery import create_package_stripe_session
-                        import stripe
-                        
-                        current_username = st.session_state.get('username', 'unknown')
-                        
-                        session = create_package_stripe_session(
-                            stripe,
-                            current_username,
-                            "deep_dive",
-                            297,
-                            f"Lead Empire - Industry Deep Dive ({final_industry})",
-                            final_industry,
-                            final_location
-                        )
-                        
-                        st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
-                        st.success(f"🚀 Redirecting to checkout...")
-                        st.stop()
-                        
-                    except Exception as e:
-                        st.error(f"❌ Payment setup error: {str(e)}")
-        elif user_authenticated:
-            st.button("🔥 Buy Deep Dive", disabled=True, help="Stripe not configured", 
-                    use_container_width=True, key="deep_dive_package_disabled_btn")
+        # Disable if targeting not done OR terms not agreed
+        button_disabled = not targeting_complete or not agreed
+        if not targeting_complete:
+            button_help = "Complete targeting selections above"
+        elif not agreed:
+            button_help = "Please agree to terms"
         else:
-            if st.button("🔑 Sign In to Buy", use_container_width=True, 
-                        key="deep_dive_package_signin_btn"):
-                st.session_state.show_login = True
-                st.rerun()
+            button_help = "Purchase Industry Deep Dive"
+        
+        if st.button("🔥 Buy Deep Dive", type="primary", use_container_width=True, 
+                    key="deep_dive_package_buy_btn",
+                    disabled=button_disabled, help=button_help):
+            if targeting_complete:
+                try:
+                    from payment_auth_recovery import create_package_stripe_session
+                    import stripe
+                    
+                    current_username = st.session_state.get('username', 'unknown')
+                    
+                    session = create_package_stripe_session(
+                        stripe,
+                        current_username,
+                        "deep_dive",
+                        297,
+                        f"Lead Empire - Industry Deep Dive ({final_industry})",
+                        final_industry,
+                        final_location
+                    )
+                    
+                    st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
+                    st.success(f"🚀 Redirecting to checkout...")
+                    st.stop()
+                    
+                except Exception as e:
+                    st.error(f"❌ Payment setup error: {str(e)}")
+    elif user_authenticated:
+        st.button("🔥 Buy Deep Dive", disabled=True, help="Stripe not configured", 
+                use_container_width=True, key="deep_dive_package_disabled_btn")
+    else:
+        if st.button("🔑 Sign In to Buy", use_container_width=True, 
+                    key="deep_dive_package_signin_btn"):
+            st.session_state.show_login = True
+            st.rerun()
 
-    # PACKAGE 3: MARKET DOMINATION (package_col3)
-    with package_col3:
-        st.markdown("### 💎 Market Domination")
-        st.warning("👑 ENTERPRISE")
-        st.markdown("## $897")
-        st.markdown("---")
-        
-        st.markdown("**📦 What's Included:**")
-        st.markdown("""
-        - **5,000 premium leads** across multiple related niches
-        - Advanced geographic targeting
-        - Phone/email enrichment when available
-        - Custom DM sequences for your industry
-        - 30-day refresh guarantee
-        - 5 business days delivery
-        """)
-        
-        st.info("**Perfect for:** Enterprise campaigns, market domination")
-        
-        if user_authenticated and config.get("stripe_secret_key"):
-            # ✅ Agree to terms checkbox
-            agree_key = "agree_domination_pack"
-            agreed = st.checkbox(
-                "✅ Agree to terms",
-                key=agree_key,
-                help="I agree to the Terms of Service & No-Refund Policy"
-            )
+# PACKAGE 3: MARKET DOMINATION (package_col3)
+with package_col3:
+    st.markdown("### 💎 Market Domination")
+    st.warning("👑 ENTERPRISE")
+    st.markdown("## $897")
+    st.markdown("---")
+    
+    st.markdown("**📦 What's Included:**")
+    st.markdown("""
+    - **5,000 premium leads** across multiple related niches
+    - Advanced geographic targeting
+    - Phone/email enrichment when available
+    - Custom DM sequences for your industry
+    - 30-day refresh guarantee
+    - 5 business days delivery
+    """)
+    
+    st.info("**Perfect for:** Enterprise campaigns, market domination")
+    
+    if user_authenticated and config.get("stripe_secret_key"):
+        # ✅ Agree to terms checkbox
+        agree_key = "agree_domination_pack"
+        agreed = st.checkbox(
+            "✅ Agree to terms",
+            key=agree_key,
+            help="I agree to the Terms of Service & No-Refund Policy"
+        )
 
-            # Disable if targeting not done OR terms not agreed
-            button_disabled = not targeting_complete or not agreed
-            if not targeting_complete:
-                button_help = "Complete targeting selections above"
-            elif not agreed:
-                button_help = "Please agree to terms"
-            else:
-                button_help = "Purchase Market Domination"
-            
-            if st.button("💎 Buy Domination", use_container_width=True, 
-                        key="domination_package_buy_btn",
-                        disabled=button_disabled, help=button_help):
-                if targeting_complete:
-                    try:
-                        from payment_auth_recovery import create_package_stripe_session
-                        import stripe
-                        
-                        current_username = st.session_state.get('username', 'unknown')
-                        
-                        session = create_package_stripe_session(
-                            stripe,
-                            current_username,
-                            "domination",
-                            897,
-                            f"Lead Empire - Market Domination ({final_industry})",
-                            final_industry,
-                            final_location
-                        )
-                        
-                        st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
-                        st.success(f"🚀 Redirecting to checkout...")
-                        st.stop()
-                        
-                    except Exception as e:
-                        st.error(f"❌ Payment setup error: {str(e)}")
-        elif user_authenticated:
-            st.button("💎 Buy Domination", disabled=True, help="Stripe not configured", 
-                    use_container_width=True, key="domination_package_disabled_btn")
+        # Disable if targeting not done OR terms not agreed
+        button_disabled = not targeting_complete or not agreed
+        if not targeting_complete:
+            button_help = "Complete targeting selections above"
+        elif not agreed:
+            button_help = "Please agree to terms"
         else:
-            if st.button("🔑 Sign In to Buy", use_container_width=True, 
-                        key="domination_package_signin_btn"):
-                st.session_state.show_login = True
-                st.rerun()
+            button_help = "Purchase Market Domination"
+        
+        if st.button("💎 Buy Domination", use_container_width=True, 
+                    key="domination_package_buy_btn",
+                    disabled=button_disabled, help=button_help):
+            if targeting_complete:
+                try:
+                    from payment_auth_recovery import create_package_stripe_session
+                    import stripe
+                    
+                    current_username = st.session_state.get('username', 'unknown')
+                    
+                    session = create_package_stripe_session(
+                        stripe,
+                        current_username,
+                        "domination",
+                        897,
+                        f"Lead Empire - Market Domination ({final_industry})",
+                        final_industry,
+                        final_location
+                    )
+                    
+                    st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
+                    st.success(f"🚀 Redirecting to checkout...")
+                    st.stop()
+                    
+                except Exception as e:
+                    st.error(f"❌ Payment setup error: {str(e)}")
+    elif user_authenticated:
+        st.button("💎 Buy Domination", disabled=True, help="Stripe not configured", 
+                use_container_width=True, key="domination_package_disabled_btn")
+    else:
+        if st.button("🔑 Sign In to Buy", use_container_width=True, 
+                    key="domination_package_signin_btn"):
+            st.session_state.show_login = True
+            st.rerun()
     
     # ROI showcase
     st.markdown("---")
@@ -8110,14 +8121,14 @@ if MULTILINGUAL_AVAILABLE:
         
     st.dataframe(comparison_data, use_container_width=True)   
 
-st.markdown(
-    '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
-    'padding:12px 16px;border-radius:25px;'
-    'background:linear-gradient(135deg,#0066cc,#4dabf7);'
-    'color:white;font-weight:bold;text-decoration:none;'
-    'z-index:9999;">⬆️ Top</a>',
-    unsafe_allow_html=True,
-)
+    st.markdown(
+        '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
+        'padding:12px 16px;border-radius:25px;'
+        'background:linear-gradient(135deg,#0066cc,#4dabf7);'
+        'color:white;font-weight:bold;text-decoration:none;'
+        'z-index:9999;">⬆️ Top</a>',
+        unsafe_allow_html=True,
+    )
     
 
 with tab6:  # Settings tab
