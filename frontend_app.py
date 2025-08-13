@@ -34,7 +34,7 @@ import uuid
 
 # Import the new utilities
 try:
-    from enhanced_config_loader import ConfigLoader
+    from enhanced_config_loader import ConfigLoader, patch_stripe_credentials
     from streamlit_config_utils import (
      ensure_client_config_exists,
      get_user_excluded_accounts, 
@@ -93,6 +93,7 @@ except ImportError as e:
             if os.path.exists("config.json"):
                 with open("config.json", "r") as f:
                     config = json.load(f)
+                config = patch_stripe_credentials(config)
                 return {"search_term": config.get("search_term", "crypto trader"), 
                        "max_scrolls": config.get("max_scrolls", 12)}
         except:
@@ -104,6 +105,7 @@ except ImportError as e:
             if os.path.exists("config.json"):
                 with open("config.json", "r") as f:
                     config = json.load(f)
+                config = patch_stripe_credentials(config)
             else:
                 config = {}
             config["search_term"] = search_term
@@ -838,6 +840,7 @@ def load_config():
         if os.path.exists("config.json"):
             with open("config.json", "r") as f:
                 config = json.load(f)
+            config = patch_stripe_credentials(config)
             
             # Move Stripe key to root level if it's in global
             if "stripe_secret_key" not in config and "global" in config:

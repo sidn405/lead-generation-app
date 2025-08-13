@@ -1,0 +1,175 @@
+{
+    "stripe": {
+        "enabled": true,
+        "currency": "usd",
+        "success_url": "https://leadgeneratorempire.com/success",
+        "cancel_url": "https://leadgeneratorempire.com/cancel",
+        "test_mode": true
+    },
+    "lead_packages": {
+        "enabled": true,
+        "packages": [
+            {
+                "id": "starter_leads",
+                "name": "Niche Starter Pack",
+                "description": "500 high-quality leads",
+                "price": 97.0,
+                "lead_count": 500,
+                "features": [
+                    "Twitter leads",
+                    "LinkedIn leads",
+                    "Email verified"
+                ]
+            },
+            {
+                "id": "most_popular_leads",
+                "name": "Industry Deep Dive",
+                "description": "2000 premium leads with phone numbers",
+                "price": 297.0,
+                "lead_count": 2000,
+                "features": [
+                    "All platforms",
+                    "Phone numbers",
+                    "Location data",
+                    "Priority support"
+                ]
+            },
+            {
+                "id": "enterprise_leads",
+                "name": "Market Domination",
+                "description": "5000 enterprise-grade leads",
+                "price": 897.0,
+                "lead_count": 5000,
+                "features": [
+                    "All platforms",
+                    "Full contact info",
+                    "CRM integration",
+                    "Custom targeting"
+                ]
+            }
+        ]
+    },
+    "payment_settings": {
+        "allow_test_payments": true,
+        "require_email_verification": true,
+        "send_receipt_emails": true,
+        "auto_deliver_leads": true
+    },
+    "global": {
+        "search_term": "pastry chef",
+        "max_scrolls": 50,
+        "enable_multilingual": false,
+        "default_dm": "Hi there! I love your content and would be excited to connect. Let's chat!",
+        "fallback_dm": "Hey! Just came across your profile and really impressed by your work. Would love to connect!",
+        "excluded_accounts": [
+            "ai leads guy",
+            "Ai leads guy",
+            "AI-Leads-Guy",
+            "4dgamingllc",
+            "Sidney Muhammad"
+        ]
+    },
+    "platforms": {
+        "twitter": {
+            "lead_output_file": "twitter_leads.csv",
+            "backup_output_file": "twitter_leads_backup.csv",
+            "location_csv": "locations.csv",
+            "max_scrolls": 40,
+            "excluded_accounts": [
+                "ai leads guy"
+            ]
+        },
+        "facebook": {
+            "lead_output_file": "facebook_leads.csv",
+            "backup_output_file": "facebook_leads_backup.csv",
+            "location_csv": "locations.csv",
+            "max_scrolls": 50,
+            "excluded_accounts": [
+                "Sidney Muhammad"
+            ]
+        },
+        "linkedin": {
+            "lead_output_file": "linkedin_leads.csv",
+            "backup_output_file": "linkedin_leads_backup.csv",
+            "location_csv": "locations.csv",
+            "max_scrolls": 12,
+            "excluded_accounts": [
+                "4dgamingllc"
+            ]
+        },
+        "tiktok": {
+            "lead_output_file": "tiktok_leads.csv",
+            "backup_output_file": "tiktok_leads_backup.csv",
+            "location_csv": "locations.csv",
+            "max_scrolls": 40,
+            "excluded_accounts": [
+                "eyenvest"
+            ]
+        },
+        "youtube": {
+            "lead_output_file": "youtube_leads.csv",
+            "backup_output_file": "youtube_leads_backup.csv",
+            "location_csv": "locations.csv",
+            "max_scrolls": 50,
+            "excluded_accounts": [
+                "4dgamingllc"
+            ]
+        },
+        "medium": {
+            "lead_output_file": "medium_leads.csv",
+            "backup_output_file": "medium_leads_backup.csv",
+            "location_csv": "locations.csv",
+            "max_scrolls": 12,
+            "excluded_accounts": [
+                "Ai leads guy"
+            ]
+        },
+        "instagram": {
+            "lead_output_file": "instagram_unified_leads.csv",
+            "backup_output_file": "instagram_leads_backup.csv",
+            "location_csv": "locations.csv",
+            "max_scrolls": 40,
+            "excluded_accounts": [
+                "4smart_itech"
+            ]
+        },
+        "reddit": {
+            "lead_output_file": "reddit_leads.csv",
+            "backup_output_file": "reddit_leads_backup.csv",
+            "location_csv": "locations.csv",
+            "max_scrolls": 40,
+            "excluded_accounts": [
+                "AI-Leads-Guy"
+            ]
+        }
+    },
+    "dm_template_rules": [],
+    "multilingual": {
+        "enabled": false
+    },
+    "usage_limits": {
+        "starter": {
+            "max_leads_per_month": 250,
+            "platforms_allowed": [
+                "twitter",
+                "facebook"
+            ]
+        },
+        "most_popular": {
+            "max_leads_per_month": 2000,
+            "platforms_allowed": [
+                "twitter",
+                "facebook",
+                "instagram",
+                "linkedin",
+                "youtube",
+                "tiktok"
+            ]
+        }
+    },
+    "search_term": "pastry chef",
+    "max_scrolls": 8,
+    "enable_multilingual": true,
+    "force_language": "english",
+    "last_updated": "2025-08-11T23:36:28.502701"
+}
