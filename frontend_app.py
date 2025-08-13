@@ -7816,10 +7816,10 @@ if MULTILINGUAL_AVAILABLE:
             if not targeting_complete:
                 st.warning("⚠️ Please complete your targeting selections above before purchasing")
         
-        st.markdown("---")
+st.markdown("---")
         
-        # Lead package bundles with targeting integration
-        package_col1, package_col2, package_col3 = st.columns(3)
+# Lead package bundles with targeting integration
+package_col1, package_col2, package_col3 = st.columns(3)
 
 with package_col1:
     st.markdown("### 🎯 Niche Starter Pack")
