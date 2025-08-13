@@ -7,7 +7,7 @@ from typing import Tuple, List, Dict
 from simple_credit_system import credit_system
 
 APP_BASE_URL = (
-    st.secrets.get("APP_BASE_URL") 
+    os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
     or os.getenv("APP_BASE_URL") 
     or "http://localhost:8501"
 )
