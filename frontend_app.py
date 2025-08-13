@@ -7827,10 +7827,10 @@ if MULTILINGUAL_AVAILABLE:
             if not targeting_complete:
                 st.warning("⚠️ Please complete your targeting selections above before purchasing")
         
-st.markdown("---")
+        st.markdown("---")
         
-# Lead package bundles with targeting integration
-package_col1, package_col2, package_col3 = st.columns(3)
+        # Lead package bundles with targeting integration
+        package_col1, package_col2, package_col3 = st.columns(3)
 
 with package_col1:
     st.markdown("### 🎯 Niche Starter Pack")
@@ -8048,543 +8048,198 @@ with package_col3:
             st.rerun()
     
     # ROI showcase
-    st.markdown("---")
-    st.header("💰 Package ROI Calculator")
-            
-    roi_col1, roi_col2, roi_col3 = st.columns(3)
-            
-    with roi_col1:
-        st.subheader("🎯 **Starter Pack ROI**")
-        st.success("500 leads × $25 value = **$12,500 value**")
-        st.markdown("Cost: $97 → **12,786% ROI**")
-            
-    with roi_col2:
-        st.subheader("🔥 **Deep Dive ROI**")
-        st.success("2,000 leads × $25 value = **$50,000 value**")
-        st.markdown("Cost: $297 → **16,835% ROI**")
-            
-    with roi_col3:
-        st.subheader("💎 **Domination ROI**")
-        st.success("5,000 leads × $25 value = **$250,000 value**")
-        st.markdown("Cost: $897 → **27,869% ROI**")
-            
-    # Package comparison
-    st.markdown("---")
-    st.header("📊 Package Comparison")
-            
-    comparison_data = {
-        "Feature": [
-            "Number of Leads",
-            "Platforms Included", 
-            "Delivery Time",
-            "Social Profiles",
-            "DM Generation",
-            "Geographic Targeting",
-            "Industry Research",
-            "Support Level",
-            "Refresh Guarantee"
-        ],
-        "🎯 Starter ($97)": [
-            "500",
-            "2-3 platforms",
-            "48 hours",
-            "Basic",
-            "Templates",
-            "No",
-            "Basic",
-            "Email",
-            "No"
-        ],
-        "🔥 Deep Dive ($297)": [
-            "2,000",
-            "All 8 platforms",
-            "72 hours", 
-            "Included",
-            "Pre-generated",
-            "Basic",
-            "Comprehensive",
-            "Priority",
-            "7 days"
-        ],
-        "💎 Domination ($897)": [
-            "5,000",
-            "All 8 platforms",
-            "5 business days",
-            "Enhanced",
-            "Custom sequences", 
-            "Advanced",
-            "Multi-niche",
-            "Priority+",
-            "30 days"
-        ]
-    }
+st.markdown("---")
+st.header("💰 Package ROI Calculator")
         
-    st.dataframe(comparison_data, use_container_width=True)   
+roi_col1, roi_col2, roi_col3 = st.columns(3)
+        
+with roi_col1:
+    st.subheader("🎯 **Starter Pack ROI**")
+    st.success("500 leads × $25 value = **$12,500 value**")
+    st.markdown("Cost: $97 → **12,786% ROI**")
+        
+with roi_col2:
+    st.subheader("🔥 **Deep Dive ROI**")
+    st.success("2,000 leads × $25 value = **$50,000 value**")
+    st.markdown("Cost: $297 → **16,835% ROI**")
+        
+with roi_col3:
+    st.subheader("💎 **Domination ROI**")
+    st.success("5,000 leads × $25 value = **$250,000 value**")
+    st.markdown("Cost: $897 → **27,869% ROI**")
+        
+# Package comparison
+st.markdown("---")
+st.header("📊 Package Comparison")
+        
+comparison_data = {
+    "Feature": [
+        "Number of Leads",
+        "Platforms Included", 
+        "Delivery Time",
+        "Social Profiles",
+        "DM Generation",
+        "Geographic Targeting",
+        "Industry Research",
+        "Support Level",
+        "Refresh Guarantee"
+    ],
+    "🎯 Starter ($97)": [
+        "500",
+        "2-3 platforms",
+        "48 hours",
+        "Basic",
+        "Templates",
+        "No",
+        "Basic",
+        "Email",
+        "No"
+    ],
+    "🔥 Deep Dive ($297)": [
+        "2,000",
+        "All 8 platforms",
+        "72 hours", 
+        "Included",
+        "Pre-generated",
+        "Basic",
+        "Comprehensive",
+        "Priority",
+        "7 days"
+    ],
+    "💎 Domination ($897)": [
+        "5,000",
+        "All 8 platforms",
+        "5 business days",
+        "Enhanced",
+        "Custom sequences", 
+        "Advanced",
+        "Multi-niche",
+        "Priority+",
+        "30 days"
+    ]
+}
+    
+st.dataframe(comparison_data, use_container_width=True)   
 
-    st.markdown(
-        '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
-        'padding:12px 16px;border-radius:25px;'
-        'background:linear-gradient(135deg,#0066cc,#4dabf7);'
-        'color:white;font-weight:bold;text-decoration:none;'
-        'z-index:9999;">⬆️ Top</a>',
-        unsafe_allow_html=True,
-    )
+st.markdown(
+    '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
+    'padding:12px 16px;border-radius:25px;'
+    'background:linear-gradient(135deg,#0066cc,#4dabf7);'
+    'color:white;font-weight:bold;text-decoration:none;'
+    'z-index:9999;">⬆️ Top</a>',
+    unsafe_allow_html=True,
+)
     
 
 with tab6:  # Settings tab
 
-    st.header("⚙️ Account Settings")
-
-    if not user_authenticated:
-        st.info("🔐 Sign in to manage your account settings")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🚀 Create Account", type="primary", use_container_width=True, key="settings_register"):
-                st.session_state.show_register = True
-                st.session_state.show_login = False
-                st.rerun()
-        with col2:
-            if st.button("🔑 Sign In", use_container_width=True, key="settings_login"):
-                st.session_state.show_login = True
-                st.session_state.show_register = False
-                st.rerun()
-        
-        # Show what settings they'll have access to
-        st.markdown("---")
-        st.markdown("### 🎯 Available Settings")
-        st.markdown("""
-        **📊 Account Management**
-        - View your plan and credit balance
-        - Update password and security settings
-        - Manage email preferences
-        
-        **🎯 Lead Generation Preferences**
-        - Set default search keywords
-        - Configure platform preferences
-        - Customize DM templates
-        
-        **🌍 Language & Localization**
-        - Choose your interface language
-        - Set geographic targeting preferences
-        - Configure cultural adaptation settings
-        
-        **📧 Communication Settings**
-        - Email notifications for completed campaigns
-        - Weekly usage reports
-        - Platform updates and announcements
-        """)
+        st.header("⚙️ Account Settings")
     
-    else:
-        # Authenticated user settings
-        username = simple_auth.get_current_user()
-        user_plan = simple_auth.get_user_plan()
-        current_credits = simple_auth.get_user_credits()
+        if not user_authenticated:
+            st.info("🔐 Sign in to manage your account settings")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🚀 Create Account", type="primary", use_container_width=True, key="settings_register"):
+                    st.session_state.show_register = True
+                    st.session_state.show_login = False
+                    st.rerun()
+            with col2:
+                if st.button("🔑 Sign In", use_container_width=True, key="settings_login"):
+                    st.session_state.show_login = True
+                    st.session_state.show_register = False
+                    st.rerun()
+            
+            # Show what settings they'll have access to
+            st.markdown("---")
+            st.markdown("### 🎯 Available Settings")
+            st.markdown("""
+            **📊 Account Management**
+            - View your plan and credit balance
+            - Update password and security settings
+            - Manage email preferences
+            
+            **🎯 Lead Generation Preferences**
+            - Set default search keywords
+            - Configure platform preferences
+            - Customize DM templates
+            
+            **🌍 Language & Localization**
+            - Choose your interface language
+            - Set geographic targeting preferences
+            - Configure cultural adaptation settings
+            
+            **📧 Communication Settings**
+            - Email notifications for completed campaigns
+            - Weekly usage reports
+            - Platform updates and announcements
+            """)
         
-        # Account Overview
-        st.subheader("👤 Account Overview")
-        
-        # Account info cards
-        overview_col1, overview_col2, overview_col3 = st.columns(3)
-        
-        with overview_col1:
-            plan_emoji = "📱" if user_plan == "demo" else "🎯" if user_plan == "starter" else "💎" if user_plan == "pro" else "👑"
-            st.metric("Plan", f"{plan_emoji} {user_plan.title()}")
-        
-        with overview_col2:
-            if user_plan == "demo":
-                # Show demo leads remaining
-                try:
-                    can_demo, remaining = credit_system.can_use_demo(username)
-                    st.metric("Demo Leads", f"{remaining}/5")
-                except:
-                    st.metric("Credits", current_credits)
-            else:
-                st.metric("Credits", current_credits)
-        
-        with overview_col3:
-            # Show account age
-            try:
-                user_data = st.session_state.get('user_data', {})
-                created_at = user_data.get('created_at', '')
-                if created_at:
-                    created_date = datetime.fromisoformat(created_at).strftime("%b %Y")
-                    st.metric("Member Since", created_date)
+        else:
+            # Authenticated user settings
+            username = simple_auth.get_current_user()
+            user_plan = simple_auth.get_user_plan()
+            current_credits = simple_auth.get_user_credits()
+            
+            # Account Overview
+            st.subheader("👤 Account Overview")
+            
+            # Account info cards
+            overview_col1, overview_col2, overview_col3 = st.columns(3)
+            
+            with overview_col1:
+                plan_emoji = "📱" if user_plan == "demo" else "🎯" if user_plan == "starter" else "💎" if user_plan == "pro" else "👑"
+                st.metric("Plan", f"{plan_emoji} {user_plan.title()}")
+            
+            with overview_col2:
+                if user_plan == "demo":
+                    # Show demo leads remaining
+                    try:
+                        can_demo, remaining = credit_system.can_use_demo(username)
+                        st.metric("Demo Leads", f"{remaining}/5")
+                    except:
+                        st.metric("Credits", current_credits)
                 else:
-                    st.metric("Status", "Active")
-            except:
-                st.metric("Status", "Active")
-        # View statistics
-        st.markdown("---")
-        st.subheader("📊 Detailed Usage Statistics")
-        try:
-            user_info = credit_system.get_user_info(username)
-            if user_info:
-                # ✅ ENHANCED USAGE METRICS WITH DYNAMIC CREDITS
-                usage_col1, usage_col2, usage_col3, usage_col4 = st.columns(4)
-                
-                with usage_col1:
-                    if user_plan == "demo":
-                        # For demo users, calculate total from demo leads used
-                        try:
-                            can_demo, remaining = credit_system.can_use_demo(username)
-                            demo_used = 5 - remaining  # Calculate used demo leads
-                            total_leads = demo_used     # ✅ FIX: Use demo leads as total
-                            st.metric("Total Leads Generated", total_leads)
-                        except:
-                            total_leads = user_info.get('total_leads_downloaded', 0)
-                            st.metric("Total Leads Generated", total_leads)
-                    else:
-                        # For paid users, use regular total
-                        total_leads = user_info.get('total_leads_downloaded', 0)
-                        st.metric("Total Leads Generated", total_leads)
-                
-                with usage_col2:
-                    total_campaigns = len(user_info.get('transactions', []))
-                    st.metric("Campaigns Run", total_campaigns)
-                
-                with usage_col3:
-                    if user_plan == "demo":
-                        try:
-                            can_demo, remaining = credit_system.can_use_demo(username)
-                            demo_used = 5 - remaining
-                            st.metric("Demo Leads Used", f"{demo_used}/5")  # ✅ This looks correct
-                        except:
-                            st.metric("Demo Leads Used", "5/5")
-                    else:
-                        # ✅ DYNAMIC CREDITS USED CALCULATION
-                        try:
-                            current_credits = simple_auth.get_user_credits()  # 1340 in your case
-                            
-                            # Calculate total credits ever owned
-                            plan_starting_credits = {
-                                'starter': 250,
-                                'pro': 2000,
-                                'ultimate': 9999
-                            }
-                            starting_credits = plan_starting_credits.get(user_plan, 250)
-                            
-                            # Add any purchased credits from transactions
-                            purchased_credits = 0
-                            transactions = user_info.get('transactions', [])
-                            for tx in transactions:
-                                if tx.get('type') == 'credit_purchase':
-                                    purchased_credits += tx.get('credits_added', 0)
-                            
-                            total_credits_ever = starting_credits + purchased_credits
-                            credits_used = total_credits_ever - current_credits
-                            
-                            st.metric("Credits Used", credits_used, delta=f"of {total_credits_ever}")
-                            
-                        except Exception as e:
-                            # Fallback: use total leads as approximation
-                            total_leads = user_info.get('total_leads_downloaded', 0)
-                            st.metric("Credits Used", total_leads, delta="≈ leads generated")
-                
-                with usage_col4:
-                    member_since = user_info.get('created_at', '')
-                    if member_since:
-                        try:
-                            days_active = (datetime.now() - datetime.fromisoformat(member_since)).days
-                            st.metric("Days Active", days_active)
-                        except:
-                            st.metric("Status", "Active")
+                    st.metric("Credits", current_credits)
+            
+            with overview_col3:
+                # Show account age
+                try:
+                    user_data = st.session_state.get('user_data', {})
+                    created_at = user_data.get('created_at', '')
+                    if created_at:
+                        created_date = datetime.fromisoformat(created_at).strftime("%b %Y")
+                        st.metric("Member Since", created_date)
                     else:
                         st.metric("Status", "Active")
-                # ✅ NEW: PLATFORM PERFORMANCE SECTION
-                st.markdown("---")
-                st.subheader("🎯 Platform Performance")
-                
-                # Calculate platform statistics from transactions
-                platform_stats = {}
-                platform_leads = {}
-                platform_campaigns = {}
-                
-                transactions = user_info.get('transactions', [])
-                
-                for tx in transactions:
-                    if tx.get('type') == 'lead_download':
-                        platform = tx.get('platform', 'unknown')
-                        leads_count = tx.get('leads_downloaded', 0)
-                        
-                        # Track total leads per platform
-                        if platform not in platform_leads:
-                            platform_leads[platform] = 0
-                            platform_campaigns[platform] = 0
-                        
-                        platform_leads[platform] += leads_count
-                        platform_campaigns[platform] += 1
-                
-                # Display platform performance
-                if platform_leads:
-                    # Sort platforms by total leads (descending)
-                    sorted_platforms = sorted(platform_leads.items(), key=lambda x: x[1], reverse=True)
-                    
-                    # Create performance metrics
-                    perf_col1, perf_col2, perf_col3 = st.columns(3)
-                    
-                    with perf_col1:
-                        st.markdown("**📊 Leads by Platform:**")
-                        for platform, leads in sorted_platforms[:5]:  # Top 5 platforms
-                            percentage = (leads / total_leads * 100) if total_leads > 0 else 0
-                            
-                            # Platform emojis
-                            platform_emojis = {
-                                'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
-                                'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
-                                'medium': '📝', 'reddit': '🗨️', 'parallel_session': '⚡'
-                            }
-                            
-                            emoji = platform_emojis.get(platform, '📱')
-                            st.metric(f"{emoji} {platform.title()}", leads, delta=f"{percentage:.1f}%")
-                    
-                    with perf_col2:
-                        st.markdown("**🎯 Performance Metrics:**")
-                        
-                        # Best performing platform
-                        best_platform = sorted_platforms[0] if sorted_platforms else ('none', 0)
-                        st.metric("🏆 Top Platform", f"{best_platform[0].title()}", delta=f"{best_platform[1]} leads")
-                        
-                        # Average leads per campaign
-                        avg_leads = total_leads / total_campaigns if total_campaigns > 0 else 0
-                        st.metric("📈 Avg Leads/Campaign", f"{avg_leads:.1f}")
-                        
-                        # Platform diversity
-                        active_platforms = len([p for p, l in platform_leads.items() if l > 0])
-                        st.metric("🌍 Active Platforms", active_platforms)
-                    
-                    with perf_col3:
-                        st.markdown("**⚡ Efficiency Stats:**")
-                        
-                        # Most recent activity
-                        if transactions:
-                            latest_tx = max(transactions, key=lambda x: x.get('timestamp', ''))
-                            latest_platform = latest_tx.get('platform', 'unknown')
-                            latest_leads = latest_tx.get('leads_downloaded', 0)
-                            
-                            st.metric("🕒 Latest Campaign", latest_platform.title(), delta=f"{latest_leads} leads")
-                        
-                        # Total campaigns
-                        st.metric("🚀 Total Campaigns", total_campaigns)
-                        
-                        # Success rate (campaigns with >0 leads)
-                        successful_campaigns = len([tx for tx in transactions 
-                                                if tx.get('type') == 'lead_download' and tx.get('leads_downloaded', 0) > 0])
-                        success_rate = (successful_campaigns / total_campaigns * 100) if total_campaigns > 0 else 0
-                        st.metric("✅ Success Rate", f"{success_rate:.1f}%")
-                    
-                    # ✅ PLATFORM PERFORMANCE CHART
-                    if len(sorted_platforms) > 1:
-                        st.markdown("**📊 Platform Distribution:**")
-                        
-                        # Create simple bar chart using metrics
-                        chart_cols = st.columns(len(sorted_platforms))
-                        max_leads = max(leads for _, leads in sorted_platforms)
-                        
-                        for i, (platform, leads) in enumerate(sorted_platforms):
-                            with chart_cols[i]:
-                                # Calculate bar height (normalized to 100)
-                                bar_height = int((leads / max_leads * 100)) if max_leads > 0 else 0
-                                
-                                # Platform emoji
-                                emoji = platform_emojis.get(platform, '📱')
-                                
-                                # Simple visual bar using progress
-                                st.markdown(f"**{emoji} {platform.title()}**")
-                                st.progress(leads / max_leads if max_leads > 0 else 0)
-                                st.caption(f"{leads} leads ({(leads/total_leads*100):.1f}%)")
-                
-                else:
-                    st.info("📊 No platform performance data yet. Generate some leads to see your stats!")
-                # ✅ CONDENSED RECENT ACTIVITY (DROPDOWN)
-                st.markdown("---")
-                
-                if transactions:
-                    # Summary stats for recent activity
-                    recent_transactions = sorted(transactions, key=lambda x: x.get('timestamp', ''), reverse=True)
-                    recent_count = len(recent_transactions)
-                    
-                    # Show summary
-                    activity_summary_col1, activity_summary_col2, activity_summary_col3 = st.columns(3)
-                    
-                    with activity_summary_col1:
-                        st.metric("📋 Total Activities", recent_count)
-                    
-                    with activity_summary_col2:
-                        # Most recent activity
-                        if recent_transactions:
-                            latest = recent_transactions[0]
-                            latest_type = latest.get('type', 'unknown')
-                            if latest_type == 'lead_download':
-                                summary = f"Generated {latest.get('leads_downloaded', 0)} leads"
-                            elif latest_type == 'credit_purchase':
-                                summary = f"Purchased {latest.get('credits_added', 0)} credits"
-                            else:
-                                summary = latest_type.replace('_', ' ').title()
-                            
-                            st.metric("🕒 Latest Activity", summary)
-                    
-                    with activity_summary_col3:
-                        # Recent activity timeframe
-                        if len(recent_transactions) >= 2:
-                            try:
-                                latest_time = datetime.fromisoformat(recent_transactions[0].get('timestamp', ''))
-                                oldest_time = datetime.fromisoformat(recent_transactions[-1].get('timestamp', ''))
-                                timespan = (latest_time - oldest_time).days
-                                st.metric("📅 Activity Span", f"{timespan} days")
-                            except:
-                                st.metric("📅 Status", "Active")
-                    
-                    # ✅ COLLAPSIBLE DETAILED ACTIVITY LIST
-                    with st.expander(f"📋 View Detailed Activity History ({recent_count} entries)", expanded=False):
-                        st.markdown("**Recent Activity Timeline:**")
-                        
-                        # Show last 15 transactions in a more compact format
-                        for i, tx in enumerate(recent_transactions[:15]):
-                            tx_type = tx.get('type', 'unknown')
-                            timestamp = tx.get('timestamp', '')
-                            
-                            if timestamp:
-                                try:
-                                    tx_date = datetime.fromisoformat(timestamp).strftime("%m/%d %H:%M")
-                                except:
-                                    tx_date = timestamp
-                            else:
-                                tx_date = "Unknown"
-                            
-                            # Create compact display
-                            if tx_type == 'lead_download':
-                                leads_count = tx.get('leads_downloaded', 0)
-                                platform = tx.get('platform', 'unknown')
-                                
-                                # Platform emoji
-                                platform_emojis = {
-                                    'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
-                                    'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
-                                    'medium': '📝', 'reddit': '🗨️', 'parallel_session': '⚡'
-                                }
-                                emoji = platform_emojis.get(platform, '📱')
-                                
-                                st.success(f"{emoji} **{tx_date}**: Generated **{leads_count}** leads from {platform}")
-                                
-                            elif tx_type == 'credit_purchase':
-                                credits_added = tx.get('credits_added', 0)
-                                st.info(f"💳 **{tx_date}**: Purchased **{credits_added}** credits")
-                                
-                            elif tx_type == 'demo_usage':
-                                st.info(f"🎯 **{tx_date}**: Used demo lead")
-                                
-                            else:
-                                st.caption(f"📋 **{tx_date}**: {tx_type.replace('_', ' ').title()}")
-                        
-                        # Show "load more" if there are more transactions
-                        if len(recent_transactions) > 15:
-                            st.caption(f"... and {len(recent_transactions) - 15} more activities")
-                            
-                            if st.button("📄 Export Full Activity History"):
-                                # Create CSV export of all transactions
-                                import pandas as pd
-                                
-                                export_data = []
-                                for tx in transactions:
-                                    export_data.append({
-                                        'Date': tx.get('timestamp', ''),
-                                        'Type': tx.get('type', ''),
-                                        'Platform': tx.get('platform', ''),
-                                        'Leads': tx.get('leads_downloaded', 0),
-                                        'Credits': tx.get('credits_added', 0)
-                                    })
-                                
-                                df = pd.DataFrame(export_data)
-                                csv = df.to_csv(index=False)
-                                
-                                st.download_button(
-                                    label="📥 Download Activity History",
-                                    data=csv,
-                                    file_name=f"activity_history_{username}_{datetime.now().strftime('%Y%m%d')}.csv",
-                                    mime="text/csv"
-                                )
-                else:
-                    st.info("📋 No activity yet - start generating leads to see your history!")
-                # ✅ QUICK STATS SUMMARY
-                st.markdown("---")
-                st.subheader("⚡ Quick Stats Summary")
-                
-                summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
-                
-                with summary_col1:
-                    leads_per_day = total_leads / max(days_active, 1) if 'days_active' in locals() else 0
-                    st.metric("📈 Leads/Day", f"{leads_per_day:.1f}")
-                
-                with summary_col2:
-                    if platform_leads:
-                        best_platform_name = max(platform_leads, key=platform_leads.get)
-                        st.metric("🏆 Best Platform", best_platform_name.title())
-                    else:
-                        st.metric("🏆 Best Platform", "None yet")
-                
-                with summary_col3:
-                    avg_campaign_size = total_leads / total_campaigns if total_campaigns > 0 else 0
-                    st.metric("🎯 Avg Campaign", f"{avg_campaign_size:.1f} leads")
-                
-                with summary_col4:
-                    efficiency = (total_leads / max(days_active, 1)) if 'days_active' in locals() and days_active > 0 else 0
-                    st.metric("⚡ Efficiency", f"{efficiency:.1f}/day")
-            else:
-                st.warning("⚠️ Could not load usage data")
-                
-        except Exception as e:
-            st.error(f"❌ Error loading usage data: {str(e)}")
-            
-            # ✅ DEBUG INFO FOR TROUBLESHOOTING
-            with st.expander("🔍 Debug Information", expanded=False):
-                st.code(f"""
-                Error: {str(e)}
-                Username: {username if 'username' in locals() else 'Not set'}
-                User Plan: {user_plan if 'user_plan' in locals() else 'Not set'}
-                Session Credits: {st.session_state.get('credits', 'Not set')}
-                """)
-        
-        # Quick actions
-        st.markdown("---")
-        st.subheader("⚡ Quick Actions")
-        
-        quick_col1, quick_col2, quick_col3 = st.columns(3)
-        
-        with quick_col1:
-            if user_plan == "demo":
-                if st.button("🚀 Upgrade Account", type="primary", use_container_width=True):
-                    # Switch to pricing tab
-                    st.session_state.show_pricing = True
-                    st.rerun()
-            else:
-                if st.button("💎 Buy More Credits", type="primary", use_container_width=True):
-                    # Switch to pricing tab
-                    st.session_state.show_pricing = True
-                    st.rerun()
-        
-        with quick_col2:
-            if st.button("🔐 Change Password", use_container_width=True):
-                st.session_state.show_password_change = True
-                st.rerun()
-        
-        with quick_col3:
-            if "show_usage_details" not in st.session_state:
-                st.session_state.show_usage_details = False
-        # now, conditionally render the Detailed Usage panel
-        if st.session_state.show_usage_details:
+                except:
+                    st.metric("Status", "Active")
+
+            # View statistics
             st.markdown("---")
             st.subheader("📊 Detailed Usage Statistics")
-            
+
             try:
                 user_info = credit_system.get_user_info(username)
                 if user_info:
-                    # Usage metrics
+                    # ✅ ENHANCED USAGE METRICS WITH DYNAMIC CREDITS
                     usage_col1, usage_col2, usage_col3, usage_col4 = st.columns(4)
                     
                     with usage_col1:
-                        total_leads = user_info.get('total_leads_downloaded', 0)
-                        st.metric("Total Leads Generated", total_leads)
+                        if user_plan == "demo":
+                            # For demo users, calculate total from demo leads used
+                            try:
+                                can_demo, remaining = credit_system.can_use_demo(username)
+                                demo_used = 5 - remaining  # Calculate used demo leads
+                                total_leads = demo_used     # ✅ FIX: Use demo leads as total
+                                st.metric("Total Leads Generated", total_leads)
+                            except:
+                                total_leads = user_info.get('total_leads_downloaded', 0)
+                                st.metric("Total Leads Generated", total_leads)
+                        else:
+                            # For paid users, use regular total
+                            total_leads = user_info.get('total_leads_downloaded', 0)
+                            st.metric("Total Leads Generated", total_leads)
                     
                     with usage_col2:
                         total_campaigns = len(user_info.get('transactions', []))
@@ -8592,12 +8247,41 @@ with tab6:  # Settings tab
                     
                     with usage_col3:
                         if user_plan == "demo":
-                            can_demo, remaining = credit_system.can_use_demo(username)
-                            demo_used = 5 - remaining
-                            st.metric("Demo Leads Used", f"{demo_used}/5")
+                            try:
+                                can_demo, remaining = credit_system.can_use_demo(username)
+                                demo_used = 5 - remaining
+                                st.metric("Demo Leads Used", f"{demo_used}/5")  # ✅ This looks correct
+                            except:
+                                st.metric("Demo Leads Used", "5/5")
                         else:
-                            credits_used = user_info.get('total_credits_used', 0)
-                            st.metric("Credits Used", credits_used)
+                            # ✅ DYNAMIC CREDITS USED CALCULATION
+                            try:
+                                current_credits = simple_auth.get_user_credits()  # 1340 in your case
+                                
+                                # Calculate total credits ever owned
+                                plan_starting_credits = {
+                                    'starter': 250,
+                                    'pro': 2000,
+                                    'ultimate': 9999
+                                }
+                                starting_credits = plan_starting_credits.get(user_plan, 250)
+                                
+                                # Add any purchased credits from transactions
+                                purchased_credits = 0
+                                transactions = user_info.get('transactions', [])
+                                for tx in transactions:
+                                    if tx.get('type') == 'credit_purchase':
+                                        purchased_credits += tx.get('credits_added', 0)
+                                
+                                total_credits_ever = starting_credits + purchased_credits
+                                credits_used = total_credits_ever - current_credits
+                                
+                                st.metric("Credits Used", credits_used, delta=f"of {total_credits_ever}")
+                                
+                            except Exception as e:
+                                # Fallback: use total leads as approximation
+                                total_leads = user_info.get('total_leads_downloaded', 0)
+                                st.metric("Credits Used", total_leads, delta="≈ leads generated")
                     
                     with usage_col4:
                         member_since = user_info.get('created_at', '')
@@ -8609,831 +8293,1163 @@ with tab6:  # Settings tab
                                 st.metric("Status", "Active")
                         else:
                             st.metric("Status", "Active")
+
+                    # ✅ NEW: PLATFORM PERFORMANCE SECTION
+                    st.markdown("---")
+                    st.subheader("🎯 Platform Performance")
                     
-                    # Transaction history
+                    # Calculate platform statistics from transactions
+                    platform_stats = {}
+                    platform_leads = {}
+                    platform_campaigns = {}
+                    
                     transactions = user_info.get('transactions', [])
-                    if transactions:
-                        st.markdown("**📋 Recent Activity:**")
+                    
+                    for tx in transactions:
+                        if tx.get('type') == 'lead_download':
+                            platform = tx.get('platform', 'unknown')
+                            leads_count = tx.get('leads_downloaded', 0)
+                            
+                            # Track total leads per platform
+                            if platform not in platform_leads:
+                                platform_leads[platform] = 0
+                                platform_campaigns[platform] = 0
+                            
+                            platform_leads[platform] += leads_count
+                            platform_campaigns[platform] += 1
+                    
+                    # Display platform performance
+                    if platform_leads:
+                        # Sort platforms by total leads (descending)
+                        sorted_platforms = sorted(platform_leads.items(), key=lambda x: x[1], reverse=True)
                         
-                        # Show last 10 transactions
-                        recent_transactions = sorted(transactions, key=lambda x: x.get('timestamp', ''), reverse=True)[:10]
+                        # Create performance metrics
+                        perf_col1, perf_col2, perf_col3 = st.columns(3)
                         
-                        for tx in recent_transactions:
-                            tx_type = tx.get('type', 'unknown')
-                            timestamp = tx.get('timestamp', '')
+                        with perf_col1:
+                            st.markdown("**📊 Leads by Platform:**")
+                            for platform, leads in sorted_platforms[:5]:  # Top 5 platforms
+                                percentage = (leads / total_leads * 100) if total_leads > 0 else 0
+                                
+                                # Platform emojis
+                                platform_emojis = {
+                                    'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
+                                    'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
+                                    'medium': '📝', 'reddit': '🗨️', 'parallel_session': '⚡'
+                                }
+                                
+                                emoji = platform_emojis.get(platform, '📱')
+                                st.metric(f"{emoji} {platform.title()}", leads, delta=f"{percentage:.1f}%")
+                        
+                        with perf_col2:
+                            st.markdown("**🎯 Performance Metrics:**")
                             
-                            if timestamp:
-                                try:
-                                    tx_date = datetime.fromisoformat(timestamp).strftime("%m/%d/%Y %H:%M")
-                                except:
-                                    tx_date = timestamp
-                            else:
-                                tx_date = "Unknown"
+                            # Best performing platform
+                            best_platform = sorted_platforms[0] if sorted_platforms else ('none', 0)
+                            st.metric("🏆 Top Platform", f"{best_platform[0].title()}", delta=f"{best_platform[1]} leads")
                             
-                            if tx_type == 'lead_download':
-                                leads_count = tx.get('leads_downloaded', 0)
-                                platform = tx.get('platform', 'unknown')
-                                st.success(f"📊 {tx_date}: Generated {leads_count} leads from {platform}")
+                            # Average leads per campaign
+                            avg_leads = total_leads / total_campaigns if total_campaigns > 0 else 0
+                            st.metric("📈 Avg Leads/Campaign", f"{avg_leads:.1f}")
                             
-                            elif tx_type == 'credit_purchase':
-                                credits_added = tx.get('credits_added', 0)
-                                st.info(f"💳 {tx_date}: Purchased {credits_added} credits")
+                            # Platform diversity
+                            active_platforms = len([p for p, l in platform_leads.items() if l > 0])
+                            st.metric("🌍 Active Platforms", active_platforms)
+                        
+                        with perf_col3:
+                            st.markdown("**⚡ Efficiency Stats:**")
                             
-                            elif tx_type == 'demo_usage':
-                                st.info(f"🎯 {tx_date}: Used demo lead")
+                            # Most recent activity
+                            if transactions:
+                                latest_tx = max(transactions, key=lambda x: x.get('timestamp', ''))
+                                latest_platform = latest_tx.get('platform', 'unknown')
+                                latest_leads = latest_tx.get('leads_downloaded', 0)
+                                
+                                st.metric("🕒 Latest Campaign", latest_platform.title(), delta=f"{latest_leads} leads")
+                            
+                            # Total campaigns
+                            st.metric("🚀 Total Campaigns", total_campaigns)
+                            
+                            # Success rate (campaigns with >0 leads)
+                            successful_campaigns = len([tx for tx in transactions 
+                                                    if tx.get('type') == 'lead_download' and tx.get('leads_downloaded', 0) > 0])
+                            success_rate = (successful_campaigns / total_campaigns * 100) if total_campaigns > 0 else 0
+                            st.metric("✅ Success Rate", f"{success_rate:.1f}%")
+                        
+                        # ✅ PLATFORM PERFORMANCE CHART
+                        if len(sorted_platforms) > 1:
+                            st.markdown("**📊 Platform Distribution:**")
+                            
+                            # Create simple bar chart using metrics
+                            chart_cols = st.columns(len(sorted_platforms))
+                            max_leads = max(leads for _, leads in sorted_platforms)
+                            
+                            for i, (platform, leads) in enumerate(sorted_platforms):
+                                with chart_cols[i]:
+                                    # Calculate bar height (normalized to 100)
+                                    bar_height = int((leads / max_leads * 100)) if max_leads > 0 else 0
+                                    
+                                    # Platform emoji
+                                    emoji = platform_emojis.get(platform, '📱')
+                                    
+                                    # Simple visual bar using progress
+                                    st.markdown(f"**{emoji} {platform.title()}**")
+                                    st.progress(leads / max_leads if max_leads > 0 else 0)
+                                    st.caption(f"{leads} leads ({(leads/total_leads*100):.1f}%)")
+                    
                     else:
-                        st.info("📋 No activity yet - start generating leads!")
-                
+                        st.info("📊 No platform performance data yet. Generate some leads to see your stats!")
+
+                    # ✅ CONDENSED RECENT ACTIVITY (DROPDOWN)
+                    st.markdown("---")
+                    
+                    if transactions:
+                        # Summary stats for recent activity
+                        recent_transactions = sorted(transactions, key=lambda x: x.get('timestamp', ''), reverse=True)
+                        recent_count = len(recent_transactions)
+                        
+                        # Show summary
+                        activity_summary_col1, activity_summary_col2, activity_summary_col3 = st.columns(3)
+                        
+                        with activity_summary_col1:
+                            st.metric("📋 Total Activities", recent_count)
+                        
+                        with activity_summary_col2:
+                            # Most recent activity
+                            if recent_transactions:
+                                latest = recent_transactions[0]
+                                latest_type = latest.get('type', 'unknown')
+                                if latest_type == 'lead_download':
+                                    summary = f"Generated {latest.get('leads_downloaded', 0)} leads"
+                                elif latest_type == 'credit_purchase':
+                                    summary = f"Purchased {latest.get('credits_added', 0)} credits"
+                                else:
+                                    summary = latest_type.replace('_', ' ').title()
+                                
+                                st.metric("🕒 Latest Activity", summary)
+                        
+                        with activity_summary_col3:
+                            # Recent activity timeframe
+                            if len(recent_transactions) >= 2:
+                                try:
+                                    latest_time = datetime.fromisoformat(recent_transactions[0].get('timestamp', ''))
+                                    oldest_time = datetime.fromisoformat(recent_transactions[-1].get('timestamp', ''))
+                                    timespan = (latest_time - oldest_time).days
+                                    st.metric("📅 Activity Span", f"{timespan} days")
+                                except:
+                                    st.metric("📅 Status", "Active")
+                        
+                        # ✅ COLLAPSIBLE DETAILED ACTIVITY LIST
+                        with st.expander(f"📋 View Detailed Activity History ({recent_count} entries)", expanded=False):
+                            st.markdown("**Recent Activity Timeline:**")
+                            
+                            # Show last 15 transactions in a more compact format
+                            for i, tx in enumerate(recent_transactions[:15]):
+                                tx_type = tx.get('type', 'unknown')
+                                timestamp = tx.get('timestamp', '')
+                                
+                                if timestamp:
+                                    try:
+                                        tx_date = datetime.fromisoformat(timestamp).strftime("%m/%d %H:%M")
+                                    except:
+                                        tx_date = timestamp
+                                else:
+                                    tx_date = "Unknown"
+                                
+                                # Create compact display
+                                if tx_type == 'lead_download':
+                                    leads_count = tx.get('leads_downloaded', 0)
+                                    platform = tx.get('platform', 'unknown')
+                                    
+                                    # Platform emoji
+                                    platform_emojis = {
+                                        'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
+                                        'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
+                                        'medium': '📝', 'reddit': '🗨️', 'parallel_session': '⚡'
+                                    }
+                                    emoji = platform_emojis.get(platform, '📱')
+                                    
+                                    st.success(f"{emoji} **{tx_date}**: Generated **{leads_count}** leads from {platform}")
+                                    
+                                elif tx_type == 'credit_purchase':
+                                    credits_added = tx.get('credits_added', 0)
+                                    st.info(f"💳 **{tx_date}**: Purchased **{credits_added}** credits")
+                                    
+                                elif tx_type == 'demo_usage':
+                                    st.info(f"🎯 **{tx_date}**: Used demo lead")
+                                    
+                                else:
+                                    st.caption(f"📋 **{tx_date}**: {tx_type.replace('_', ' ').title()}")
+                            
+                            # Show "load more" if there are more transactions
+                            if len(recent_transactions) > 15:
+                                st.caption(f"... and {len(recent_transactions) - 15} more activities")
+                                
+                                if st.button("📄 Export Full Activity History"):
+                                    # Create CSV export of all transactions
+                                    import pandas as pd
+                                    
+                                    export_data = []
+                                    for tx in transactions:
+                                        export_data.append({
+                                            'Date': tx.get('timestamp', ''),
+                                            'Type': tx.get('type', ''),
+                                            'Platform': tx.get('platform', ''),
+                                            'Leads': tx.get('leads_downloaded', 0),
+                                            'Credits': tx.get('credits_added', 0)
+                                        })
+                                    
+                                    df = pd.DataFrame(export_data)
+                                    csv = df.to_csv(index=False)
+                                    
+                                    st.download_button(
+                                        label="📥 Download Activity History",
+                                        data=csv,
+                                        file_name=f"activity_history_{username}_{datetime.now().strftime('%Y%m%d')}.csv",
+                                        mime="text/csv"
+                                    )
+                    else:
+                        st.info("📋 No activity yet - start generating leads to see your history!")
+
+                    # ✅ QUICK STATS SUMMARY
+                    st.markdown("---")
+                    st.subheader("⚡ Quick Stats Summary")
+                    
+                    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+                    
+                    with summary_col1:
+                        leads_per_day = total_leads / max(days_active, 1) if 'days_active' in locals() else 0
+                        st.metric("📈 Leads/Day", f"{leads_per_day:.1f}")
+                    
+                    with summary_col2:
+                        if platform_leads:
+                            best_platform_name = max(platform_leads, key=platform_leads.get)
+                            st.metric("🏆 Best Platform", best_platform_name.title())
+                        else:
+                            st.metric("🏆 Best Platform", "None yet")
+                    
+                    with summary_col3:
+                        avg_campaign_size = total_leads / total_campaigns if total_campaigns > 0 else 0
+                        st.metric("🎯 Avg Campaign", f"{avg_campaign_size:.1f} leads")
+                    
+                    with summary_col4:
+                        efficiency = (total_leads / max(days_active, 1)) if 'days_active' in locals() and days_active > 0 else 0
+                        st.metric("⚡ Efficiency", f"{efficiency:.1f}/day")
+
                 else:
                     st.warning("⚠️ Could not load usage data")
                     
             except Exception as e:
                 st.error(f"❌ Error loading usage data: {str(e)}")
-        
-        # Settings sections
-        st.markdown("---")
-        
-        # Personal Preferences
-        st.subheader("🎯 Lead Generation Preferences")
-        pref_col1, pref_col2 = st.columns(2)
-        with pref_col1:
-            # Load current user config properly
-            username = simple_auth.get_current_user() if user_authenticated else None
-            current_user_config = get_current_config(username)
-            
-            default_search = st.text_input(
-                "🔍 Default Search Keywords",
-                value=current_user_config.get("search_term", ""),
-                help="Your preferred search terms for lead generation",
-                key="user_default_search"
-            )
-            
-            default_intensity = st.slider(
-                "📊 Default Intensity Level",
-                min_value=1,
-                max_value=20,
-                value=current_user_config.get("max_scrolls", 12),
-                help="Your preferred intensity level for campaigns",
-                key="user_default_intensity"
-            )
-            
-            # Show current values for confirmation
-            st.info(f"Current defaults: '{current_user_config.get('search_term', 'not set')}' with intensity {current_user_config.get('max_scrolls', 'not set')}")
-        with pref_col2:
-            # Platform preferences (your existing code for this column)
-            st.markdown("**🌍 Preferred Platforms:**")
-            
-            # Show available platforms based on plan
-            plan_access = {
-                'demo': ['Twitter'],
-                'starter': ['Twitter', 'Facebook'],
-                'pro': ['Twitter', 'Facebook', 'LinkedIn', 'TikTok', 'Instagram', 'YouTube'],
-                'ultimate': ['Twitter', 'Facebook', 'LinkedIn', 'TikTok', 'Instagram', 'YouTube', 'Medium', 'Reddit']
-            }
-            
-            available_platforms = plan_access.get(user_plan, ['Twitter'])
-            
-            for platform in available_platforms:
-                platform_emojis = {
-                    'Twitter': '🐦', 'Facebook': '📘', 'LinkedIn': '💼',
-                    'TikTok': '🎵', 'Instagram': '📸', 'YouTube': '🎥',
-                    'Medium': '📝', 'Reddit': '🗨️'
-                }
-                emoji = platform_emojis.get(platform, '🎯')
                 
-                pref_key = f"prefer_{platform.lower()}"
-                platform_pref = st.checkbox(
-                    f"{emoji} {platform}",
-                    value=True,
-                    key=pref_key,
-                    help=f"Include {platform} in your campaigns by default"
-                )
-        # NEW: Account Exclusion Management Section
-        st.markdown("---")
-        st.subheader("🚫 Account Exclusions")
-        st.markdown("*Manage which accounts are excluded from your lead results*")
-        
-        # Load current excluded accounts
-        try:
-            import os
-            from enhanced_config_loader import ConfigLoader
-            config_file = f"client_configs/client_{st.session_state.username}_config.json"
-            config_loader = ConfigLoader(config_file)
-           
+                # ✅ DEBUG INFO FOR TROUBLESHOOTING
+                with st.expander("🔍 Debug Information", expanded=False):
+                    st.code(f"""
+                    Error: {str(e)}
+                    Username: {username if 'username' in locals() else 'Not set'}
+                    User Plan: {user_plan if 'user_plan' in locals() else 'Not set'}
+                    Session Credits: {st.session_state.get('credits', 'Not set')}
+                    """)
             
-            excluded_accounts = config_loader.config.get("excluded_accounts", {})
-            platform_accounts = excluded_accounts.get("accounts", {})
-            global_excludes = excluded_accounts.get("global_excludes", [])
-            
-        except Exception as e:
-            st.error(f"Could not load account exclusions: {e}")
-            platform_accounts = {}
-            global_excludes = []
-        
-        # Statistics
-        total_excluded = sum(len(accounts) for accounts in platform_accounts.values()) + len(global_excludes)
-        
-        excl_col1, excl_col2, excl_col3 = st.columns(3)
-        with excl_col1:
-            st.metric("🚫 Total Excluded", total_excluded)
-        with excl_col2:
-            st.metric("🌍 Global Exclusions", len(global_excludes))
-        with excl_col3:
-            platforms_with_exclusions = len([p for p in platform_accounts.values() if len(p) > 0])
-            st.metric("📱 Platforms Configured", platforms_with_exclusions)
-        
-        # Tabs for different exclusion management
-        exclusion_tab1, exclusion_tab2 = st.tabs(["📱 Platform-Specific", "🌍 Global Exclusions"])
-        
-        with exclusion_tab1:
-            st.markdown("#### Manage Platform-Specific Exclusions")
-            
-            platforms = {
-                'instagram': {'emoji': '📸', 'name': 'Instagram', 'color': '#E4405F'},
-                'tiktok': {'emoji': '🎵', 'name': 'TikTok', 'color': '#000000'},
-                'facebook': {'emoji': '📘', 'name': 'Facebook', 'color': '#1877F2'},
-                'twitter': {'emoji': '🐦', 'name': 'Twitter', 'color': '#1DA1F2'},
-                'youtube': {'emoji': '📹', 'name': 'YouTube', 'color': '#FF0000'},
-                'linkedin': {'emoji': '💼', 'name': 'LinkedIn', 'color': '#0A66C2'},
-                'medium': {'emoji': '📝', 'name': 'Medium', 'color': '#000000'},
-                'reddit': {'emoji': '🗨️', 'name': 'Reddit', 'color': '#FF4500'}
-            }
-            
-            # Create two columns for platform management
-            plat_col1, plat_col2 = st.columns(2)
-            
-            for idx, (platform_id, platform_info) in enumerate(platforms.items()):
-                col = plat_col1 if idx % 2 == 0 else plat_col2
-                
-                with col:
-                    with st.container():
-                        st.markdown(f"**{platform_info['emoji']} {platform_info['name']}**")
-                        
-                        current_accounts = platform_accounts.get(platform_id, [])
-                        
-                        # Show current exclusions
-                        if current_accounts:
-                            for account in current_accounts:
-                                account_col1, account_col2 = st.columns([3, 1])
-                                with account_col1:
-                                    st.text(f"@{account}")
-                                with account_col2:
-                                    if st.button("🗑️", key=f"remove_{platform_id}_{account}", help=f"Remove @{account}"):
-                                        try:
-                                            config_loader.remove_excluded_account(platform_id, account)
-                                            config_loader.save_config() 
-                                            st.success(f"Removed @{account} from {platform_info['name']}")
-                                            st.rerun()
-                                        except Exception as e:
-                                            st.error(f"Error removing account: {e}")
-                        else:
-                            st.text("No excluded accounts")
-                        
-                        # Add new account
-                        new_account = st.text_input(
-                            f"Add {platform_info['name']} account",
-                            key=f"new_{platform_id}",
-                            placeholder="username (without @)",
-                            help=f"Enter username to exclude from {platform_info['name']} results"
-                        )
-                        
-                        if st.button(f"➕ Add to {platform_info['name']}", key=f"add_{platform_id}"):
-                            if new_account.strip():
-                                clean_account = new_account.strip().lstrip('@')
-                                try:
-                                    success = config_loader.add_excluded_account(platform_id, clean_account)
-                                    if success:
-                                        config_loader.save_config()
-                                        st.success(f"Added @{clean_account} to {platform_info['name']} exclusions")
-                                        st.rerun()
-                                    else:
-                                        st.warning(f"@{clean_account} already excluded from {platform_info['name']}")
-                                except Exception as e:
-                                    st.error(f"Error adding account: {e}")
-                            else:
-                                st.error("Please enter a username")
-                    
-                    st.markdown("---")
-        
-        with exclusion_tab2:
-            st.markdown("#### Manage Global Exclusions")
-            st.markdown("*These accounts are excluded from ALL platforms*")
-            
-            # Show current global exclusions
-            if global_excludes:
-                st.markdown("**Current Global Exclusions:**")
-                for account in global_excludes:
-                    global_col1, global_col2 = st.columns([3, 1])
-                    with global_col1:
-                        st.text(f"@{account}")
-                    with global_col2:
-                        if st.button("🗑️", key=f"remove_global_{account}", help=f"Remove @{account} from global exclusions"):
-                            try:
-                                # Remove from global excludes
-                                if "excluded_accounts" in config_loader.config:
-                                    global_list = config_loader.config["excluded_accounts"].get("global_excludes", [])
-                                    if account in global_list:
-                                        global_list.remove(account)
-                                        config_loader.save_config()
-                                        st.success(f"Removed @{account} from global exclusions")
-                                        st.rerun()
-                            except Exception as e:
-                                st.error(f"Error removing global account: {e}")
-            else:
-                st.text("No global exclusions configured")
-            
-            # Add new global exclusion
-            st.markdown("**Add Global Exclusion:**")
-            new_global = st.text_input(
-                "Username to exclude globally",
-                key="new_global_exclusion",
-                placeholder="username (without @)",
-                help="This account will be excluded from ALL platform results"
-            )
-            
-            if st.button("➕ Add Global Exclusion"):
-                if new_global.strip():
-                    clean_global = new_global.strip().lstrip('@')
-                    try:
-                        success = config_loader.add_global_exclude(clean_global)
-                        if success:
-                            st.success(f"Added @{clean_global} to global exclusions")
-                            st.rerun()
-                        else:
-                            st.warning(f"@{clean_global} already in global exclusions")
-                    except Exception as e:
-                        st.error(f"Error adding global exclusion: {e}")
-                else:
-                    st.error("Please enter a username")
-        
-        # Quick Actions
-        st.markdown("---")
-        st.markdown("#### ⚡ Exclusion Tools")
-        
-        quick_col1, quick_col2, quick_col3 = st.columns(3)
-        
-        with quick_col1:
-            if st.button("🔄 Refresh Exclusions", help="Reload exclusions from config"):
-                st.rerun()
-        
-        with quick_col2:
-            if st.button("📥 Import from Registration", help="Add accounts from your registration"):
-                try:
-                    # Try to find registration data
-                    user_data = simple_auth.get_user_data(st.session_state.current_user)
-                    if user_data and 'social_accounts' in user_data:
-                        added_count = 0
-                        for platform, username in user_data['social_accounts'].items():
-                            if username.strip():
-                                try:
-                                    if config_loader.add_excluded_account(platform, username):
-                                        added_count += 1
-                                except:
-                                    pass
-                        
-                        if added_count > 0:
-                            st.success(f"Added {added_count} accounts from registration")
-                            st.rerun()
-                        else:
-                            st.info("No new accounts to import")
-                    else:
-                        st.warning("No registration data found")
-                except Exception as e:
-                    st.error(f"Import failed: {e}")
-        
-        with quick_col3:
-            if st.button("🧹 Clear All Exclusions", help="Remove all excluded accounts"):
-                if st.checkbox("⚠️ Confirm: Clear all exclusions", key="confirm_clear_exclusions"):
-                    try:
-                        # Clear all exclusions
-                        config_loader.config["excluded_accounts"] = {
-                            "enabled": True,
-                            "accounts": {
-                                "instagram": [],
-                                "tiktok": [],
-                                "facebook": [],
-                                "twitter": [],
-                                "youtube": [],
-                                "linkedin": [],
-                                "medium": [],
-                                "reddit": []
-                            },
-                            "global_excludes": []
-                        }
-                        config_loader.save_config()
-                        st.success("All exclusions cleared")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error clearing exclusions: {e}")
-        
-        # Help section
-        with st.expander("ℹ️ How Account Exclusions Work"):
-            st.markdown("""
-            **Account exclusions prevent your own social media accounts from appearing in your lead results.**
-            
-            **Platform-Specific Exclusions:**
-            - Only apply to that specific platform
-            - Example: Excluding your Instagram won't affect TikTok results
-            
-            **Global Exclusions:**
-            - Apply to ALL platforms automatically
-            - Useful for accounts you use across multiple platforms
-            
-            **Best Practices:**
-            - Add your business accounts to prevent self-targeting
-            - Add personal accounts if they might appear in business searches
-            - Use global exclusions for accounts used across platforms
-            - Regularly review and update your exclusions
-            
-            **Tips:**
-            - Changes take effect immediately for new lead generation
-            - You can add usernames with or without the @ symbol
-            - Usernames are case-insensitive
-            """)
-        
-        # Show current configuration summary (FILTERED BY CURRENT USER)
-        st.markdown("---")
-        st.markdown("#### 📊 Current Configuration Summary")
-        # ✅ GET CURRENT USER'S EXCLUSIONS ONLY
-        if 'username' in st.session_state and st.session_state.username:
-            current_username = st.session_state.username
-            
-            # Filter exclusions for current user only
-            user_platform_accounts = {}
-            user_global_excludes = []
-            
-            # Get user-specific platform exclusions
-            for platform, accounts in platform_accounts.items():
-                if accounts:
-                    # Filter accounts that belong to current user
-                    user_accounts = []
-                    for account in accounts:
-                        # Check if this account belongs to current user
-                        # (You might need to adjust this logic based on how you store user associations)
-                        if current_username in account or account.startswith(current_username):
-                            user_accounts.append(account)
-                    
-                    if user_accounts:
-                        user_platform_accounts[platform] = user_accounts
-            
-            # Get user-specific global exclusions  
-            if global_excludes:
-                for account in global_excludes:
-                    if current_username in account or account.startswith(current_username):
-                        user_global_excludes.append(account)
-            
-            # Count total user exclusions
-            user_total_excluded = sum(len(accounts) for accounts in user_platform_accounts.values()) + len(user_global_excludes)
-            
-            if user_total_excluded > 0:
-                summary_data = []
-                
-                # Platform-specific summary (user only)
-                for platform, accounts in user_platform_accounts.items():
-                    if accounts:
-                        platform_info = platforms.get(platform, {'emoji': '📱', 'name': platform.title()})
-                        summary_data.append({
-                            "Platform": f"{platform_info['emoji']} {platform_info['name']}",
-                            "Excluded Accounts": f"{len(accounts)} accounts", 
-                            "Accounts": ", ".join([f"@{acc}" for acc in accounts[:3]]) + ("..." if len(accounts) > 3 else "")
-                        })
-                
-                # Global summary (user only)
-                if user_global_excludes:
-                    summary_data.append({
-                        "Platform": "🌍 Global",
-                        "Excluded Accounts": f"{len(user_global_excludes)} accounts",
-                        "Accounts": ", ".join([f"@{acc}" for acc in user_global_excludes[:3]]) + ("..." if len(user_global_excludes) > 3 else "")
-                    })
-                
-                if summary_data:
-                    st.table(summary_data)
-                    st.success(f"👤 **{current_username}**: {user_total_excluded} total exclusions configured")
-                else:
-                    st.info("No exclusions configured for your account")
-            else:
-                st.info(f"💡 **Hi {current_username}!** Add your social media accounts to prevent them from appearing in your lead results!")
-        else:
-            st.warning("⚠️ Please log in to view your configuration summary")
-        
-        # Communication Preferences
-        st.markdown("---")
-        st.subheader("📧 Communication Preferences")
-        
-        comm_col1, comm_col2 = st.columns(2)
-        
-        with comm_col1:
-            email_completion = st.checkbox(
-                "📧 Email when campaigns complete",
-                value=True,
-                help="Get notified when your lead generation campaigns finish"
-            )
-            
-            email_weekly = st.checkbox(
-                "📊 Weekly usage reports",
-                value=True,
-                help="Receive weekly summaries of your lead generation activity"
-            )
-        
-        with comm_col2:
-            email_updates = st.checkbox(
-                "🔔 Platform updates",
-                value=True,
-                help="Stay informed about new features and improvements"
-            )
-            
-            email_tips = st.checkbox(
-                "💡 Lead generation tips",
-                value=True,
-                help="Receive expert tips for better lead generation results"
-            )
-        
-        # Language & Localization (if multilingual is available)
-        if MULTILINGUAL_AVAILABLE:
+            # Quick actions
             st.markdown("---")
-            st.subheader("🌍 Language & Localization")
+            st.subheader("⚡ Quick Actions")
             
-            lang_col1, lang_col2 = st.columns(2)
+            quick_col1, quick_col2, quick_col3 = st.columns(3)
             
-            with lang_col1:
-                interface_language = st.selectbox(
-                    "🔤 Interface Language",
-                    ["English", "Spanish", "French", "German", "Portuguese"],
-                    key="interface_language_select",
-                    help="Choose your preferred interface language"
-                )
+            with quick_col1:
+                if user_plan == "demo":
+                    if st.button("🚀 Upgrade Account", type="primary", use_container_width=True):
+                        # Switch to pricing tab
+                        st.session_state.show_pricing = True
+                        st.rerun()
+                else:
+                    if st.button("💎 Buy More Credits", type="primary", use_container_width=True):
+                        # Switch to pricing tab
+                        st.session_state.show_pricing = True
+                        st.rerun()
+            
+            with quick_col2:
+                if st.button("🔐 Change Password", use_container_width=True):
+                    st.session_state.show_password_change = True
+                    st.rerun()
+            
+            with quick_col3:
+                if "show_usage_details" not in st.session_state:
+                    st.session_state.show_usage_details = False
+
+            # now, conditionally render the Detailed Usage panel
+            if st.session_state.show_usage_details:
+                st.markdown("---")
+                st.subheader("📊 Detailed Usage Statistics")
                 
-                default_dm_language = st.selectbox(
-                    "💬 Default DM Language",
-                    ["Auto-detect", "English", "Spanish", "French", "German", "Portuguese"],
-                    key="default_dm_language_select",
-                    help="Default language for generated DMs"
-                )
-            
-            with lang_col2:
-                cultural_style = st.selectbox(
-                    "🎭 Cultural Adaptation",
-                    ["Standard", "Casual", "Professional", "Creative"],
-                    key="cultural_adaptation_select",
-                    help="Adjust tone and style for different cultures"
-                )
-                
-                geographic_focus = st.selectbox(
-                    "📍 Geographic Focus",
-                    ["Global", "North America", "Europe", "Asia-Pacific", "Latin America"],
-                    key="geographic_focus_select",
-                    help="Focus your campaigns on specific regions"
-                )
-        
-        # Security Settings
-        st.markdown("---")
-        st.subheader("🔐 Security & Privacy")
-        
-        security_col1, security_col2 = st.columns(2)
-        
-        with security_col1:
-            st.markdown("**🔐 Password Security**")
-            
-            if st.button("🔑 Change Password", use_container_width=True, key="change_password_main"):
-                st.session_state.show_update_password = True
-                st.rerun()
-            
-            # Show password requirements
-            with st.expander("🛡️ Password Requirements"):
-                st.markdown("""
-                **Strong passwords must include:**
-                - At least 8 characters
-                - One uppercase letter (A-Z)
-                - One lowercase letter (a-z)  
-                - One number (0-9)
-                - One special character (!@#$%^&*)
-                """)
-        
-        with security_col2:
-            st.markdown("**🔒 Privacy Settings**")
-            
-            data_retention = st.selectbox(
-                "📊 Data Retention",
-                ["30 days", "90 days", "1 year", "Until deleted"],
-                index=2,
-                help="How long to keep your generated leads"
-            )
-            
-            usage_analytics = st.checkbox(
-                "📈 Usage Analytics",
-                value=True,
-                help="Help improve the platform by sharing anonymous usage data"
-            )
-        
-        # Account Actions
-        st.markdown("---")
-        st.subheader("⚙️ Account Actions")
-        
-        action_col1, action_col2, action_col3 = st.columns(3)
-        
-        with action_col1:
-            if st.button("📤 Export Account Data", use_container_width=True):
                 try:
-                    # Create account data export
-                    user_data = st.session_state.get('user_data', {})
-                    export_data = {
-                        "username": username,
-                        "plan": user_plan,
-                        "credits": current_credits,
-                        "created_at": user_data.get('created_at', ''),
-                        "total_leads_downloaded": user_data.get('total_leads_downloaded', 0),
-                        "export_date": datetime.now().isoformat()
+                    user_info = credit_system.get_user_info(username)
+                    if user_info:
+                        # Usage metrics
+                        usage_col1, usage_col2, usage_col3, usage_col4 = st.columns(4)
+                        
+                        with usage_col1:
+                            total_leads = user_info.get('total_leads_downloaded', 0)
+                            st.metric("Total Leads Generated", total_leads)
+                        
+                        with usage_col2:
+                            total_campaigns = len(user_info.get('transactions', []))
+                            st.metric("Campaigns Run", total_campaigns)
+                        
+                        with usage_col3:
+                            if user_plan == "demo":
+                                can_demo, remaining = credit_system.can_use_demo(username)
+                                demo_used = 5 - remaining
+                                st.metric("Demo Leads Used", f"{demo_used}/5")
+                            else:
+                                credits_used = user_info.get('total_credits_used', 0)
+                                st.metric("Credits Used", credits_used)
+                        
+                        with usage_col4:
+                            member_since = user_info.get('created_at', '')
+                            if member_since:
+                                try:
+                                    days_active = (datetime.now() - datetime.fromisoformat(member_since)).days
+                                    st.metric("Days Active", days_active)
+                                except:
+                                    st.metric("Status", "Active")
+                            else:
+                                st.metric("Status", "Active")
+                        
+                        # Transaction history
+                        transactions = user_info.get('transactions', [])
+                        if transactions:
+                            st.markdown("**📋 Recent Activity:**")
+                            
+                            # Show last 10 transactions
+                            recent_transactions = sorted(transactions, key=lambda x: x.get('timestamp', ''), reverse=True)[:10]
+                            
+                            for tx in recent_transactions:
+                                tx_type = tx.get('type', 'unknown')
+                                timestamp = tx.get('timestamp', '')
+                                
+                                if timestamp:
+                                    try:
+                                        tx_date = datetime.fromisoformat(timestamp).strftime("%m/%d/%Y %H:%M")
+                                    except:
+                                        tx_date = timestamp
+                                else:
+                                    tx_date = "Unknown"
+                                
+                                if tx_type == 'lead_download':
+                                    leads_count = tx.get('leads_downloaded', 0)
+                                    platform = tx.get('platform', 'unknown')
+                                    st.success(f"📊 {tx_date}: Generated {leads_count} leads from {platform}")
+                                
+                                elif tx_type == 'credit_purchase':
+                                    credits_added = tx.get('credits_added', 0)
+                                    st.info(f"💳 {tx_date}: Purchased {credits_added} credits")
+                                
+                                elif tx_type == 'demo_usage':
+                                    st.info(f"🎯 {tx_date}: Used demo lead")
+                        else:
+                            st.info("📋 No activity yet - start generating leads!")
+                    
+                    else:
+                        st.warning("⚠️ Could not load usage data")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error loading usage data: {str(e)}")
+            
+            # Settings sections
+            st.markdown("---")
+            
+            # Personal Preferences
+            st.subheader("🎯 Lead Generation Preferences")
+
+            pref_col1, pref_col2 = st.columns(2)
+
+            with pref_col1:
+                # Load current user config properly
+                username = simple_auth.get_current_user() if user_authenticated else None
+                current_user_config = get_current_config(username)
+                
+                default_search = st.text_input(
+                    "🔍 Default Search Keywords",
+                    value=current_user_config.get("search_term", ""),
+                    help="Your preferred search terms for lead generation",
+                    key="user_default_search"
+                )
+                
+                default_intensity = st.slider(
+                    "📊 Default Intensity Level",
+                    min_value=1,
+                    max_value=20,
+                    value=current_user_config.get("max_scrolls", 12),
+                    help="Your preferred intensity level for campaigns",
+                    key="user_default_intensity"
+                )
+                
+                # Show current values for confirmation
+                st.info(f"Current defaults: '{current_user_config.get('search_term', 'not set')}' with intensity {current_user_config.get('max_scrolls', 'not set')}")
+
+            with pref_col2:
+                # Platform preferences (your existing code for this column)
+                st.markdown("**🌍 Preferred Platforms:**")
+                
+                # Show available platforms based on plan
+                plan_access = {
+                    'demo': ['Twitter'],
+                    'starter': ['Twitter', 'Facebook'],
+                    'pro': ['Twitter', 'Facebook', 'LinkedIn', 'TikTok', 'Instagram', 'YouTube'],
+                    'ultimate': ['Twitter', 'Facebook', 'LinkedIn', 'TikTok', 'Instagram', 'YouTube', 'Medium', 'Reddit']
+                }
+                
+                available_platforms = plan_access.get(user_plan, ['Twitter'])
+                
+                for platform in available_platforms:
+                    platform_emojis = {
+                        'Twitter': '🐦', 'Facebook': '📘', 'LinkedIn': '💼',
+                        'TikTok': '🎵', 'Instagram': '📸', 'YouTube': '🎥',
+                        'Medium': '📝', 'Reddit': '🗨️'
                     }
+                    emoji = platform_emojis.get(platform, '🎯')
                     
-                    export_json = json.dumps(export_data, indent=2)
+                    pref_key = f"prefer_{platform.lower()}"
+                    platform_pref = st.checkbox(
+                        f"{emoji} {platform}",
+                        value=True,
+                        key=pref_key,
+                        help=f"Include {platform} in your campaigns by default"
+                    )
+
+            # NEW: Account Exclusion Management Section
+            st.markdown("---")
+            st.subheader("🚫 Account Exclusions")
+            st.markdown("*Manage which accounts are excluded from your lead results*")
+            
+            # Load current excluded accounts
+            try:
+                import os
+                from enhanced_config_loader import ConfigLoader
+                config_file = f"client_configs/client_{st.session_state.username}_config.json"
+                config_loader = ConfigLoader(config_file)
+               
+                
+                excluded_accounts = config_loader.config.get("excluded_accounts", {})
+                platform_accounts = excluded_accounts.get("accounts", {})
+                global_excludes = excluded_accounts.get("global_excludes", [])
+                
+            except Exception as e:
+                st.error(f"Could not load account exclusions: {e}")
+                platform_accounts = {}
+                global_excludes = []
+            
+            # Statistics
+            total_excluded = sum(len(accounts) for accounts in platform_accounts.values()) + len(global_excludes)
+            
+            excl_col1, excl_col2, excl_col3 = st.columns(3)
+            with excl_col1:
+                st.metric("🚫 Total Excluded", total_excluded)
+            with excl_col2:
+                st.metric("🌍 Global Exclusions", len(global_excludes))
+            with excl_col3:
+                platforms_with_exclusions = len([p for p in platform_accounts.values() if len(p) > 0])
+                st.metric("📱 Platforms Configured", platforms_with_exclusions)
+            
+            # Tabs for different exclusion management
+            exclusion_tab1, exclusion_tab2 = st.tabs(["📱 Platform-Specific", "🌍 Global Exclusions"])
+            
+            with exclusion_tab1:
+                st.markdown("#### Manage Platform-Specific Exclusions")
+                
+                platforms = {
+                    'instagram': {'emoji': '📸', 'name': 'Instagram', 'color': '#E4405F'},
+                    'tiktok': {'emoji': '🎵', 'name': 'TikTok', 'color': '#000000'},
+                    'facebook': {'emoji': '📘', 'name': 'Facebook', 'color': '#1877F2'},
+                    'twitter': {'emoji': '🐦', 'name': 'Twitter', 'color': '#1DA1F2'},
+                    'youtube': {'emoji': '📹', 'name': 'YouTube', 'color': '#FF0000'},
+                    'linkedin': {'emoji': '💼', 'name': 'LinkedIn', 'color': '#0A66C2'},
+                    'medium': {'emoji': '📝', 'name': 'Medium', 'color': '#000000'},
+                    'reddit': {'emoji': '🗨️', 'name': 'Reddit', 'color': '#FF4500'}
+                }
+                
+                # Create two columns for platform management
+                plat_col1, plat_col2 = st.columns(2)
+                
+                for idx, (platform_id, platform_info) in enumerate(platforms.items()):
+                    col = plat_col1 if idx % 2 == 0 else plat_col2
                     
-                    st.download_button(
-                        "📥 Download Account Data",
-                        data=export_json,
-                        file_name=f"account_data_{username}_{datetime.now().strftime('%Y%m%d')}.json",
-                        mime="application/json",
-                        use_container_width=True
+                    with col:
+                        with st.container():
+                            st.markdown(f"**{platform_info['emoji']} {platform_info['name']}**")
+                            
+                            current_accounts = platform_accounts.get(platform_id, [])
+                            
+                            # Show current exclusions
+                            if current_accounts:
+                                for account in current_accounts:
+                                    account_col1, account_col2 = st.columns([3, 1])
+                                    with account_col1:
+                                        st.text(f"@{account}")
+                                    with account_col2:
+                                        if st.button("🗑️", key=f"remove_{platform_id}_{account}", help=f"Remove @{account}"):
+                                            try:
+                                                config_loader.remove_excluded_account(platform_id, account)
+                                                config_loader.save_config() 
+                                                st.success(f"Removed @{account} from {platform_info['name']}")
+                                                st.rerun()
+                                            except Exception as e:
+                                                st.error(f"Error removing account: {e}")
+                            else:
+                                st.text("No excluded accounts")
+                            
+                            # Add new account
+                            new_account = st.text_input(
+                                f"Add {platform_info['name']} account",
+                                key=f"new_{platform_id}",
+                                placeholder="username (without @)",
+                                help=f"Enter username to exclude from {platform_info['name']} results"
+                            )
+                            
+                            if st.button(f"➕ Add to {platform_info['name']}", key=f"add_{platform_id}"):
+                                if new_account.strip():
+                                    clean_account = new_account.strip().lstrip('@')
+                                    try:
+                                        success = config_loader.add_excluded_account(platform_id, clean_account)
+                                        if success:
+                                            config_loader.save_config()
+                                            st.success(f"Added @{clean_account} to {platform_info['name']} exclusions")
+                                            st.rerun()
+                                        else:
+                                            st.warning(f"@{clean_account} already excluded from {platform_info['name']}")
+                                    except Exception as e:
+                                        st.error(f"Error adding account: {e}")
+                                else:
+                                    st.error("Please enter a username")
+                        
+                        st.markdown("---")
+            
+            with exclusion_tab2:
+                st.markdown("#### Manage Global Exclusions")
+                st.markdown("*These accounts are excluded from ALL platforms*")
+                
+                # Show current global exclusions
+                if global_excludes:
+                    st.markdown("**Current Global Exclusions:**")
+                    for account in global_excludes:
+                        global_col1, global_col2 = st.columns([3, 1])
+                        with global_col1:
+                            st.text(f"@{account}")
+                        with global_col2:
+                            if st.button("🗑️", key=f"remove_global_{account}", help=f"Remove @{account} from global exclusions"):
+                                try:
+                                    # Remove from global excludes
+                                    if "excluded_accounts" in config_loader.config:
+                                        global_list = config_loader.config["excluded_accounts"].get("global_excludes", [])
+                                        if account in global_list:
+                                            global_list.remove(account)
+                                            config_loader.save_config()
+                                            st.success(f"Removed @{account} from global exclusions")
+                                            st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error removing global account: {e}")
+                else:
+                    st.text("No global exclusions configured")
+                
+                # Add new global exclusion
+                st.markdown("**Add Global Exclusion:**")
+                new_global = st.text_input(
+                    "Username to exclude globally",
+                    key="new_global_exclusion",
+                    placeholder="username (without @)",
+                    help="This account will be excluded from ALL platform results"
+                )
+                
+                if st.button("➕ Add Global Exclusion"):
+                    if new_global.strip():
+                        clean_global = new_global.strip().lstrip('@')
+                        try:
+                            success = config_loader.add_global_exclude(clean_global)
+                            if success:
+                                st.success(f"Added @{clean_global} to global exclusions")
+                                st.rerun()
+                            else:
+                                st.warning(f"@{clean_global} already in global exclusions")
+                        except Exception as e:
+                            st.error(f"Error adding global exclusion: {e}")
+                    else:
+                        st.error("Please enter a username")
+            
+            # Quick Actions
+            st.markdown("---")
+            st.markdown("#### ⚡ Exclusion Tools")
+            
+            quick_col1, quick_col2, quick_col3 = st.columns(3)
+            
+            with quick_col1:
+                if st.button("🔄 Refresh Exclusions", help="Reload exclusions from config"):
+                    st.rerun()
+            
+            with quick_col2:
+                if st.button("📥 Import from Registration", help="Add accounts from your registration"):
+                    try:
+                        # Try to find registration data
+                        user_data = simple_auth.get_user_data(st.session_state.current_user)
+                        if user_data and 'social_accounts' in user_data:
+                            added_count = 0
+                            for platform, username in user_data['social_accounts'].items():
+                                if username.strip():
+                                    try:
+                                        if config_loader.add_excluded_account(platform, username):
+                                            added_count += 1
+                                    except:
+                                        pass
+                            
+                            if added_count > 0:
+                                st.success(f"Added {added_count} accounts from registration")
+                                st.rerun()
+                            else:
+                                st.info("No new accounts to import")
+                        else:
+                            st.warning("No registration data found")
+                    except Exception as e:
+                        st.error(f"Import failed: {e}")
+            
+            with quick_col3:
+                if st.button("🧹 Clear All Exclusions", help="Remove all excluded accounts"):
+                    if st.checkbox("⚠️ Confirm: Clear all exclusions", key="confirm_clear_exclusions"):
+                        try:
+                            # Clear all exclusions
+                            config_loader.config["excluded_accounts"] = {
+                                "enabled": True,
+                                "accounts": {
+                                    "instagram": [],
+                                    "tiktok": [],
+                                    "facebook": [],
+                                    "twitter": [],
+                                    "youtube": [],
+                                    "linkedin": [],
+                                    "medium": [],
+                                    "reddit": []
+                                },
+                                "global_excludes": []
+                            }
+                            config_loader.save_config()
+                            st.success("All exclusions cleared")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error clearing exclusions: {e}")
+            
+            # Help section
+            with st.expander("ℹ️ How Account Exclusions Work"):
+                st.markdown("""
+                **Account exclusions prevent your own social media accounts from appearing in your lead results.**
+                
+                **Platform-Specific Exclusions:**
+                - Only apply to that specific platform
+                - Example: Excluding your Instagram won't affect TikTok results
+                
+                **Global Exclusions:**
+                - Apply to ALL platforms automatically
+                - Useful for accounts you use across multiple platforms
+                
+                **Best Practices:**
+                - Add your business accounts to prevent self-targeting
+                - Add personal accounts if they might appear in business searches
+                - Use global exclusions for accounts used across platforms
+                - Regularly review and update your exclusions
+                
+                **Tips:**
+                - Changes take effect immediately for new lead generation
+                - You can add usernames with or without the @ symbol
+                - Usernames are case-insensitive
+                """)
+            
+            # Show current configuration summary (FILTERED BY CURRENT USER)
+            st.markdown("---")
+            st.markdown("#### 📊 Current Configuration Summary")
+
+            # ✅ GET CURRENT USER'S EXCLUSIONS ONLY
+            if 'username' in st.session_state and st.session_state.username:
+                current_username = st.session_state.username
+                
+                # Filter exclusions for current user only
+                user_platform_accounts = {}
+                user_global_excludes = []
+                
+                # Get user-specific platform exclusions
+                for platform, accounts in platform_accounts.items():
+                    if accounts:
+                        # Filter accounts that belong to current user
+                        user_accounts = []
+                        for account in accounts:
+                            # Check if this account belongs to current user
+                            # (You might need to adjust this logic based on how you store user associations)
+                            if current_username in account or account.startswith(current_username):
+                                user_accounts.append(account)
+                        
+                        if user_accounts:
+                            user_platform_accounts[platform] = user_accounts
+                
+                # Get user-specific global exclusions  
+                if global_excludes:
+                    for account in global_excludes:
+                        if current_username in account or account.startswith(current_username):
+                            user_global_excludes.append(account)
+                
+                # Count total user exclusions
+                user_total_excluded = sum(len(accounts) for accounts in user_platform_accounts.values()) + len(user_global_excludes)
+                
+                if user_total_excluded > 0:
+                    summary_data = []
+                    
+                    # Platform-specific summary (user only)
+                    for platform, accounts in user_platform_accounts.items():
+                        if accounts:
+                            platform_info = platforms.get(platform, {'emoji': '📱', 'name': platform.title()})
+                            summary_data.append({
+                                "Platform": f"{platform_info['emoji']} {platform_info['name']}",
+                                "Excluded Accounts": f"{len(accounts)} accounts", 
+                                "Accounts": ", ".join([f"@{acc}" for acc in accounts[:3]]) + ("..." if len(accounts) > 3 else "")
+                            })
+                    
+                    # Global summary (user only)
+                    if user_global_excludes:
+                        summary_data.append({
+                            "Platform": "🌍 Global",
+                            "Excluded Accounts": f"{len(user_global_excludes)} accounts",
+                            "Accounts": ", ".join([f"@{acc}" for acc in user_global_excludes[:3]]) + ("..." if len(user_global_excludes) > 3 else "")
+                        })
+                    
+                    if summary_data:
+                        st.table(summary_data)
+                        st.success(f"👤 **{current_username}**: {user_total_excluded} total exclusions configured")
+                    else:
+                        st.info("No exclusions configured for your account")
+                else:
+                    st.info(f"💡 **Hi {current_username}!** Add your social media accounts to prevent them from appearing in your lead results!")
+
+            else:
+                st.warning("⚠️ Please log in to view your configuration summary")
+            
+            # Communication Preferences
+            st.markdown("---")
+            st.subheader("📧 Communication Preferences")
+            
+            comm_col1, comm_col2 = st.columns(2)
+            
+            with comm_col1:
+                email_completion = st.checkbox(
+                    "📧 Email when campaigns complete",
+                    value=True,
+                    help="Get notified when your lead generation campaigns finish"
+                )
+                
+                email_weekly = st.checkbox(
+                    "📊 Weekly usage reports",
+                    value=True,
+                    help="Receive weekly summaries of your lead generation activity"
+                )
+            
+            with comm_col2:
+                email_updates = st.checkbox(
+                    "🔔 Platform updates",
+                    value=True,
+                    help="Stay informed about new features and improvements"
+                )
+                
+                email_tips = st.checkbox(
+                    "💡 Lead generation tips",
+                    value=True,
+                    help="Receive expert tips for better lead generation results"
+                )
+            
+            # Language & Localization (if multilingual is available)
+            if MULTILINGUAL_AVAILABLE:
+                st.markdown("---")
+                st.subheader("🌍 Language & Localization")
+                
+                lang_col1, lang_col2 = st.columns(2)
+                
+                with lang_col1:
+                    interface_language = st.selectbox(
+                        "🔤 Interface Language",
+                        ["English", "Spanish", "French", "German", "Portuguese"],
+                        key="interface_language_select",
+                        help="Choose your preferred interface language"
                     )
                     
-                except Exception as e:
-                    st.error(f"❌ Export failed: {str(e)}")
-        
-        with action_col2:
-            if st.button("🔄 Reset Preferences", use_container_width=True):
-                if st.checkbox("⚠️ Confirm reset", key="confirm_reset_prefs"):
-                    try:
-                        # Reset user preferences to defaults
-                        st.success("✅ Preferences reset to defaults")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ Reset failed: {str(e)}")
-                else:
-                    st.info("Check the box above to confirm")
-        
-        with action_col3:
-            if st.button("🔒 Logout", use_container_width=True):
-                simple_auth.logout_user()
-                st.success("✅ Successfully logged out")
-                st.rerun()
+                    default_dm_language = st.selectbox(
+                        "💬 Default DM Language",
+                        ["Auto-detect", "English", "Spanish", "French", "German", "Portuguese"],
+                        key="default_dm_language_select",
+                        help="Default language for generated DMs"
+                    )
+                
+                with lang_col2:
+                    cultural_style = st.selectbox(
+                        "🎭 Cultural Adaptation",
+                        ["Standard", "Casual", "Professional", "Creative"],
+                        key="cultural_adaptation_select",
+                        help="Adjust tone and style for different cultures"
+                    )
+                    
+                    geographic_focus = st.selectbox(
+                        "📍 Geographic Focus",
+                        ["Global", "North America", "Europe", "Asia-Pacific", "Latin America"],
+                        key="geographic_focus_select",
+                        help="Focus your campaigns on specific regions"
+                    )
             
-        # 4️⃣ Close Account Button
-        if st.button("❌ Close Account", use_container_width=True, key="close_account_btn"):
-            st.session_state.show_close_expander = True
-        
-        # Show confirmation expander
-        if st.session_state.get("show_close_expander", False):
-            with st.expander("⚠️ Are you absolutely sure? This will permanently delete your account", expanded=True):
-                st.warning(
-                    "⚠️ **PERMANENT DELETION WARNING** ⚠️\n\n"
-                    "Deleting your account will:\n"
-                    "• Remove ALL your data and credits\n" 
-                    "• Delete any saved campaigns and settings\n"
-                    "• Remove your user profile permanently\n"
-                    "• **This action CANNOT be undone**",
-                    icon="⚠️"
-                )
+            # Security Settings
+            st.markdown("---")
+            st.subheader("🔐 Security & Privacy")
+            
+            security_col1, security_col2 = st.columns(2)
+            
+            with security_col1:
+                st.markdown("**🔐 Password Security**")
                 
-                # Reason for leaving
-                reason = st.selectbox(
-                    "📝 Why are you closing your account? (helps us improve)",
-                    [
-                        "Select a reason...",
-                        "Found a better alternative", 
-                        "Too expensive",
-                        "Not using it enough",
-                        "Missing features I need",
-                        "Technical issues",
-                        "Privacy concerns",
-                        "Other reason"
-                    ],
-                    key="close_reason"
-                )
+                if st.button("🔑 Change Password", use_container_width=True, key="change_password_main"):
+                    st.session_state.show_update_password = True
+                    st.rerun()
                 
-                # Optional feedback
-                feedback = st.text_area(
-                    "💬 Any suggestions to help us improve? (optional)",
-                    placeholder="Your feedback helps us build a better product for future users...",
-                    key="close_feedback",
-                    height=100
-                )
-                
-                # Final confirmation checkbox
-                confirm_understood = st.checkbox(
-                    "✅ I understand this will **permanently delete** my account and all data",
-                    key="confirm_close"
-                )
-                
-                # Additional warning if they haven't selected a reason
-                reason_selected = reason != "Select a reason..."
-                
-                if not reason_selected:
-                    st.info("💡 Please select a reason before proceeding")
-                
-                # Show what will be deleted
-                if confirm_understood:
-                    current_user = simple_auth.get_current_user()
-                    st.markdown("### 🗑️ The following will be deleted:")
-                    st.markdown(f"""
-                    - **User account:** {current_user}
-                    - **All credits and payment history**
-                    - **Campaign data and settings** 
-                    - **Configuration files**
-                    - **All stored preferences**
+                # Show password requirements
+                with st.expander("🛡️ Password Requirements"):
+                    st.markdown("""
+                    **Strong passwords must include:**
+                    - At least 8 characters
+                    - One uppercase letter (A-Z)
+                    - One lowercase letter (a-z)  
+                    - One number (0-9)
+                    - One special character (!@#$%^&*)
                     """)
+            
+            with security_col2:
+                st.markdown("**🔒 Privacy Settings**")
                 
-                # Final delete button with double confirmation
-                col1, col2 = st.columns(2)
+                data_retention = st.selectbox(
+                    "📊 Data Retention",
+                    ["30 days", "90 days", "1 year", "Until deleted"],
+                    index=2,
+                    help="How long to keep your generated leads"
+                )
                 
-                with col1:
-                    if st.button(
-                        "❌ Cancel",
-                        use_container_width=True,
-                        key="cancel_delete_btn"
-                    ):
-                        # Clear all the deletion-related session state
-                        st.session_state.show_close_expander = False
-                        st.session_state.pop('close_reason', None)
-                        st.session_state.pop('close_feedback', None)
-                        st.session_state.pop('confirm_close', None)
-                        st.rerun()
-                
-                with col2:
-                    delete_enabled = confirm_understood and reason_selected
-                    
-                    if st.button(
-                        "🗑️ DELETE MY ACCOUNT PERMANENTLY" if delete_enabled else "❌ Complete Requirements Above",
-                        type="primary" if delete_enabled else "secondary",
-                        disabled=not delete_enabled,
-                        use_container_width=True,
-                        key="final_delete_btn"
-                    ):
-                        if delete_enabled:
-                            # Show deletion in progress
-                            with st.spinner("🗑️ Deleting your account..."):
-                                try:
-                                    # Log the deletion reason and feedback
-                                    current_user = simple_auth.get_current_user()
-                                    st.write(f"📝 Deletion reason: {reason}")
-                                    if feedback.strip():
-                                        st.write(f"💬 User feedback: {feedback}")
-                                    
-                                    # Perform the actual deletion
-                                    deletion_successful = simple_auth.delete_user_account()
-                                    
-                                    # The delete_user_account method will handle the rerun
-                                    # So we don't need to do anything else here
-                                    
-                                except Exception as e:
-                                    st.error(f"❌ Account deletion failed: {str(e)}")
-                                    st.info("💡 Please try again or contact support if the problem persists")
-                                    
-                                    # Log the error for debugging
-                                    st.write(f"🐛 Error details: {e}")
-                        else:
-                            st.error("❌ Please complete all requirements before proceeding")
-    # Additional helper function for complete cleanup
-    def force_complete_user_cleanup(username: str):
-        """Nuclear option: completely remove all traces of a user"""
-        import os
-        import json
-        import glob
-        import streamlit as st
-        
-        st.write(f"💣 COMPLETE CLEANUP for {username}")
-        
-        # 1. All possible JSON files
-        json_files_to_check = [
-            "users.json",
-            "users_credits.json", 
-            "users_credit.json",  # Check both versions
-            "rate_limits.json",
-            "password_reset_tokens.json"
-        ]
-        
-        for json_file in json_files_to_check:
-            if os.path.exists(json_file):
-                try:
-                    with open(json_file, "r") as f:
-                        data = json.load(f)
-                    
-                    if username in data:
-                        del data[username]
+                usage_analytics = st.checkbox(
+                    "📈 Usage Analytics",
+                    value=True,
+                    help="Help improve the platform by sharing anonymous usage data"
+                )
+            
+            # Account Actions
+            st.markdown("---")
+            st.subheader("⚙️ Account Actions")
+            
+            action_col1, action_col2, action_col3 = st.columns(3)
+            
+            with action_col1:
+                if st.button("📤 Export Account Data", use_container_width=True):
+                    try:
+                        # Create account data export
+                        user_data = st.session_state.get('user_data', {})
+                        export_data = {
+                            "username": username,
+                            "plan": user_plan,
+                            "credits": current_credits,
+                            "created_at": user_data.get('created_at', ''),
+                            "total_leads_downloaded": user_data.get('total_leads_downloaded', 0),
+                            "export_date": datetime.now().isoformat()
+                        }
                         
-                        with open(json_file, "w") as f:
-                            json.dump(data, f, indent=2)
+                        export_json = json.dumps(export_data, indent=2)
                         
-                        st.write(f"✅ Removed {username} from {json_file}")
-                except Exception as e:
-                    st.write(f"❌ Error with {json_file}: {e}")
-        
-        # 2. All possible directories and file patterns
-        patterns_to_check = [
-            f"client_configs/client_{username}_config.json",
-            f"user_data/{username}*",
-            f"*{username}*",
-        ]
-        
-        for pattern in patterns_to_check:
-            try:
-                matching_files = glob.glob(pattern)
-                for file_path in matching_files:
-                    if os.path.isfile(file_path):
-                        os.remove(file_path)
-                        st.write(f"🗑️ Removed: {file_path}")
-            except Exception as e:
-                st.write(f"⚠️ Pattern {pattern} error: {e}")
-        
-        st.write("💥 Complete cleanup finished")
-        
-        # Save preferences button
-        st.markdown("---")
-        
-        if st.button("💾 Save All Settings", type="primary", use_container_width=True):
-            try:
-                # Get current username
-                username = simple_auth.get_current_user() if user_authenticated else None
-                
-                # Update config with new default settings
-                if CONFIG_MANAGER_AVAILABLE:
-                    config_updated = update_config(username, default_search, default_intensity)
-                else:
-                    config_updated = False
-                
-                # Save user preferences (your existing code)
-                user_preferences = {
-                    "default_search": default_search,
-                    "default_intensity": default_intensity,
-                    "email_completion": email_completion,
-                    "email_weekly": email_weekly,
-                    "email_updates": email_updates,
-                    "email_tips": email_tips,
-                    "data_retention": data_retention,
-                    "usage_analytics": usage_analytics
-                }
-                
-                # Add multilingual preferences if available
-                if MULTILINGUAL_AVAILABLE:
-                    user_preferences.update({
-                        "interface_language": interface_language,
-                        "default_dm_language": default_dm_language,
-                        "cultural_style": cultural_style,
-                        "geographic_focus": geographic_focus
-                    })
-                
-                # Save to user's session data
-                user_data = st.session_state.get('user_data', {})
-                user_data['preferences'] = user_preferences
-                st.session_state.user_data = user_data
-                
-                if config_updated:
-                    st.success("✅ Settings saved successfully!")
-                    st.info("🔄 Your preferences will be applied to future campaigns")
-                    st.info(f"📝 Updated: Search term = '{default_search}', Intensity = {default_intensity}")
-                    
-                    # Simple instruction for user
-                    st.markdown("---")
-                    st.markdown("### ✅ Settings Saved")
-                    st.markdown(f"""
-                    **Your new defaults:**
-                    - 🔍 Search term: **{default_search}**
-                    - 📊 Intensity: **{default_intensity}**
-                    
-                    **💡 To use these in Empire Scraper:**
-                    - Go to Empire Scraper tab
-                    - Click "🔄 Load from Settings" in the optional section
-                    - Or just type your preferred values directly
-                    """)
-                    
-                else:
-                    st.warning("⚠️ Settings partially saved - config update may have failed")
-                
-            except Exception as e:
-                st.error(f"❌ Error saving settings: {str(e)}")
-                print(f"Settings save error: {e}")
-        # Enhanced status indicator
-        if st.session_state.get('settings_just_updated'):
-            settings_update_time = st.session_state.get('settings_update_time', 'unknown')
-            try:
-                if settings_update_time != 'unknown':
-                    update_time = datetime.fromisoformat(settings_update_time)
-                    time_ago = (datetime.now() - update_time).total_seconds()
-                    
-                    if time_ago < 300:  # Show for 5 minutes
-                        st.info(f"🔄 Settings updated {int(time_ago)} seconds ago - Empire Scraper will refresh when you switch tabs")
+                        st.download_button(
+                            "📥 Download Account Data",
+                            data=export_json,
+                            file_name=f"account_data_{username}_{datetime.now().strftime('%Y%m%d')}.json",
+                            mime="application/json",
+                            use_container_width=True
+                        )
                         
-                        # Show current session state for verification
-                        with st.expander("🔍 Current Session State", expanded=False):
-                            st.json({
-                                "search_term": st.session_state.get('search_term'),
-                                "max_scrolls": st.session_state.get('max_scrolls'),
-                                "last_tab": st.session_state.get('last_active_tab'),
-                                "force_refresh": st.session_state.get('force_empire_refresh')
-                            })
+                    except Exception as e:
+                        st.error(f"❌ Export failed: {str(e)}")
+            
+            with action_col2:
+                if st.button("🔄 Reset Preferences", use_container_width=True):
+                    if st.checkbox("⚠️ Confirm reset", key="confirm_reset_prefs"):
+                        try:
+                            # Reset user preferences to defaults
+                            st.success("✅ Preferences reset to defaults")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Reset failed: {str(e)}")
                     else:
-                        # Clear the flag after 5 minutes
-                        st.session_state.settings_just_updated = False
-            except:
-                pass
+                        st.info("Check the box above to confirm")
+            
+            with action_col3:
+                if st.button("🔒 Logout", use_container_width=True):
+                    simple_auth.logout_user()
+                    st.success("✅ Successfully logged out")
+                    st.rerun()
+                
+            # 4️⃣ Close Account Button
+            if st.button("❌ Close Account", use_container_width=True, key="close_account_btn"):
+                st.session_state.show_close_expander = True
+            
+            # Show confirmation expander
+            if st.session_state.get("show_close_expander", False):
+                with st.expander("⚠️ Are you absolutely sure? This will permanently delete your account", expanded=True):
+                    st.warning(
+                        "⚠️ **PERMANENT DELETION WARNING** ⚠️\n\n"
+                        "Deleting your account will:\n"
+                        "• Remove ALL your data and credits\n" 
+                        "• Delete any saved campaigns and settings\n"
+                        "• Remove your user profile permanently\n"
+                        "• **This action CANNOT be undone**",
+                        icon="⚠️"
+                    )
+                    
+                    # Reason for leaving
+                    reason = st.selectbox(
+                        "📝 Why are you closing your account? (helps us improve)",
+                        [
+                            "Select a reason...",
+                            "Found a better alternative", 
+                            "Too expensive",
+                            "Not using it enough",
+                            "Missing features I need",
+                            "Technical issues",
+                            "Privacy concerns",
+                            "Other reason"
+                        ],
+                        key="close_reason"
+                    )
+                    
+                    # Optional feedback
+                    feedback = st.text_area(
+                        "💬 Any suggestions to help us improve? (optional)",
+                        placeholder="Your feedback helps us build a better product for future users...",
+                        key="close_feedback",
+                        height=100
+                    )
+                    
+                    # Final confirmation checkbox
+                    confirm_understood = st.checkbox(
+                        "✅ I understand this will **permanently delete** my account and all data",
+                        key="confirm_close"
+                    )
+                    
+                    # Additional warning if they haven't selected a reason
+                    reason_selected = reason != "Select a reason..."
+                    
+                    if not reason_selected:
+                        st.info("💡 Please select a reason before proceeding")
+                    
+                    # Show what will be deleted
+                    if confirm_understood:
+                        current_user = simple_auth.get_current_user()
+                        st.markdown("### 🗑️ The following will be deleted:")
+                        st.markdown(f"""
+                        - **User account:** {current_user}
+                        - **All credits and payment history**
+                        - **Campaign data and settings** 
+                        - **Configuration files**
+                        - **All stored preferences**
+                        """)
+                    
+                    # Final delete button with double confirmation
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        if st.button(
+                            "❌ Cancel",
+                            use_container_width=True,
+                            key="cancel_delete_btn"
+                        ):
+                            # Clear all the deletion-related session state
+                            st.session_state.show_close_expander = False
+                            st.session_state.pop('close_reason', None)
+                            st.session_state.pop('close_feedback', None)
+                            st.session_state.pop('confirm_close', None)
+                            st.rerun()
+                    
+                    with col2:
+                        delete_enabled = confirm_understood and reason_selected
+                        
+                        if st.button(
+                            "🗑️ DELETE MY ACCOUNT PERMANENTLY" if delete_enabled else "❌ Complete Requirements Above",
+                            type="primary" if delete_enabled else "secondary",
+                            disabled=not delete_enabled,
+                            use_container_width=True,
+                            key="final_delete_btn"
+                        ):
+                            if delete_enabled:
+                                # Show deletion in progress
+                                with st.spinner("🗑️ Deleting your account..."):
+                                    try:
+                                        # Log the deletion reason and feedback
+                                        current_user = simple_auth.get_current_user()
+                                        st.write(f"📝 Deletion reason: {reason}")
+                                        if feedback.strip():
+                                            st.write(f"💬 User feedback: {feedback}")
+                                        
+                                        # Perform the actual deletion
+                                        deletion_successful = simple_auth.delete_user_account()
+                                        
+                                        # The delete_user_account method will handle the rerun
+                                        # So we don't need to do anything else here
+                                        
+                                    except Exception as e:
+                                        st.error(f"❌ Account deletion failed: {str(e)}")
+                                        st.info("💡 Please try again or contact support if the problem persists")
+                                        
+                                        # Log the error for debugging
+                                        st.write(f"🐛 Error details: {e}")
+                            else:
+                                st.error("❌ Please complete all requirements before proceeding")
+
+
+        # Additional helper function for complete cleanup
+        def force_complete_user_cleanup(username: str):
+            """Nuclear option: completely remove all traces of a user"""
+            import os
+            import json
+            import glob
+            import streamlit as st
+            
+            st.write(f"💣 COMPLETE CLEANUP for {username}")
+            
+            # 1. All possible JSON files
+            json_files_to_check = [
+                "users.json",
+                "users_credits.json", 
+                "users_credit.json",  # Check both versions
+                "rate_limits.json",
+                "password_reset_tokens.json"
+            ]
+            
+            for json_file in json_files_to_check:
+                if os.path.exists(json_file):
+                    try:
+                        with open(json_file, "r") as f:
+                            data = json.load(f)
+                        
+                        if username in data:
+                            del data[username]
+                            
+                            with open(json_file, "w") as f:
+                                json.dump(data, f, indent=2)
+                            
+                            st.write(f"✅ Removed {username} from {json_file}")
+                    except Exception as e:
+                        st.write(f"❌ Error with {json_file}: {e}")
+            
+            # 2. All possible directories and file patterns
+            patterns_to_check = [
+                f"client_configs/client_{username}_config.json",
+                f"user_data/{username}*",
+                f"*{username}*",
+            ]
+            
+            for pattern in patterns_to_check:
+                try:
+                    matching_files = glob.glob(pattern)
+                    for file_path in matching_files:
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+                            st.write(f"🗑️ Removed: {file_path}")
+                except Exception as e:
+                    st.write(f"⚠️ Pattern {pattern} error: {e}")
+            
+            st.write("💥 Complete cleanup finished")
+            
+            # Save preferences button
+            st.markdown("---")
+            
+            if st.button("💾 Save All Settings", type="primary", use_container_width=True):
+                try:
+                    # Get current username
+                    username = simple_auth.get_current_user() if user_authenticated else None
+                    
+                    # Update config with new default settings
+                    if CONFIG_MANAGER_AVAILABLE:
+                        config_updated = update_config(username, default_search, default_intensity)
+                    else:
+                        config_updated = False
+                    
+                    # Save user preferences (your existing code)
+                    user_preferences = {
+                        "default_search": default_search,
+                        "default_intensity": default_intensity,
+                        "email_completion": email_completion,
+                        "email_weekly": email_weekly,
+                        "email_updates": email_updates,
+                        "email_tips": email_tips,
+                        "data_retention": data_retention,
+                        "usage_analytics": usage_analytics
+                    }
+                    
+                    # Add multilingual preferences if available
+                    if MULTILINGUAL_AVAILABLE:
+                        user_preferences.update({
+                            "interface_language": interface_language,
+                            "default_dm_language": default_dm_language,
+                            "cultural_style": cultural_style,
+                            "geographic_focus": geographic_focus
+                        })
+                    
+                    # Save to user's session data
+                    user_data = st.session_state.get('user_data', {})
+                    user_data['preferences'] = user_preferences
+                    st.session_state.user_data = user_data
+                    
+                    if config_updated:
+                        st.success("✅ Settings saved successfully!")
+                        st.info("🔄 Your preferences will be applied to future campaigns")
+                        st.info(f"📝 Updated: Search term = '{default_search}', Intensity = {default_intensity}")
+                        
+                        # Simple instruction for user
+                        st.markdown("---")
+                        st.markdown("### ✅ Settings Saved")
+                        st.markdown(f"""
+                        **Your new defaults:**
+                        - 🔍 Search term: **{default_search}**
+                        - 📊 Intensity: **{default_intensity}**
+                        
+                        **💡 To use these in Empire Scraper:**
+                        - Go to Empire Scraper tab
+                        - Click "🔄 Load from Settings" in the optional section
+                        - Or just type your preferred values directly
+                        """)
+                        
+                    else:
+                        st.warning("⚠️ Settings partially saved - config update may have failed")
+                    
+                except Exception as e:
+                    st.error(f"❌ Error saving settings: {str(e)}")
+                    print(f"Settings save error: {e}")
+
+            # Enhanced status indicator
+            if st.session_state.get('settings_just_updated'):
+                settings_update_time = st.session_state.get('settings_update_time', 'unknown')
+                try:
+                    if settings_update_time != 'unknown':
+                        update_time = datetime.fromisoformat(settings_update_time)
+                        time_ago = (datetime.now() - update_time).total_seconds()
+                        
+                        if time_ago < 300:  # Show for 5 minutes
+                            st.info(f"🔄 Settings updated {int(time_ago)} seconds ago - Empire Scraper will refresh when you switch tabs")
+                            
+                            # Show current session state for verification
+                            with st.expander("🔍 Current Session State", expanded=False):
+                                st.json({
+                                    "search_term": st.session_state.get('search_term'),
+                                    "max_scrolls": st.session_state.get('max_scrolls'),
+                                    "last_tab": st.session_state.get('last_active_tab'),
+                                    "force_refresh": st.session_state.get('force_empire_refresh')
+                                })
+                        else:
+                            # Clear the flag after 5 minutes
+                            st.session_state.settings_just_updated = False
+                except:
+                    pass
 
 
 st.markdown(
