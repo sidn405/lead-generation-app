@@ -8037,78 +8037,78 @@ with package_col3:
             st.rerun()
     
     # ROI showcase
-st.markdown("---")
-st.header("💰 Package ROI Calculator")
+    st.markdown("---")
+    st.header("💰 Package ROI Calculator")
+            
+    roi_col1, roi_col2, roi_col3 = st.columns(3)
+            
+    with roi_col1:
+        st.subheader("🎯 **Starter Pack ROI**")
+        st.success("500 leads × $25 value = **$12,500 value**")
+        st.markdown("Cost: $97 → **12,786% ROI**")
+            
+    with roi_col2:
+        st.subheader("🔥 **Deep Dive ROI**")
+        st.success("2,000 leads × $25 value = **$50,000 value**")
+        st.markdown("Cost: $297 → **16,835% ROI**")
+            
+    with roi_col3:
+        st.subheader("💎 **Domination ROI**")
+        st.success("5,000 leads × $25 value = **$250,000 value**")
+        st.markdown("Cost: $897 → **27,869% ROI**")
+            
+    # Package comparison
+    st.markdown("---")
+    st.header("📊 Package Comparison")
+            
+    comparison_data = {
+        "Feature": [
+            "Number of Leads",
+            "Platforms Included", 
+            "Delivery Time",
+            "Social Profiles",
+            "DM Generation",
+            "Geographic Targeting",
+            "Industry Research",
+            "Support Level",
+            "Refresh Guarantee"
+        ],
+        "🎯 Starter ($97)": [
+            "500",
+            "2-3 platforms",
+            "48 hours",
+            "Basic",
+            "Templates",
+            "No",
+            "Basic",
+            "Email",
+            "No"
+        ],
+        "🔥 Deep Dive ($297)": [
+            "2,000",
+            "All 8 platforms",
+            "72 hours", 
+            "Included",
+            "Pre-generated",
+            "Basic",
+            "Comprehensive",
+            "Priority",
+            "7 days"
+        ],
+        "💎 Domination ($897)": [
+            "5,000",
+            "All 8 platforms",
+            "5 business days",
+            "Enhanced",
+            "Custom sequences", 
+            "Advanced",
+            "Multi-niche",
+            "Priority+",
+            "30 days"
+        ]
+    }
         
-roi_col1, roi_col2, roi_col3 = st.columns(3)
-        
-with roi_col1:
-    st.subheader("🎯 **Starter Pack ROI**")
-    st.success("500 leads × $25 value = **$12,500 value**")
-    st.markdown("Cost: $97 → **12,786% ROI**")
-        
-with roi_col2:
-    st.subheader("🔥 **Deep Dive ROI**")
-    st.success("2,000 leads × $25 value = **$50,000 value**")
-    st.markdown("Cost: $297 → **16,835% ROI**")
-        
-with roi_col3:
-    st.subheader("💎 **Domination ROI**")
-    st.success("5,000 leads × $25 value = **$250,000 value**")
-    st.markdown("Cost: $897 → **27,869% ROI**")
-        
-# Package comparison
-st.markdown("---")
-st.header("📊 Package Comparison")
-        
-comparison_data = {
-    "Feature": [
-        "Number of Leads",
-        "Platforms Included", 
-        "Delivery Time",
-        "Social Profiles",
-        "DM Generation",
-        "Geographic Targeting",
-        "Industry Research",
-        "Support Level",
-        "Refresh Guarantee"
-    ],
-    "🎯 Starter ($97)": [
-        "500",
-        "2-3 platforms",
-        "48 hours",
-        "Basic",
-        "Templates",
-        "No",
-        "Basic",
-        "Email",
-        "No"
-    ],
-    "🔥 Deep Dive ($297)": [
-        "2,000",
-        "All 8 platforms",
-        "72 hours", 
-        "Included",
-        "Pre-generated",
-        "Basic",
-        "Comprehensive",
-        "Priority",
-        "7 days"
-    ],
-    "💎 Domination ($897)": [
-        "5,000",
-        "All 8 platforms",
-        "5 business days",
-        "Enhanced",
-        "Custom sequences", 
-        "Advanced",
-        "Multi-niche",
-        "Priority+",
-        "30 days"
-    ]
-}
-    
-st.dataframe(comparison_data, use_container_width=True)   
+    st.dataframe(comparison_data, use_container_width=True)   
 
 st.markdown(
     '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
