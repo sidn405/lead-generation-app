@@ -218,8 +218,8 @@ def create_package_stripe_session(stripe, username: str, package_type: str, amou
         user_email = f"{username}@empire.com"
     
     # Create package-specific success URL
-    success_url = f"http://localhost:8501?success=true&package={package_type}&username={username}&amount={amount}&industry={industry.replace(' ', '+')}&location={location.replace(' ', '+')}&timestamp={int(time.time())}"
-    cancel_url = f"http://localhost:8501?cancelled=true&username={username}"
+    success_url = f"https://leadgeneratorempire.com/?success=true&package={package_type}&username={username}&amount={amount}&industry={industry.replace(' ', '+')}&location={location.replace(' ', '+')}&timestamp={int(time.time())}"
+    cancel_url = f"https://leadgeneratorempire.com/?cancelled=true&username={username}"
     
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
@@ -462,8 +462,8 @@ def create_improved_stripe_session(stripe, username: str, plan_type: str, amount
         user_email = f"{username}@empire.com"
     
     # Create more robust success URL
-    success_url = f"http://localhost:8501?success=true&plan={plan_type}&username={username}&amount={amount}&timestamp={int(time.time())}"
-    cancel_url = f"http://localhost:8501?cancelled=true&username={username}"
+    success_url = f"https://leadgeneratorempire.com/?success=true&plan={plan_type}&username={username}&amount={amount}&timestamp={int(time.time())}"
+    cancel_url = f"https://leadgeneratorempire.com/?cancelled=true&username={username}"
     
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],

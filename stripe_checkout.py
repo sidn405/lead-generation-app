@@ -69,9 +69,9 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
         is_subscription = credits > 0 and tier.get('credits') is None  # No explicit credits = subscription
         
         if is_subscription:
-            success_url = f"http://localhost:8501?payment_success=true&tier={plan_name.lower().replace(' ', '_')}&monthly_credits={credits}&username={username}&amount={price}&type=subscription"
+            success_url = f"https://leadgeneratorempire.com/?payment_success=true&tier={plan_name.lower().replace(' ', '_')}&monthly_credits={credits}&username={username}&amount={price}&type=subscription"
         else:
-            success_url = f"http://localhost:8501?payment_success=true&tier={plan_name.lower().replace(' ', '_')}&credits={credits}&username={username}&amount={price}&type=credits"
+            success_url = f"https://leadgeneratorempire.com/?payment_success=true&tier={plan_name.lower().replace(' ', '_')}&credits={credits}&username={username}&amount={price}&type=credits"
         
         print(f"🔗 Success URL: {success_url}")
         
