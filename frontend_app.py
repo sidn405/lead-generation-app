@@ -156,6 +156,20 @@ from user_auth import (
     
 )
 
+import os, sys, logging
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.info("CLIENT_CONFIG_DIR=%s", os.getenv("CLIENT_CONFIG_DIR"))
+logging.info("Exists? %s", os.path.exists(os.getenv("CLIENT_CONFIG_DIR", "")))
+try:
+    os.makedirs(os.getenv("CLIENT_CONFIG_DIR", "/app/client_configs"), exist_ok=True)
+    testfile = os.path.join(os.getenv("CLIENT_CONFIG_DIR", "/app/client_configs"), ".rw_test")
+    with open(testfile, "w") as f:
+        f.write("ok")
+    logging.info("Writable: created %s", testfile)
+except Exception as e:
+    logging.exception("Volume not writable: %s", e)
+
+
 from stripe_integration import handle_payment_flow, show_purchase_buttons
 from package_system import show_package_store, show_my_packages
 from purchases_tracker import automatic_payment_capture
