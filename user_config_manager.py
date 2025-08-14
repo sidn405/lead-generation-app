@@ -27,14 +27,6 @@ def _resolve_client_config_dir() -> str:
     os.makedirs(base, exist_ok=True)
     return base
 
-def get_client_config_path(self, username):
-    path = os.path.join(self.config_base_path, f"{username}.config.json")
-
-    # Ensure the directory exists
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    return path
-
 def _sanitize_username(u: str) -> str:
     return "".join(c for c in (u or "") if c.isalnum() or c in (".","-","_")).lower()
 
