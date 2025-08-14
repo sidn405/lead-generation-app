@@ -6779,231 +6779,231 @@ if MULTILINGUAL_AVAILABLE:
                     key="dm_platform_style"
                 )
             
-            st.markdown("---")
-            st.subheader("📊 Generation Preview")
-            
-            if contacts_for_dm:
-                total_contacts = len(contacts_for_dm)
+                st.markdown("---")
+                st.subheader("📊 Generation Preview")
                 
-                if language_mode == "Multi-language campaign":
-                    total_dms = total_contacts * len(campaign_languages)
-                    st.metric("Total DMs", total_dms)
-                    st.metric("Languages", len(campaign_languages))
-                else:
-                    st.metric("Total Contacts", total_contacts)
-                    st.metric("Language Mode", language_mode.split()[0])
-                
-                estimated_time = max(1, total_contacts / 10)  # ~10 contacts per minute
-                st.metric("Est. Time", f"{estimated_time:.1f} min")
-        
-        # Generate DMs button
-        st.markdown("---")
-        
-        if not contacts_for_dm:
-            st.error("❌ Please provide contacts for DM generation")
-            st.button("🌍 Generate Multilingual DMs", disabled=True, use_container_width=True)
-        elif st.button("🌍 Generate Multilingual DMs", type="primary", key="generate_multilingual_dms", use_container_width=True):
-            progress = st.progress(0)
-            status = st.empty()
-            
-            try:
-                all_results = []
-                   
-                if language_mode == "Multi-language campaign":
-                    # Generate DMs in multiple languages
-                    total_iterations = len(campaign_languages)
+                if contacts_for_dm:
+                    total_contacts = len(contacts_for_dm)
                     
-                    for i, language in enumerate(campaign_languages):
-                        status.info(f"🌍 Generating {language.title()} DMs... ({i+1}/{total_iterations})")
-                        
-                        results = generate_multilingual_batch(
-                            contacts=contacts_for_dm,
-                            platform=dm_platform,
-                            target_language=language
-                        )
-                        
-                        # Add language suffix to names for identification
-                        for result in results:
-                            result["campaign_language"] = language
-                            result["original_name"] = result["original_name"]
-                            result["name"] = f"{result['original_name']} ({language.title()})"
-                        
-                        all_results.extend(results)
-                        progress.progress((i + 1) / total_iterations)
-                
-                else:
-                    # Single language mode (auto -detect or forced)
-                    status.info(f"🌍 Generating multilingual DMs...")
-                    
-                    if language_mode == "Force specific language":
-                        results = generate_multilingual_batch(
-                            contacts=contacts_for_dm,
-                            platform=dm_platform,
-                            target_language=target_language
-                        )
+                    if language_mode == "Multi-language campaign":
+                        total_dms = total_contacts * len(campaign_languages)
+                        st.metric("Total DMs", total_dms)
+                        st.metric("Languages", len(campaign_languages))
                     else:
-                        # Auto-detect mode
-                        results = generate_multilingual_batch(
-                            contacts=contacts_for_dm,
-                            platform=dm_platform,
-                            target_language=None  # Auto-detect
-                        )
+                        st.metric("Total Contacts", total_contacts)
+                        st.metric("Language Mode", language_mode.split()[0])
                     
-                    all_results = results
-                    progress.progress(1.0)
+                    estimated_time = max(1, total_contacts / 10)  # ~10 contacts per minute
+                    st.metric("Est. Time", f"{estimated_time:.1f} min")
+            
+            # Generate DMs button
+            st.markdown("---")
+            
+            if not contacts_for_dm:
+                st.error("❌ Please provide contacts for DM generation")
+                st.button("🌍 Generate Multilingual DMs", disabled=True, use_container_width=True)
+            elif st.button("🌍 Generate Multilingual DMs", type="primary", key="generate_multilingual_dms", use_container_width=True):
+                progress = st.progress(0)
+                status = st.empty()
                 
-                status.success("✅ Multilingual DM generation completed!")
-
-                
-                if all_results:
-                    st.session_state.all_results      = all_results
-                    st.session_state.generation_mode  = language_mode
-                    st.session_state.dm_platform       = dm_platform
-                    st.success(f"🎉 Generated {len(all_results)} multilingual DMs!")
-
-                if st.session_state.get("all_results"):
-                    results = st.session_state.all_results        
+                try:
+                    all_results = []
                     
-                    # Language breakdown
-                    language_breakdown = {}
-                    for result in all_results:
-                        lang = result.get("detected_language", "unknown")
-                        language_breakdown[lang] = language_breakdown.get(lang, 0) + 1
+                    if language_mode == "Multi-language campaign":
+                        # Generate DMs in multiple languages
+                        total_iterations = len(campaign_languages)
+                        
+                        for i, language in enumerate(campaign_languages):
+                            status.info(f"🌍 Generating {language.title()} DMs... ({i+1}/{total_iterations})")
+                            
+                            results = generate_multilingual_batch(
+                                contacts=contacts_for_dm,
+                                platform=dm_platform,
+                                target_language=language
+                            )
+                            
+                            # Add language suffix to names for identification
+                            for result in results:
+                                result["campaign_language"] = language
+                                result["original_name"] = result["original_name"]
+                                result["name"] = f"{result['original_name']} ({language.title()})"
+                            
+                            all_results.extend(results)
+                            progress.progress((i + 1) / total_iterations)
                     
-                    st.markdown("**🌍 Language Breakdown:**")
-                    lang_cols = st.columns(len(language_breakdown))
-                    for i, (lang, count) in enumerate(language_breakdown.items()):
-                        with lang_cols[i]:
-                            percentage = (count / len(all_results)) * 100
-                            st.metric(f"{lang.title()}", count, delta=f"{percentage:.0f}%")
-                    
-                    # Display results
-                    st.subheader("📋 Generated Multilingual DMs")
-                    
-                    # Convert to DataFrame for display
-                    display_df = pd.DataFrame([
-                        {
-                            "Name": result.get("original_name", result.get("name", "")),
-                            "Language": result.get("detected_language", "unknown"),
-                            "Platform": result.get("platform", dm_platform),
-                            "DM": result.get("dm", ""),
-                            "Length": result.get("length", 0),
-                            "Method": result.get("method", "unknown")
-                        }
-                        for result in all_results
-                    ])
-                    
-                    # Filter controls
-                    filter_col1, filter_col2 = st.columns(2)
-                    
-                    with filter_col1:
-                        language_filter = st.selectbox(
-                            "Filter by Language:",
-                            ["All Languages"] + sorted(list(language_breakdown.keys())),
-                            key="results_language_filter"
-                        )
-                    
-                    with filter_col2:
-                        search_filter = st.text_input(
-                            "Search in names/DMs:",
-                            key="results_search_filter"
-                        )
-                    
-                    # Apply filters
-                    filtered_df = display_df.copy()
-                    
-                    if language_filter != "All Languages":
-                        filtered_df = filtered_df[filtered_df["Language"] == language_filter]
-                    
-                    if search_filter:
-                        mask = filtered_df["Name"].str.contains(search_filter, case=False, na=False) | \
-                               filtered_df["DM"].str.contains(search_filter, case=False, na=False)
-                        filtered_df = filtered_df[mask]
-                    
-                    st.dataframe(filtered_df, use_container_width=True)
-                    
-                    # Export options
-                    st.markdown("---")
-                    st.subheader("📤 Export & Save Options")
-                    
-                    export_col1, export_col2, export_col3, export_col4 = st.columns(4)
-
-                    with export_col1:
-
-                        st.button(
-                            "💾 Save to Library",
-                            key="save_dm",
-                            on_click=save_dms_callback
-                        )
-
-                    
-                    with export_col2:
-                        # Export all results
-                        all_csv = display_df.to_csv(index=False)
-                        st.download_button(
-                            "📄 Export All DMs",
-                            data=all_csv,
-                            file_name=f"multilingual_dms_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                            mime="text/csv",
-                            use_container_width=True,
-                            key="export_all_multilingual_dms"
-                        )
-                    
-                    with export_col3:
-                        # Export filtered results
-                        if language_filter != "All Languages" or search_filter:
-                            filtered_csv = filtered_df.to_csv(index=False)
-                            export_label = f"📄 Export {language_filter}" if language_filter != "All Languages" else "📄 Export Filtered"
-                            st.download_button(
-                                export_label,
-                                data=filtered_csv,
-                                file_name=f"multilingual_dms_filtered_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                                mime="text/csv",
-                                use_container_width=True,
-                                key="export_filtered_multilingual_dms"
+                    else:
+                        # Single language mode (auto -detect or forced)
+                        status.info(f"🌍 Generating multilingual DMs...")
+                        
+                        if language_mode == "Force specific language":
+                            results = generate_multilingual_batch(
+                                contacts=contacts_for_dm,
+                                platform=dm_platform,
+                                target_language=target_language
                             )
                         else:
-                            st.button("📄 Export Filtered", disabled=True, use_container_width=True, key="export_filtered_disabled")
-                    
-                    with export_col4:
-                        # Create enhanced export with metadata
-                        if st.button("📊 Create Summary", use_container_width=True, key="create_enhanced_export"):
-                            # Create summary data
-                            summary_data = {
-                                "Total DMs Generated": len(all_results),
-                                "Languages Used": len(language_breakdown),
-                                "Platform": dm_platform,
-                                "Generation Mode": language_mode,
-                                "Timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                            }
-                            
-                            summary_df = pd.DataFrame([summary_data])
-                            summary_csv = summary_df.to_csv(index=False)
-                            
-                            st.download_button(
-                                "📊 Download Summary",
-                                data=summary_csv,
-                                file_name=f"multilingual_summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                                mime="text/csv",
-                                key="download_summary_report"
+                            # Auto-detect mode
+                            results = generate_multilingual_batch(
+                                contacts=contacts_for_dm,
+                                platform=dm_platform,
+                                target_language=None  # Auto-detect
                             )
+                        
+                        all_results = results
+                        progress.progress(1.0)
                     
-                    # ✅ MANUAL EXIT BUTTON
-                    st.markdown("---")
-                    col1, col2, col3 = st.columns([1, 1, 1])
-                    with col2:
-                        if st.button("❌ Close Results", use_container_width=True, type="secondary", key="close_dm_results"):
-                            # Clear any stored session state for DM results
-                            keys_to_clear = [key for key in st.session_state.keys() if 'dm' in key.lower() or 'multilingual' in key.lower()]
-                            for key in keys_to_clear:
-                                del st.session_state[key]
-                            
-                            # Force page refresh to return to generation form
-                            st.rerun()
+                    status.success("✅ Multilingual DM generation completed!")
 
-            except Exception as e:
-                status.error(f"❌ DM generation failed: {str(e)}")
-                st.error(f"Error details: {e}")
+                    
+                    if all_results:
+                        st.session_state.all_results      = all_results
+                        st.session_state.generation_mode  = language_mode
+                        st.session_state.dm_platform       = dm_platform
+                        st.success(f"🎉 Generated {len(all_results)} multilingual DMs!")
+
+                    if st.session_state.get("all_results"):
+                        results = st.session_state.all_results        
+                        
+                        # Language breakdown
+                        language_breakdown = {}
+                        for result in all_results:
+                            lang = result.get("detected_language", "unknown")
+                            language_breakdown[lang] = language_breakdown.get(lang, 0) + 1
+                        
+                        st.markdown("**🌍 Language Breakdown:**")
+                        lang_cols = st.columns(len(language_breakdown))
+                        for i, (lang, count) in enumerate(language_breakdown.items()):
+                            with lang_cols[i]:
+                                percentage = (count / len(all_results)) * 100
+                                st.metric(f"{lang.title()}", count, delta=f"{percentage:.0f}%")
+                        
+                        # Display results
+                        st.subheader("📋 Generated Multilingual DMs")
+                        
+                        # Convert to DataFrame for display
+                        display_df = pd.DataFrame([
+                            {
+                                "Name": result.get("original_name", result.get("name", "")),
+                                "Language": result.get("detected_language", "unknown"),
+                                "Platform": result.get("platform", dm_platform),
+                                "DM": result.get("dm", ""),
+                                "Length": result.get("length", 0),
+                                "Method": result.get("method", "unknown")
+                            }
+                            for result in all_results
+                        ])
+                        
+                        # Filter controls
+                        filter_col1, filter_col2 = st.columns(2)
+                        
+                        with filter_col1:
+                            language_filter = st.selectbox(
+                                "Filter by Language:",
+                                ["All Languages"] + sorted(list(language_breakdown.keys())),
+                                key="results_language_filter"
+                            )
+                        
+                        with filter_col2:
+                            search_filter = st.text_input(
+                                "Search in names/DMs:",
+                                key="results_search_filter"
+                            )
+                        
+                        # Apply filters
+                        filtered_df = display_df.copy()
+                        
+                        if language_filter != "All Languages":
+                            filtered_df = filtered_df[filtered_df["Language"] == language_filter]
+                        
+                        if search_filter:
+                            mask = filtered_df["Name"].str.contains(search_filter, case=False, na=False) | \
+                                filtered_df["DM"].str.contains(search_filter, case=False, na=False)
+                            filtered_df = filtered_df[mask]
+                        
+                        st.dataframe(filtered_df, use_container_width=True)
+                        
+                        # Export options
+                        st.markdown("---")
+                        st.subheader("📤 Export & Save Options")
+                        
+                        export_col1, export_col2, export_col3, export_col4 = st.columns(4)
+
+                        with export_col1:
+
+                            st.button(
+                                "💾 Save to Library",
+                                key="save_dm",
+                                on_click=save_dms_callback
+                            )
+
+                        
+                        with export_col2:
+                            # Export all results
+                            all_csv = display_df.to_csv(index=False)
+                            st.download_button(
+                                "📄 Export All DMs",
+                                data=all_csv,
+                                file_name=f"multilingual_dms_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                                mime="text/csv",
+                                use_container_width=True,
+                                key="export_all_multilingual_dms"
+                            )
+                        
+                        with export_col3:
+                            # Export filtered results
+                            if language_filter != "All Languages" or search_filter:
+                                filtered_csv = filtered_df.to_csv(index=False)
+                                export_label = f"📄 Export {language_filter}" if language_filter != "All Languages" else "📄 Export Filtered"
+                                st.download_button(
+                                    export_label,
+                                    data=filtered_csv,
+                                    file_name=f"multilingual_dms_filtered_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                                    mime="text/csv",
+                                    use_container_width=True,
+                                    key="export_filtered_multilingual_dms"
+                                )
+                            else:
+                                st.button("📄 Export Filtered", disabled=True, use_container_width=True, key="export_filtered_disabled")
+                        
+                        with export_col4:
+                            # Create enhanced export with metadata
+                            if st.button("📊 Create Summary", use_container_width=True, key="create_enhanced_export"):
+                                # Create summary data
+                                summary_data = {
+                                    "Total DMs Generated": len(all_results),
+                                    "Languages Used": len(language_breakdown),
+                                    "Platform": dm_platform,
+                                    "Generation Mode": language_mode,
+                                    "Timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                }
+                                
+                                summary_df = pd.DataFrame([summary_data])
+                                summary_csv = summary_df.to_csv(index=False)
+                                
+                                st.download_button(
+                                    "📊 Download Summary",
+                                    data=summary_csv,
+                                    file_name=f"multilingual_summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                                    mime="text/csv",
+                                    key="download_summary_report"
+                                )
+                        
+                        # ✅ MANUAL EXIT BUTTON
+                        st.markdown("---")
+                        col1, col2, col3 = st.columns([1, 1, 1])
+                        with col2:
+                            if st.button("❌ Close Results", use_container_width=True, type="secondary", key="close_dm_results"):
+                                # Clear any stored session state for DM results
+                                keys_to_clear = [key for key in st.session_state.keys() if 'dm' in key.lower() or 'multilingual' in key.lower()]
+                                for key in keys_to_clear:
+                                    del st.session_state[key]
+                                
+                                # Force page refresh to return to generation form
+                                st.rerun()
+
+                except Exception as e:
+                    status.error(f"❌ DM generation failed: {str(e)}")
+                    st.error(f"Error details: {e}")
         
             with dm_tab2:
                 st.markdown(f"### 📚 DM Library - {current_username}")
