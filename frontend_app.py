@@ -6576,8 +6576,8 @@ if MULTILINGUAL_AVAILABLE:
                 # Full multilingual DM interface for authenticated users
                 current_username = st.session_state.username
                 
-                # Create sub-tabs for Generate DMs and DM Library
-                dm_tab1, dm_tab2 = st.tabs(["🎯 Generate DMs", "📚 DM Library"])
+            # Create sub-tabs for Generate DMs and DM Library
+            dm_tab1, dm_tab2 = st.tabs(["🎯 Generate DMs", "📚 DM Library"])
                 
             with dm_tab1:
                 # DM GENERATION SECTION
