@@ -97,7 +97,7 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
                 
                 # SUCCESS URL with username validation
                 success_url=success_url,
-                cancel_url=f"http://localhost:8501?username={username}&payment_cancelled=true",
+                cancel_url=f"https://leadgeneratorempire.com/?username={username}&payment_cancelled=true",
                 
                 # Customer info
                 customer_email=user_email,
@@ -130,7 +130,7 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
                 
                 # SUCCESS URL with username validation
                 success_url=success_url,
-                cancel_url=f"http://localhost:8501?username={username}&payment_cancelled=true",
+                cancel_url=f"https://leadgeneratorempire.com/?username={username}&payment_cancelled=true",
                 
                 # Customer info
                 customer_email=user_email,
