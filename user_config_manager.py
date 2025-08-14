@@ -8,14 +8,43 @@ import os
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 
+# Resolve a persistent config dir (Railway or local)
+def _resolve_client_config_dir() -> str:
+    # Preferred: env override (set this in Railway → Variables)
+    base = os.getenv("CLIENT_CONFIG_DIR")
+    if base:
+        os.makedirs(base, exist_ok=True)
+        return base
+
+    # Secondary: running on Railway? default to the mounted path
+    if os.getenv("RAILWAY_ENVIRONMENT"):
+        base = "/app/client_configs"
+        os.makedirs(base, exist_ok=True)
+        return base
+
+    # Local dev fallback
+    base = "client_configs"
+    os.makedirs(base, exist_ok=True)
+    return base
+
+def get_client_config_path(self, username):
+    path = os.path.join(self.config_base_path, f"{username}.config.json")
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    return path
+
+def _sanitize_username(u: str) -> str:
+    return "".join(c for c in (u or "") if c.isalnum() or c in (".","-","_")).lower()
 
 class UserConfigManager:
     """Manages user-specific configurations and syncs with global config"""
     
     def __init__(self, main_config_file: str = "config.json"):
         self.main_config_file = main_config_file
-        self.client_configs_dir = "client_configs"
-        self.ensure_directories()
+        self.client_configs_dir = os.getenv("CLIENT_CONFIG_DIR", "client_configs")
+        
     
     def ensure_directories(self):
         """Ensure required directories exist"""
@@ -23,7 +52,19 @@ class UserConfigManager:
     
     def get_client_config_path(self, username: str) -> str:
         """Get path to client-specific config file"""
-        return os.path.join(self.client_configs_dir, f"client_{username}_config.json")
+        safe = _sanitize_username(username)
+        path = os.path.join(self.client_configs_dir, f"client_{safe}_config.json")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        return path
+    
+    def get_users_db_path(self) -> str:
+        return os.path.join(self.client_configs_dir, "users.json")
+
+    def get_leads_dir(self) -> str:
+        p = os.path.join(self.client_configs_dir, "leads_output")
+        os.makedirs(p, exist_ok=True)
+        return p
+
     
     def load_main_config(self) -> Dict[str, Any]:
         """Load main configuration file"""
