@@ -7273,53 +7273,53 @@ if MULTILINGUAL_AVAILABLE:
             unsafe_allow_html=True,
         )
 
-    # ✅ RESTORE USER SESSION when returning from Stripe
-    def restore_user_session_from_url():
-        """Restore user session when returning from Stripe checkout"""
-        returned_user = st.query_params.get("user")
-        
-        if returned_user and not simple_auth.get_current_user():
-            # User returned from Stripe but session was lost
-            try:
-                # Log the user back in automatically
-                if simple_auth.authenticate_user(returned_user, skip_password=True):
-                    st.session_state.username = returned_user
-                    st.success(f"✅ Welcome back, {returned_user}!")
-                    print(f"🔄 Restored session for user: {returned_user}")
-                    return True
-            except Exception as e:
-                print(f"❌ Failed to restore session: {e}")
-                st.warning("Please log in again")
-        
-        return False
+        # ✅ RESTORE USER SESSION when returning from Stripe
+        def restore_user_session_from_url():
+            """Restore user session when returning from Stripe checkout"""
+            returned_user = st.query_params.get("user")
+            
+            if returned_user and not simple_auth.get_current_user():
+                # User returned from Stripe but session was lost
+                try:
+                    # Log the user back in automatically
+                    if simple_auth.authenticate_user(returned_user, skip_password=True):
+                        st.session_state.username = returned_user
+                        st.success(f"✅ Welcome back, {returned_user}!")
+                        print(f"🔄 Restored session for user: {returned_user}")
+                        return True
+                except Exception as e:
+                    print(f"❌ Failed to restore session: {e}")
+                    st.warning("Please log in again")
+            
+            return False
 
-    # ✅ CAPTURE USERNAME FIRST - before clearing any params
-    url_username = st.query_params.get("username")
-    payment_cancelled = "payment_cancelled" in st.query_params
+        # ✅ CAPTURE USERNAME FIRST - before clearing any params
+        url_username = st.query_params.get("username")
+        payment_cancelled = "payment_cancelled" in st.query_params
 
-    # ✅ HANDLE CANCELLATION - but keep username for restoration
-    if payment_cancelled:
-        st.warning("⚠️ Payment was cancelled. You can try again anytime.")
-        st.query_params.clear()  # Now safe to clear
+        # ✅ HANDLE CANCELLATION - but keep username for restoration
+        if payment_cancelled:
+            st.warning("⚠️ Payment was cancelled. You can try again anytime.")
+            st.query_params.clear()  # Now safe to clear
 
-    # ✅ RESTORE SESSION using captured username
-    current_user = simple_auth.get_current_user() if 'simple_auth' in globals() else None
+        # ✅ RESTORE SESSION using captured username
+        current_user = simple_auth.get_current_user() if 'simple_auth' in globals() else None
 
-    if url_username and not current_user:
-        st.write("🔄 Attempting session restoration...")
-        
-        # User returned from Stripe but session was lost - restore it
-        st.session_state.authenticated = True
-        st.session_state.current_user = url_username
-        st.session_state.username = url_username
-        
-        # Force the simple_auth system to recognize the user
-        if hasattr(simple_auth, 'current_user'):
-            simple_auth.current_user = url_username
-            st.write("✅ Set simple_auth.current_user")
-        
-        st.success(f"✅ Session restored for {url_username}!")
-        st.write("🔄 Refreshing app...")
+        if url_username and not current_user:
+            st.write("🔄 Attempting session restoration...")
+            
+            # User returned from Stripe but session was lost - restore it
+            st.session_state.authenticated = True
+            st.session_state.current_user = url_username
+            st.session_state.username = url_username
+            
+            # Force the simple_auth system to recognize the user
+            if hasattr(simple_auth, 'current_user'):
+                simple_auth.current_user = url_username
+                st.write("✅ Set simple_auth.current_user")
+            
+            st.success(f"✅ Session restored for {url_username}!")
+            st.write("🔄 Refreshing app...")
 
 # Continue with the rest of the tabs...
 with tab4:  # Pricing Plans
