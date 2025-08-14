@@ -6579,432 +6579,432 @@ if MULTILINGUAL_AVAILABLE:
                 # Create sub-tabs for Generate DMs and DM Library
                 dm_tab1, dm_tab2 = st.tabs(["🎯 Generate DMs", "📚 DM Library"])
                 
-                with dm_tab1:
-                    # DM GENERATION SECTION
-                    
-                    # Load existing leads for DM generation
-                    ml_col1, ml_col2 = st.columns([2, 1])
-                
-                with ml_col1:
-                    st.subheader("📋 Lead Data Source")
-                    
-                    # Option to upload CSV or use existing leads
-                    dm_source = st.radio(
-                        "Choose DM Generation Source:",
-                        ["Existing Empire Leads", "Upload New CSV", "Manual Entry"],
-                        key="dm_source_selection"
-                    )
-
-                    contacts_for_dm = []
-
-                    if dm_source == "Existing Empire Leads":
-                        # Get current user for user-specific leads
-                        current_username = st.session_state.username
-                        
-                        # Use existing scraped leads - USER SPECIFIC ONLY
-                        available_files = {}
-                        
-                        # Look for user-specific files only
-                        import glob
-                        
-                        platform_patterns = {
-                            "🐦 Twitter": ["twitter_leads_*.csv", "twitter_unified_*.csv"],
-                            "💼 LinkedIn": ["linkedin_leads_*.csv", "linkedin_unified_*.csv"],
-                            "📘 Facebook": ["facebook_leads_*.csv", "facebook_unified_*.csv"],
-                            "🎵 TikTok": ["tiktok_leads_*.csv", "tiktok_unified_*.csv"],
-                            "📸 Instagram": ["instagram_leads_*.csv", "instagram_unified_*.csv"],
-                            "🎥 YouTube": ["youtube_leads_*.csv", "youtube_unified_*.csv"],
-                            "📝 Medium": ["medium_leads_*.csv", "medium_unified_*.csv"],
-                            "🗨️ Reddit": ["reddit_leads_*.csv", "reddit_unified_*.csv"]
-                        }
-                        
-                        for platform_name, patterns in platform_patterns.items():
-                            user_files = []
-                            
-                            # Check each pattern for user-specific files
-                            for pattern in patterns:
-                                # Look for files with username in filename
-                                user_pattern = pattern.replace("*.csv", f"*{current_username}*.csv")
-                                files_with_user = glob.glob(user_pattern)
-                                
-                                # Also check for files with username at different positions
-                                alt_pattern = pattern.replace("*.csv", f"{current_username}_*.csv")
-                                files_alt = glob.glob(alt_pattern)
-                                
-                                user_files.extend(files_with_user)
-                                user_files.extend(files_alt)
-                            
-                            if user_files:
-                                # Get the most recent file for this user
-                                latest_file = max(user_files, key=os.path.getctime)
-                                try:
-                                    df = pd.read_csv(latest_file)
-                                    if not df.empty:
-                                        available_files[platform_name] = latest_file
-                                except:
-                                    pass
-                        
-                        if available_files:
-                            selected_platform = st.selectbox(
-                                "Select Platform Leads:",
-                                list(available_files.keys()),
-                                key="platform_dm_selection"
-                            )
-                            
-                            if selected_platform:
-                                try:
-                                    df = pd.read_csv(available_files[selected_platform])
-                                    st.success(f"✅ Loaded {len(df)} of YOUR leads from {selected_platform}")
-                                    
-                                    # Show which file is being used for transparency
-                                    filename = os.path.basename(available_files[selected_platform])
-                                    st.caption(f"📄 Using file: {filename}")
-                                    
-                                    # Show preview
-                                    st.dataframe(df.head(), use_container_width=True)
-                                    
-                                    # Convert to contacts format
-                                    contacts_for_dm = [
-                                        {"name": row.get("name", ""), "bio": row.get("bio", "")}
-                                        for _, row in df.iterrows()
-                                    ]
-                                    
-                                except Exception as e:
-                                    st.error(f"❌ Error loading your leads: {str(e)}")
-                        else:
-                            st.info(f"📭 No leads found for user: {current_username}")
-                            st.markdown(f"""
-                            **To generate your own leads:**
-                            1. 🔍 Go to **Empire Scraper** tab above
-                            2. 📝 Enter your target keywords  
-                            3. 🚀 Select platforms and run search
-                            4. 💬 Your leads will appear here for DM generation
-                            
-                            **Note:** You can only see leads you've generated, not other users' leads.
-                            """)
-                    
-                    elif dm_source == "Upload New CSV":
-                        uploaded_file = st.file_uploader(
-                            "Upload CSV with leads (name, bio columns required)",
-                            type=["csv"],
-                            key="upload_csv_dm"
-                        )
-                        
-                        if uploaded_file is not None:
-                            try:
-                                df = pd.read_csv(uploaded_file)
-                                st.success(f"✅ Uploaded {len(df)} contacts")
-                                
-                                # Validate columns
-                                if "name" in df.columns and "bio" in df.columns:
-                                    st.dataframe(df.head(), use_container_width=True)
-                                    
-                                    contacts_for_dm = [
-                                        {"name": row["name"], "bio": row["bio"]}
-                                        for _, row in df.iterrows()
-                                    ]
-                                else:
-                                    st.error("❌ CSV must have 'name' and 'bio' columns")
-                            except Exception as e:
-                                st.error(f"❌ Error reading CSV: {str(e)}")
-                    
-                    elif dm_source == "Manual Entry":
-                        st.markdown("**Enter contacts manually:**")
-                        
-                        num_contacts = st.number_input(
-                            "Number of contacts:",
-                            min_value=1,
-                            max_value=10,
-                            value=3,
-                            key="num_manual_contacts"
-                        )
-                        
-                        manual_contacts = []
-                        for i in range(num_contacts):
-                            col_name, col_bio = st.columns(2)
-                            with col_name:
-                                name = st.text_input(f"Name {i+1}", key=f"manual_name_{i}")
-                            with col_bio:
-                                bio = st.text_input(f"Bio {i+1}", key=f"manual_bio_{i}")
-                            
-                            if name and bio:
-                                manual_contacts.append({"name": name, "bio": bio})
-                        
-                        contacts_for_dm = manual_contacts
-                        
-                        if contacts_for_dm:
-                            st.success(f"✅ {len(contacts_for_dm)} contacts ready for DM generation")
+        with dm_tab1:
+            # DM GENERATION SECTION
             
-                with ml_col2:
-                    st.subheader("🌍 Language Settings")
-                    
-                    # Language selection
-                    language_mode = st.radio(
-                        "Language Generation Mode:",
-                        ["Auto-detect per contact", "Force specific language", "Multi-language campaign"],
-                        key="language_mode_selection"
-                    )
-                    
-                    target_language = None
-                    campaign_languages = []
-                    
-                    if language_mode == "Force specific language":
-                        available_languages = list(LANGUAGE_KEYWORDS.keys())
-                        target_language = st.selectbox(
-                            "Target Language:",
-                            available_languages,
-                            key="force_language_select"
-                        )
-                        
-                        st.info(f"🎯 All DMs will be generated in {target_language.title()}")
-                    
-                    elif language_mode == "Multi-language campaign":
-                        available_languages = list(LANGUAGE_KEYWORDS.keys())
-                        campaign_languages = st.multiselect(
-                            "Campaign Languages:",
-                            available_languages,
-                            default=["english", "spanish", "french"],
-                            key="campaign_languages_select"
-                        )
-                        
-                        st.info(f"🌍 DMs will be generated in {len(campaign_languages)} languages")
-                    
-                    else:
-                        st.info("🔍 Language will be auto-detected for each contact")
-                    
-                    # Platform selection for DM style
-                    dm_platform = st.selectbox(
-                        "DM Platform Style:",
-                        ["twitter", "linkedin", "facebook", "tiktok", "instagram", "youtube", "medium", "reddit"],
-                        key="dm_platform_style"
-                    )
+            # Load existing leads for DM generation
+            ml_col1, ml_col2 = st.columns([2, 1])
+        
+        with ml_col1:
+            st.subheader("📋 Lead Data Source")
+            
+            # Option to upload CSV or use existing leads
+            dm_source = st.radio(
+                "Choose DM Generation Source:",
+                ["Existing Empire Leads", "Upload New CSV", "Manual Entry"],
+                key="dm_source_selection"
+            )
+
+            contacts_for_dm = []
+
+            if dm_source == "Existing Empire Leads":
+                # Get current user for user-specific leads
+                current_username = st.session_state.username
                 
-                st.markdown("---")
-                st.subheader("📊 Generation Preview")
+                # Use existing scraped leads - USER SPECIFIC ONLY
+                available_files = {}
+                
+                # Look for user-specific files only
+                import glob
+                
+                platform_patterns = {
+                    "🐦 Twitter": ["twitter_leads_*.csv", "twitter_unified_*.csv"],
+                    "💼 LinkedIn": ["linkedin_leads_*.csv", "linkedin_unified_*.csv"],
+                    "📘 Facebook": ["facebook_leads_*.csv", "facebook_unified_*.csv"],
+                    "🎵 TikTok": ["tiktok_leads_*.csv", "tiktok_unified_*.csv"],
+                    "📸 Instagram": ["instagram_leads_*.csv", "instagram_unified_*.csv"],
+                    "🎥 YouTube": ["youtube_leads_*.csv", "youtube_unified_*.csv"],
+                    "📝 Medium": ["medium_leads_*.csv", "medium_unified_*.csv"],
+                    "🗨️ Reddit": ["reddit_leads_*.csv", "reddit_unified_*.csv"]
+                }
+                
+                for platform_name, patterns in platform_patterns.items():
+                    user_files = []
+                    
+                    # Check each pattern for user-specific files
+                    for pattern in patterns:
+                        # Look for files with username in filename
+                        user_pattern = pattern.replace("*.csv", f"*{current_username}*.csv")
+                        files_with_user = glob.glob(user_pattern)
+                        
+                        # Also check for files with username at different positions
+                        alt_pattern = pattern.replace("*.csv", f"{current_username}_*.csv")
+                        files_alt = glob.glob(alt_pattern)
+                        
+                        user_files.extend(files_with_user)
+                        user_files.extend(files_alt)
+                    
+                    if user_files:
+                        # Get the most recent file for this user
+                        latest_file = max(user_files, key=os.path.getctime)
+                        try:
+                            df = pd.read_csv(latest_file)
+                            if not df.empty:
+                                available_files[platform_name] = latest_file
+                        except:
+                            pass
+                
+                if available_files:
+                    selected_platform = st.selectbox(
+                        "Select Platform Leads:",
+                        list(available_files.keys()),
+                        key="platform_dm_selection"
+                    )
+                    
+                    if selected_platform:
+                        try:
+                            df = pd.read_csv(available_files[selected_platform])
+                            st.success(f"✅ Loaded {len(df)} of YOUR leads from {selected_platform}")
+                            
+                            # Show which file is being used for transparency
+                            filename = os.path.basename(available_files[selected_platform])
+                            st.caption(f"📄 Using file: {filename}")
+                            
+                            # Show preview
+                            st.dataframe(df.head(), use_container_width=True)
+                            
+                            # Convert to contacts format
+                            contacts_for_dm = [
+                                {"name": row.get("name", ""), "bio": row.get("bio", "")}
+                                for _, row in df.iterrows()
+                            ]
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error loading your leads: {str(e)}")
+                else:
+                    st.info(f"📭 No leads found for user: {current_username}")
+                    st.markdown(f"""
+                    **To generate your own leads:**
+                    1. 🔍 Go to **Empire Scraper** tab above
+                    2. 📝 Enter your target keywords  
+                    3. 🚀 Select platforms and run search
+                    4. 💬 Your leads will appear here for DM generation
+                    
+                    **Note:** You can only see leads you've generated, not other users' leads.
+                    """)
+            
+            elif dm_source == "Upload New CSV":
+                uploaded_file = st.file_uploader(
+                    "Upload CSV with leads (name, bio columns required)",
+                    type=["csv"],
+                    key="upload_csv_dm"
+                )
+                
+                if uploaded_file is not None:
+                    try:
+                        df = pd.read_csv(uploaded_file)
+                        st.success(f"✅ Uploaded {len(df)} contacts")
+                        
+                        # Validate columns
+                        if "name" in df.columns and "bio" in df.columns:
+                            st.dataframe(df.head(), use_container_width=True)
+                            
+                            contacts_for_dm = [
+                                {"name": row["name"], "bio": row["bio"]}
+                                for _, row in df.iterrows()
+                            ]
+                        else:
+                            st.error("❌ CSV must have 'name' and 'bio' columns")
+                    except Exception as e:
+                        st.error(f"❌ Error reading CSV: {str(e)}")
+            
+            elif dm_source == "Manual Entry":
+                st.markdown("**Enter contacts manually:**")
+                
+                num_contacts = st.number_input(
+                    "Number of contacts:",
+                    min_value=1,
+                    max_value=10,
+                    value=3,
+                    key="num_manual_contacts"
+                )
+                
+                manual_contacts = []
+                for i in range(num_contacts):
+                    col_name, col_bio = st.columns(2)
+                    with col_name:
+                        name = st.text_input(f"Name {i+1}", key=f"manual_name_{i}")
+                    with col_bio:
+                        bio = st.text_input(f"Bio {i+1}", key=f"manual_bio_{i}")
+                    
+                    if name and bio:
+                        manual_contacts.append({"name": name, "bio": bio})
+                
+                contacts_for_dm = manual_contacts
                 
                 if contacts_for_dm:
-                    total_contacts = len(contacts_for_dm)
-                    
-                    if language_mode == "Multi-language campaign":
-                        total_dms = total_contacts * len(campaign_languages)
-                        st.metric("Total DMs", total_dms)
-                        st.metric("Languages", len(campaign_languages))
-                    else:
-                        st.metric("Total Contacts", total_contacts)
-                        st.metric("Language Mode", language_mode.split()[0])
-                    
-                    estimated_time = max(1, total_contacts / 10)  # ~10 contacts per minute
-                    st.metric("Est. Time", f"{estimated_time:.1f} min")
+                    st.success(f"✅ {len(contacts_for_dm)} contacts ready for DM generation")
+    
+        with ml_col2:
+            st.subheader("🌍 Language Settings")
             
-            # Generate DMs button
-            st.markdown("---")
+            # Language selection
+            language_mode = st.radio(
+                "Language Generation Mode:",
+                ["Auto-detect per contact", "Force specific language", "Multi-language campaign"],
+                key="language_mode_selection"
+            )
             
-            if not contacts_for_dm:
-                st.error("❌ Please provide contacts for DM generation")
-                st.button("🌍 Generate Multilingual DMs", disabled=True, use_container_width=True)
-            elif st.button("🌍 Generate Multilingual DMs", type="primary", key="generate_multilingual_dms", use_container_width=True):
-                progress = st.progress(0)
-                status = st.empty()
+            target_language = None
+            campaign_languages = []
+            
+            if language_mode == "Force specific language":
+                available_languages = list(LANGUAGE_KEYWORDS.keys())
+                target_language = st.selectbox(
+                    "Target Language:",
+                    available_languages,
+                    key="force_language_select"
+                )
                 
-                try:
-                    all_results = []
-                       
-                    if language_mode == "Multi-language campaign":
-                        # Generate DMs in multiple languages
-                        total_iterations = len(campaign_languages)
-                        
-                        for i, language in enumerate(campaign_languages):
-                            status.info(f"🌍 Generating {language.title()} DMs... ({i+1}/{total_iterations})")
-                            
-                            results = generate_multilingual_batch(
-                                contacts=contacts_for_dm,
-                                platform=dm_platform,
-                                target_language=language
-                            )
-                            
-                            # Add language suffix to names for identification
-                            for result in results:
-                                result["campaign_language"] = language
-                                result["original_name"] = result["original_name"]
-                                result["name"] = f"{result['original_name']} ({language.title()})"
-                            
-                            all_results.extend(results)
-                            progress.progress((i + 1) / total_iterations)
-                    
-                    else:
-                        # Single language mode (auto -detect or forced)
-                        status.info(f"🌍 Generating multilingual DMs...")
-                        
-                        if language_mode == "Force specific language":
-                            results = generate_multilingual_batch(
-                                contacts=contacts_for_dm,
-                                platform=dm_platform,
-                                target_language=target_language
-                            )
-                        else:
-                            # Auto-detect mode
-                            results = generate_multilingual_batch(
-                                contacts=contacts_for_dm,
-                                platform=dm_platform,
-                                target_language=None  # Auto-detect
-                            )
-                        
-                        all_results = results
-                        progress.progress(1.0)
-                    
-                    status.success("✅ Multilingual DM generation completed!")
-
-                    
-                    if all_results:
-                        st.session_state.all_results      = all_results
-                        st.session_state.generation_mode  = language_mode
-                        st.session_state.dm_platform       = dm_platform
-                        st.success(f"🎉 Generated {len(all_results)} multilingual DMs!")
-
-                    if st.session_state.get("all_results"):
-                        results = st.session_state.all_results        
-                        
-                        # Language breakdown
-                        language_breakdown = {}
-                        for result in all_results:
-                            lang = result.get("detected_language", "unknown")
-                            language_breakdown[lang] = language_breakdown.get(lang, 0) + 1
-                        
-                        st.markdown("**🌍 Language Breakdown:**")
-                        lang_cols = st.columns(len(language_breakdown))
-                        for i, (lang, count) in enumerate(language_breakdown.items()):
-                            with lang_cols[i]:
-                                percentage = (count / len(all_results)) * 100
-                                st.metric(f"{lang.title()}", count, delta=f"{percentage:.0f}%")
-                        
-                        # Display results
-                        st.subheader("📋 Generated Multilingual DMs")
-                        
-                        # Convert to DataFrame for display
-                        display_df = pd.DataFrame([
-                            {
-                                "Name": result.get("original_name", result.get("name", "")),
-                                "Language": result.get("detected_language", "unknown"),
-                                "Platform": result.get("platform", dm_platform),
-                                "DM": result.get("dm", ""),
-                                "Length": result.get("length", 0),
-                                "Method": result.get("method", "unknown")
-                            }
-                            for result in all_results
-                        ])
-                        
-                        # Filter controls
-                        filter_col1, filter_col2 = st.columns(2)
-                        
-                        with filter_col1:
-                            language_filter = st.selectbox(
-                                "Filter by Language:",
-                                ["All Languages"] + sorted(list(language_breakdown.keys())),
-                                key="results_language_filter"
-                            )
-                        
-                        with filter_col2:
-                            search_filter = st.text_input(
-                                "Search in names/DMs:",
-                                key="results_search_filter"
-                            )
-                        
-                        # Apply filters
-                        filtered_df = display_df.copy()
-                        
-                        if language_filter != "All Languages":
-                            filtered_df = filtered_df[filtered_df["Language"] == language_filter]
-                        
-                        if search_filter:
-                            mask = filtered_df["Name"].str.contains(search_filter, case=False, na=False) | \
-                                   filtered_df["DM"].str.contains(search_filter, case=False, na=False)
-                            filtered_df = filtered_df[mask]
-                        
-                        st.dataframe(filtered_df, use_container_width=True)
-                        
-                        # Export options
-                        st.markdown("---")
-                        st.subheader("📤 Export & Save Options")
-                        
-                        export_col1, export_col2, export_col3, export_col4 = st.columns(4)
-
-                        with export_col1:
-
-                            st.button(
-                                "💾 Save to Library",
-                                key="save_dm",
-                                on_click=save_dms_callback
-                            )
-
-                        
-                        with export_col2:
-                            # Export all results
-                            all_csv = display_df.to_csv(index=False)
-                            st.download_button(
-                                "📄 Export All DMs",
-                                data=all_csv,
-                                file_name=f"multilingual_dms_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                                mime="text/csv",
-                                use_container_width=True,
-                                key="export_all_multilingual_dms"
-                            )
-                        
-                        with export_col3:
-                            # Export filtered results
-                            if language_filter != "All Languages" or search_filter:
-                                filtered_csv = filtered_df.to_csv(index=False)
-                                export_label = f"📄 Export {language_filter}" if language_filter != "All Languages" else "📄 Export Filtered"
-                                st.download_button(
-                                    export_label,
-                                    data=filtered_csv,
-                                    file_name=f"multilingual_dms_filtered_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                                    mime="text/csv",
-                                    use_container_width=True,
-                                    key="export_filtered_multilingual_dms"
-                                )
-                            else:
-                                st.button("📄 Export Filtered", disabled=True, use_container_width=True, key="export_filtered_disabled")
-                        
-                        with export_col4:
-                            # Create enhanced export with metadata
-                            if st.button("📊 Create Summary", use_container_width=True, key="create_enhanced_export"):
-                                # Create summary data
-                                summary_data = {
-                                    "Total DMs Generated": len(all_results),
-                                    "Languages Used": len(language_breakdown),
-                                    "Platform": dm_platform,
-                                    "Generation Mode": language_mode,
-                                    "Timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                                }
-                                
-                                summary_df = pd.DataFrame([summary_data])
-                                summary_csv = summary_df.to_csv(index=False)
-                                
-                                st.download_button(
-                                    "📊 Download Summary",
-                                    data=summary_csv,
-                                    file_name=f"multilingual_summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                                    mime="text/csv",
-                                    key="download_summary_report"
-                                )
-                        
-                        # ✅ MANUAL EXIT BUTTON
-                        st.markdown("---")
-                        col1, col2, col3 = st.columns([1, 1, 1])
-                        with col2:
-                            if st.button("❌ Close Results", use_container_width=True, type="secondary", key="close_dm_results"):
-                                # Clear any stored session state for DM results
-                                keys_to_clear = [key for key in st.session_state.keys() if 'dm' in key.lower() or 'multilingual' in key.lower()]
-                                for key in keys_to_clear:
-                                    del st.session_state[key]
-                                
-                                # Force page refresh to return to generation form
-                                st.rerun()
-
-                except Exception as e:
-                    status.error(f"❌ DM generation failed: {str(e)}")
-                    st.error(f"Error details: {e}")
+                st.info(f"🎯 All DMs will be generated in {target_language.title()}")
             
+            elif language_mode == "Multi-language campaign":
+                available_languages = list(LANGUAGE_KEYWORDS.keys())
+                campaign_languages = st.multiselect(
+                    "Campaign Languages:",
+                    available_languages,
+                    default=["english", "spanish", "french"],
+                    key="campaign_languages_select"
+                )
+                
+                st.info(f"🌍 DMs will be generated in {len(campaign_languages)} languages")
+            
+            else:
+                st.info("🔍 Language will be auto-detected for each contact")
+            
+            # Platform selection for DM style
+            dm_platform = st.selectbox(
+                "DM Platform Style:",
+                ["twitter", "linkedin", "facebook", "tiktok", "instagram", "youtube", "medium", "reddit"],
+                key="dm_platform_style"
+            )
+        
+        st.markdown("---")
+        st.subheader("📊 Generation Preview")
+        
+        if contacts_for_dm:
+            total_contacts = len(contacts_for_dm)
+            
+            if language_mode == "Multi-language campaign":
+                total_dms = total_contacts * len(campaign_languages)
+                st.metric("Total DMs", total_dms)
+                st.metric("Languages", len(campaign_languages))
+            else:
+                st.metric("Total Contacts", total_contacts)
+                st.metric("Language Mode", language_mode.split()[0])
+            
+            estimated_time = max(1, total_contacts / 10)  # ~10 contacts per minute
+            st.metric("Est. Time", f"{estimated_time:.1f} min")
+    
+    # Generate DMs button
+    st.markdown("---")
+    
+    if not contacts_for_dm:
+        st.error("❌ Please provide contacts for DM generation")
+        st.button("🌍 Generate Multilingual DMs", disabled=True, use_container_width=True)
+    elif st.button("🌍 Generate Multilingual DMs", type="primary", key="generate_multilingual_dms", use_container_width=True):
+        progress = st.progress(0)
+        status = st.empty()
+        
+        try:
+            all_results = []
+               
+            if language_mode == "Multi-language campaign":
+                # Generate DMs in multiple languages
+                total_iterations = len(campaign_languages)
+                
+                for i, language in enumerate(campaign_languages):
+                    status.info(f"🌍 Generating {language.title()} DMs... ({i+1}/{total_iterations})")
+                    
+                    results = generate_multilingual_batch(
+                        contacts=contacts_for_dm,
+                        platform=dm_platform,
+                        target_language=language
+                    )
+                    
+                    # Add language suffix to names for identification
+                    for result in results:
+                        result["campaign_language"] = language
+                        result["original_name"] = result["original_name"]
+                        result["name"] = f"{result['original_name']} ({language.title()})"
+                    
+                    all_results.extend(results)
+                    progress.progress((i + 1) / total_iterations)
+            
+            else:
+                # Single language mode (auto -detect or forced)
+                status.info(f"🌍 Generating multilingual DMs...")
+                
+                if language_mode == "Force specific language":
+                    results = generate_multilingual_batch(
+                        contacts=contacts_for_dm,
+                        platform=dm_platform,
+                        target_language=target_language
+                    )
+                else:
+                    # Auto-detect mode
+                    results = generate_multilingual_batch(
+                        contacts=contacts_for_dm,
+                        platform=dm_platform,
+                        target_language=None  # Auto-detect
+                    )
+                
+                all_results = results
+                progress.progress(1.0)
+            
+            status.success("✅ Multilingual DM generation completed!")
+
+            
+            if all_results:
+                st.session_state.all_results      = all_results
+                st.session_state.generation_mode  = language_mode
+                st.session_state.dm_platform       = dm_platform
+                st.success(f"🎉 Generated {len(all_results)} multilingual DMs!")
+
+            if st.session_state.get("all_results"):
+                results = st.session_state.all_results        
+                
+                # Language breakdown
+                language_breakdown = {}
+                for result in all_results:
+                    lang = result.get("detected_language", "unknown")
+                    language_breakdown[lang] = language_breakdown.get(lang, 0) + 1
+                
+                st.markdown("**🌍 Language Breakdown:**")
+                lang_cols = st.columns(len(language_breakdown))
+                for i, (lang, count) in enumerate(language_breakdown.items()):
+                    with lang_cols[i]:
+                        percentage = (count / len(all_results)) * 100
+                        st.metric(f"{lang.title()}", count, delta=f"{percentage:.0f}%")
+                
+                # Display results
+                st.subheader("📋 Generated Multilingual DMs")
+                
+                # Convert to DataFrame for display
+                display_df = pd.DataFrame([
+                    {
+                        "Name": result.get("original_name", result.get("name", "")),
+                        "Language": result.get("detected_language", "unknown"),
+                        "Platform": result.get("platform", dm_platform),
+                        "DM": result.get("dm", ""),
+                        "Length": result.get("length", 0),
+                        "Method": result.get("method", "unknown")
+                    }
+                    for result in all_results
+                ])
+                
+                # Filter controls
+                filter_col1, filter_col2 = st.columns(2)
+                
+                with filter_col1:
+                    language_filter = st.selectbox(
+                        "Filter by Language:",
+                        ["All Languages"] + sorted(list(language_breakdown.keys())),
+                        key="results_language_filter"
+                    )
+                
+                with filter_col2:
+                    search_filter = st.text_input(
+                        "Search in names/DMs:",
+                        key="results_search_filter"
+                    )
+                
+                # Apply filters
+                filtered_df = display_df.copy()
+                
+                if language_filter != "All Languages":
+                    filtered_df = filtered_df[filtered_df["Language"] == language_filter]
+                
+                if search_filter:
+                    mask = filtered_df["Name"].str.contains(search_filter, case=False, na=False) | \
+                           filtered_df["DM"].str.contains(search_filter, case=False, na=False)
+                    filtered_df = filtered_df[mask]
+                
+                st.dataframe(filtered_df, use_container_width=True)
+                
+                # Export options
+                st.markdown("---")
+                st.subheader("📤 Export & Save Options")
+                
+                export_col1, export_col2, export_col3, export_col4 = st.columns(4)
+
+                with export_col1:
+
+                    st.button(
+                        "💾 Save to Library",
+                        key="save_dm",
+                        on_click=save_dms_callback
+                    )
+
+                
+                with export_col2:
+                    # Export all results
+                    all_csv = display_df.to_csv(index=False)
+                    st.download_button(
+                        "📄 Export All DMs",
+                        data=all_csv,
+                        file_name=f"multilingual_dms_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        key="export_all_multilingual_dms"
+                    )
+                
+                with export_col3:
+                    # Export filtered results
+                    if language_filter != "All Languages" or search_filter:
+                        filtered_csv = filtered_df.to_csv(index=False)
+                        export_label = f"📄 Export {language_filter}" if language_filter != "All Languages" else "📄 Export Filtered"
+                        st.download_button(
+                            export_label,
+                            data=filtered_csv,
+                            file_name=f"multilingual_dms_filtered_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                            mime="text/csv",
+                            use_container_width=True,
+                            key="export_filtered_multilingual_dms"
+                        )
+                    else:
+                        st.button("📄 Export Filtered", disabled=True, use_container_width=True, key="export_filtered_disabled")
+                
+                with export_col4:
+                    # Create enhanced export with metadata
+                    if st.button("📊 Create Summary", use_container_width=True, key="create_enhanced_export"):
+                        # Create summary data
+                        summary_data = {
+                            "Total DMs Generated": len(all_results),
+                            "Languages Used": len(language_breakdown),
+                            "Platform": dm_platform,
+                            "Generation Mode": language_mode,
+                            "Timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        }
+                        
+                        summary_df = pd.DataFrame([summary_data])
+                        summary_csv = summary_df.to_csv(index=False)
+                        
+                        st.download_button(
+                            "📊 Download Summary",
+                            data=summary_csv,
+                            file_name=f"multilingual_summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                            mime="text/csv",
+                            key="download_summary_report"
+                        )
+                
+                # ✅ MANUAL EXIT BUTTON
+                st.markdown("---")
+                col1, col2, col3 = st.columns([1, 1, 1])
+                with col2:
+                    if st.button("❌ Close Results", use_container_width=True, type="secondary", key="close_dm_results"):
+                        # Clear any stored session state for DM results
+                        keys_to_clear = [key for key in st.session_state.keys() if 'dm' in key.lower() or 'multilingual' in key.lower()]
+                        for key in keys_to_clear:
+                            del st.session_state[key]
+                        
+                        # Force page refresh to return to generation form
+                        st.rerun()
+
+        except Exception as e:
+            status.error(f"❌ DM generation failed: {str(e)}")
+            st.error(f"Error details: {e}")
+    
             with dm_tab2:
                 st.markdown(f"### 📚 DM Library - {current_username}")
 
