@@ -6735,49 +6735,49 @@ if MULTILINGUAL_AVAILABLE:
                         if contacts_for_dm:
                             st.success(f"✅ {len(contacts_for_dm)} contacts ready for DM generation")
             
-            with ml_col2:
-                st.subheader("🌍 Language Settings")
-                
-                # Language selection
-                language_mode = st.radio(
-                    "Language Generation Mode:",
-                    ["Auto-detect per contact", "Force specific language", "Multi-language campaign"],
-                    key="language_mode_selection"
-                )
-                
-                target_language = None
-                campaign_languages = []
-                
-                if language_mode == "Force specific language":
-                    available_languages = list(LANGUAGE_KEYWORDS.keys())
-                    target_language = st.selectbox(
-                        "Target Language:",
-                        available_languages,
-                        key="force_language_select"
+                with ml_col2:
+                    st.subheader("🌍 Language Settings")
+                    
+                    # Language selection
+                    language_mode = st.radio(
+                        "Language Generation Mode:",
+                        ["Auto-detect per contact", "Force specific language", "Multi-language campaign"],
+                        key="language_mode_selection"
                     )
                     
-                    st.info(f"🎯 All DMs will be generated in {target_language.title()}")
-                
-                elif language_mode == "Multi-language campaign":
-                    available_languages = list(LANGUAGE_KEYWORDS.keys())
-                    campaign_languages = st.multiselect(
-                        "Campaign Languages:",
-                        available_languages,
-                        default=["english", "spanish", "french"],
-                        key="campaign_languages_select"
-                    )
+                    target_language = None
+                    campaign_languages = []
                     
-                    st.info(f"🌍 DMs will be generated in {len(campaign_languages)} languages")
-                
-                else:
-                    st.info("🔍 Language will be auto-detected for each contact")
-                
-                # Platform selection for DM style
-                dm_platform = st.selectbox(
-                    "DM Platform Style:",
-                    ["twitter", "linkedin", "facebook", "tiktok", "instagram", "youtube", "medium", "reddit"],
-                    key="dm_platform_style"
-                )
+                    if language_mode == "Force specific language":
+                        available_languages = list(LANGUAGE_KEYWORDS.keys())
+                        target_language = st.selectbox(
+                            "Target Language:",
+                            available_languages,
+                            key="force_language_select"
+                        )
+                        
+                        st.info(f"🎯 All DMs will be generated in {target_language.title()}")
+                    
+                    elif language_mode == "Multi-language campaign":
+                        available_languages = list(LANGUAGE_KEYWORDS.keys())
+                        campaign_languages = st.multiselect(
+                            "Campaign Languages:",
+                            available_languages,
+                            default=["english", "spanish", "french"],
+                            key="campaign_languages_select"
+                        )
+                        
+                        st.info(f"🌍 DMs will be generated in {len(campaign_languages)} languages")
+                    
+                    else:
+                        st.info("🔍 Language will be auto-detected for each contact")
+                    
+                    # Platform selection for DM style
+                    dm_platform = st.selectbox(
+                        "DM Platform Style:",
+                        ["twitter", "linkedin", "facebook", "tiktok", "instagram", "youtube", "medium", "reddit"],
+                        key="dm_platform_style"
+                    )
                 
                 st.markdown("---")
                 st.subheader("📊 Generation Preview")
