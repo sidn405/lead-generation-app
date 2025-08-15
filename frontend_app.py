@@ -539,7 +539,7 @@ if 'current_user' not in st.session_state:
 def try_save_user_to_database(username, user_data):
     try:
         with open("users.json", "r") as f:
-            users = load_json_safe(f)
+            users = load_json_safe(f, {})
         users[username] = user_data
         with open("users.json", "w") as f:
             json.dump(users, f, indent=4)
@@ -617,7 +617,7 @@ def automatic_session_restore(username):
         # Method 2: Try to find user in users.json (backup)
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = load_json_safe(f)
+                users = load_json_safe(f, {})
             
             if username in users:
                 user_data = users[username]
@@ -745,7 +745,7 @@ def try_save_user_to_credit_system(username, user_data, credits, plan):
         users = {}
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = load_json_safe(f)
+                users = load_json_safe(f, {})
         
         users[username] = user_data
         

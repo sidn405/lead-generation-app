@@ -388,7 +388,7 @@ def load_all_existing_users():
     try:
         if os.path.exists("users_credits.json"):
             with open("users_credits.json", "r") as f:
-                users_credits = load_json_safe(f)
+                users_credits = load_json_safe(f, {})
                 for username, user_data in users_credits.items():
                     all_users[username.lower()] = {
                         'source': 'users_credits.json',
@@ -1194,7 +1194,7 @@ def load_user_from_both_files(identifier: str) -> Tuple[Optional[Dict], str, str
     try:
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = load_json_safe(f)
+                users = load_json_safe(f, {})
                 
                 # Check by username
                 for username, user_data in users.items():
@@ -1212,7 +1212,7 @@ def load_user_from_both_files(identifier: str) -> Tuple[Optional[Dict], str, str
     try:
         if os.path.exists("users_credits.json"):
             with open("users_credits.json", "r") as f:
-                users = load_json_safe(f)
+                users = load_json_safe(f, {})
                 
                 # Check by username
                 for username, user_data in users.items():
@@ -1235,7 +1235,7 @@ def update_user_password(username: str, new_password: str, source_file: str) -> 
         
         # Load the appropriate file
         with open(source_file, "r") as f:
-            users = load_json_safe(f)
+            users = load_json_safe(f, {})
         
         # Update password and last login
         if username in users:
@@ -1284,7 +1284,7 @@ def verify_current_password(username: str, current_password: str, source_file: s
     """Verify user's current password"""
     try:
         with open(source_file, "r") as f:
-            users = load_json_safe(f)
+            users = load_json_safe(f, {})
         
         if username in users:
             stored_hash = users[username].get("password_hash", "")
@@ -1623,7 +1623,7 @@ def show_update_password_form():
                     # Add transaction record if using credits system
                     if source_file == "users_credits.json":
                         with open(source_file, "r") as f:
-                            users = load_json_safe(f)
+                            users = load_json_safe(f, {})
                         
                         if username in users:
                             if "transactions" not in users[username]:
@@ -2199,7 +2199,7 @@ def integrated_show_password_reset_form():
                             # Update users_credits.json
                             if os.path.exists("users_credits.json"):
                                 with open("users_credits.json", "r") as f:
-                                    users_credits = load_json_safe(f)
+                                    users_credits = load_json_safe(f, {})
                                 if username in users_credits:
                                     users_credits[username]["password_hash"] = new_password_hash
                                     users_credits[username]["password_updated_at"] = datetime.now().isoformat()

@@ -75,7 +75,7 @@ def _restore_from_users_json(username: str) -> bool:
     try:
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = load_json_safe(f)
+                users = load_json_safe(f, {})
             
             if username in users:
                 user_data = users[username]
