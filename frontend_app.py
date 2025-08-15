@@ -84,6 +84,7 @@ from payment_auth_recovery import (
     create_package_stripe_session,  # ← Add this
     debug_authentication_state
 )
+from user_auth import load_json_safe
 
 # Import the config manager
 try:
@@ -99,7 +100,7 @@ except ImportError as e:
         try:
             if os.path.exists("config.json"):
                 with open("config.json", "r") as f:
-                    config = json.load(f)
+                    config = load_json_safe(f)
                 config = patch_stripe_credentials(config)
                 return {"search_term": config.get("search_term", "crypto trader"), 
                        "max_scrolls": config.get("max_scrolls", 12)}
@@ -111,7 +112,7 @@ except ImportError as e:
         try:
             if os.path.exists("config.json"):
                 with open("config.json", "r") as f:
-                    config = json.load(f)
+                    config = load_json_safe(f)
                 config = patch_stripe_credentials(config)
             else:
                 config = {}
@@ -221,7 +222,7 @@ def save_dms_callback():
 
     # Load, append, trim, save
     with open(library_file, "r+", encoding="utf-8") as f:
-        data = json.load(f)
+        data = load_json_safe(f)
         campaign = {
             "id":        f"{username}_{datetime.now():%Y%m%d_%H%M%S}",
             "username":  username,
@@ -325,7 +326,7 @@ def load_accurate_empire_stats(username):
         empire_file = f"empire_totals_{username}.json"
         if os.path.exists(empire_file):
             with open(empire_file, "r") as f:
-                data = json.load(f)
+                data = load_json_safe(f)
             empire_stats = data.get("platforms", {})
             total_leads  = data.get("total_empire", 0)
         else:
@@ -504,7 +505,7 @@ def load_user_database():
     try:
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                return json.load(f)
+                return load_json_safe(f)
     except Exception as e:
         print(f"⚠️ Failed to load users.json: {e}")
     return {}
@@ -538,7 +539,7 @@ if 'current_user' not in st.session_state:
 def try_save_user_to_database(username, user_data):
     try:
         with open("users.json", "r") as f:
-            users = json.load(f)
+            users = load_json_safe(f)
         users[username] = user_data
         with open("users.json", "w") as f:
             json.dump(users, f, indent=4)
@@ -616,7 +617,7 @@ def automatic_session_restore(username):
         # Method 2: Try to find user in users.json (backup)
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = json.load(f)
+                users = load_json_safe(f)
             
             if username in users:
                 user_data = users[username]
@@ -744,7 +745,7 @@ def try_save_user_to_credit_system(username, user_data, credits, plan):
         users = {}
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = json.load(f)
+                users = load_json_safe(f)
         
         users[username] = user_data
         
@@ -860,7 +861,7 @@ def load_config():
     try:
         if os.path.exists("config.json"):
             with open("config.json", "r") as f:
-                config = json.load(f)
+                config = load_json_safe(f)
             config = patch_stripe_credentials(config)
             
             # Move Stripe key to root level if it's in global
@@ -1186,7 +1187,7 @@ def log_credit_purchase_failsafe(username: str, package_name: str, price: float,
         # Read current events
         try:
             with open(events_file, "r") as f:
-                events = json.load(f)
+                events = load_json_safe(f)
         except (json.JSONDecodeError, FileNotFoundError):
             events = []
             print(f"⚠️ FAILSAFE: File was corrupted, starting fresh")
@@ -1221,7 +1222,7 @@ def log_credit_purchase_failsafe(username: str, package_name: str, price: float,
                     json.dump([], f)
             
             with open(alerts_file, "r") as f:
-                alerts = json.load(f)
+                alerts = load_json_safe(f)
             
             alert_entry = {
                 "type": "CREDIT_PURCHASE_FAILSAFE",
@@ -1284,7 +1285,7 @@ def log_package_purchase_failsafe(username: str, package_name: str, price: float
         
         try:
             with open(events_file, "r") as f:
-                events = json.load(f)
+                events = load_json_safe(f)
         except (json.JSONDecodeError, FileNotFoundError):
             events = []
         
@@ -1405,7 +1406,7 @@ def log_payment_to_admin_direct(username: str, tier: str, credits: int, amount: 
                 json.dump([], f)
         
         with open(admin_file, "r") as f:
-            admin_purchases = json.load(f)
+            admin_purchases = load_json_safe(f)
         
         # Add new purchase
         admin_purchases.append(purchase_event)
@@ -2261,7 +2262,7 @@ def queue_linkedin_request(username, search_term, max_scrolls, user_email):
         # Save to queue file
         if os.path.exists(queue_file):
             with open(queue_file, "r") as f:
-                queue = json.load(f)
+                queue = load_json_safe(f)
         else:
             queue = []
         
@@ -3086,7 +3087,7 @@ def save_dms_to_library(dm_results, username, generation_mode, platform):
 
     # load, append, trim to last 20, and save back
     with open(library_file, "r+", encoding="utf-8") as f:
-        data = json.load(f)
+        data = load_json_safe(f)
         campaign = {
             "id":        f"{username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             "username":  username,
@@ -3115,7 +3116,7 @@ def load_user_dm_library(username):
         library_file = f"dm_library/{username}_dm_library.json"
         
         with open(library_file, 'r', encoding='utf-8') as f:
-            library_data = json.load(f)
+            library_data = load_json_safe(f)
         return library_data.get("campaigns", [])
         
     except Exception as e:
@@ -3132,7 +3133,7 @@ def delete_campaign_from_library(username, campaign_id):
         
         if os.path.exists(library_file):
             with open(library_file, 'r', encoding='utf-8') as f:
-                library_data = json.load(f)
+                library_data = load_json_safe(f)
             
             # Remove campaign with matching ID
             library_data["campaigns"] = [
@@ -4550,7 +4551,7 @@ with tab1:
                                             try:
                                                 if os.path.exists('scraping_session_summary.json'):
                                                     with open('scraping_session_summary.json', 'r', encoding='utf-8') as f:
-                                                        summary = json.load(f)
+                                                        summary = load_json_safe(f)
                                                     
                                                     total_leads = summary.get('total_leads', 0)
                                                     
@@ -5141,7 +5142,7 @@ with tab2: # Lead Results
                 session_found = False
                 if os.path.exists('scraping_session_summary.json'):
                     with open('scraping_session_summary.json', 'r') as f:
-                        summary = json.load(f)
+                        summary = load_json_safe(f)
                     
                     # Check if session belongs to current user
                     if summary.get('user') == username:
@@ -5311,7 +5312,7 @@ with tab2: # Lead Results
                         if 'scraping_session_summary.json' in glob.glob("*.json"):
                             try:
                                 with open('scraping_session_summary.json', 'r') as f:
-                                    summary = json.load(f)
+                                    summary = load_json_safe(f)
                                 st.json(summary)
                             except:
                                 st.text("Could not read session summary")
@@ -5759,7 +5760,7 @@ with tab2: # Lead Results
                     
                     if os.path.exists(empire_file):
                         with open(empire_file, 'r') as f:
-                            empire_data = json.load(f)
+                            empire_data = load_json_safe(f)
                         
                         empire_stats = empire_data.get('platforms', {})
                         total_leads = empire_data.get('total_empire', 0)
@@ -9325,7 +9326,7 @@ with tab6:  # Settings tab
                 if os.path.exists(json_file):
                     try:
                         with open(json_file, "r") as f:
-                            data = json.load(f)
+                            data = load_json_safe(f)
                         
                         if username in data:
                             del data[username]

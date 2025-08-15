@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple, List
 import hashlib
-
+from user_auth import load_json_safe
 
 
 class CreditSystem:
@@ -29,7 +29,7 @@ class CreditSystem:
                 with open(self.users_file, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
                     if content and content != "{}":
-                        self.users = json.loads(content)
+                        self.users =load_json_safe(content)
                         print(f"✅ Loaded {len(self.users)} users from {self.users_file}")
                     else:
                         self.users = {}
@@ -48,7 +48,7 @@ class CreditSystem:
                 with open(self.transactions_file, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
                     if content and content != "[]":
-                        self.transactions = json.loads(content)
+                        self.transactions = load_json_safe(content)
                         print(f"✅ Loaded {len(self.transactions)} transactions from {self.transactions_file}")
                     else:
                         self.transactions = []

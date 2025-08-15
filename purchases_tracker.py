@@ -1,4 +1,5 @@
 import streamlit as st
+from user_auth import load_json_safe
 
 def automatic_payment_capture():
     """
@@ -117,7 +118,7 @@ def log_credit_purchase_auto(username: str, tier: str, amount: float, credits: i
                 json.dump([], f)
         
         with open(admin_file, 'r') as f:
-            admin_purchases = json.load(f)
+            admin_purchases = load_json_safe(f)
         
         # Check for recent duplicates (prevent double-logging)
         recent_duplicate = any(
@@ -175,7 +176,7 @@ def log_subscription_purchase_auto(username: str, plan: str, amount: float) -> b
                 json.dump([], f)
         
         with open(admin_file, 'r') as f:
-            admin_purchases = json.load(f)
+            admin_purchases = load_json_safe(f)
         
         admin_purchases.append(admin_entry)
         
@@ -215,7 +216,7 @@ def fix_test_purchase_types():
             return False
         
         with open(admin_file, 'r') as f:
-            admin_purchases = json.load(f)
+            admin_purchases = load_json_safe(f)
         
         fixed_count = 0
         

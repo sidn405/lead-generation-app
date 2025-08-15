@@ -7,6 +7,7 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
+from user_auth import load_json_safe
 
 # Resolve a persistent config dir (Railway or local)
 def _resolve_client_config_dir() -> str:
@@ -63,7 +64,7 @@ class UserConfigManager:
         try:
             if os.path.exists(self.main_config_file):
                 with open(self.main_config_file, "r") as f:
-                    return json.load(f)
+                    return load_json_safe(f)
         except Exception as e:
             print(f"Error loading main config: {e}")
         
@@ -79,7 +80,7 @@ class UserConfigManager:
             
             if os.path.exists(client_config_path):
                 with open(client_config_path, "r") as f:
-                    client_config = json.load(f)
+                    client_config = load_json_safe(f)
                 
                 # Extract global settings
                 global_settings = client_config.get("global_settings", {})
@@ -149,12 +150,12 @@ class UserConfigManager:
                 # Load existing client config or create new one
                 if os.path.exists(client_config_path):
                     with open(client_config_path, "r") as f:
-                        client_config = json.load(f)
+                        client_config = load_json_safe(f)
                 else:
                     # Create new client config
                     self.create_client_config(username)
                     with open(client_config_path, "r") as f:
-                        client_config = json.load(f)
+                        client_config = load_json_safe(f)
                 
                 # Update global settings
                 if "global_settings" not in client_config:
@@ -213,7 +214,7 @@ class UserConfigManager:
             if debug_info["files_exist"]["client_config"]:
                 try:
                     with open(client_config_path, "r") as f:
-                        client_config = json.load(f)
+                        client_config = load_json_safe(f)
                     global_settings = client_config.get("global_settings", {})
                     debug_info["client_config"] = {
                         "search_term": global_settings.get("search_term", "NOT_SET"),

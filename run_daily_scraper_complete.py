@@ -15,6 +15,7 @@ else:
     print("[OK] Subprocess patch protection enabled")
 import subprocess
 from datetime import datetime
+from user_auth import load_json_safe
 
 # ✅ FIXED: Import centralized config properly
 from config_loader import get_platform_config, config_loader
@@ -153,7 +154,7 @@ def update_empire_command_center(username, latest_results):
         
         if os.path.exists(empire_stats_file):
             with open(empire_stats_file, 'r') as f:
-                empire_stats = json.load(f)
+                empire_stats = load_json_safe(f)
         else:
             # Create new empire stats
             empire_stats = {
@@ -204,7 +205,7 @@ def update_empire_command_center(username, latest_results):
         if os.path.exists('dashboard_data.json'):
             try:
                 with open('dashboard_data.json', 'r') as f:
-                    dashboard_data = json.load(f)
+                    dashboard_data = load_json_safe(f)
                 
                 dashboard_data['total_leads'] = empire_stats['total_empire']
                 dashboard_data['platforms'] = empire_stats['platforms']
@@ -298,7 +299,7 @@ def finalize_scraping_session(username, user_plan, all_results, search_term):
         # Load or create empire stats
         if os.path.exists(empire_stats_file):
             with open(empire_stats_file, 'r') as f:
-                empire_stats = json.load(f)
+                empire_stats = load_json_safe(f)
         else:
             empire_stats = {
                 'total_empire': 0,
@@ -638,7 +639,7 @@ def run_platform_scraper(platform):
         if os.path.exists(client_config_file):
             try:
                 with open(client_config_file, 'r') as f:
-                    client_config = json.load(f)
+                    client_config = load_json_safe(f)
                 
                 search_term = client_config.get('global_settings', {}).get('search_term')
                 max_scrolls = client_config.get('global_settings', {}).get('max_scrolls')
@@ -1078,7 +1079,7 @@ def finalize_scraping_session(username, user_plan, all_results, search_term):
         empire_file = f'empire_totals_{username}.json'
         if os.path.exists(empire_file):
             with open(empire_file, 'r') as f:
-                empire_totals = json.load(f)
+                empire_totals = load_json_safe(f)
         else:
             empire_totals = {'total_empire': 0, 'platforms': {}}
         
@@ -1259,7 +1260,7 @@ def test_variable_resolution():
     if os.path.exists(client_config_file):
         try:
             with open(client_config_file, 'r') as f:
-                client_config = json.load(f)
+                client_config = load_json_safe(f)
             
             search_term = client_config.get('global_settings', {}).get('search_term')
             max_scrolls = client_config.get('global_settings', {}).get('max_scrolls')

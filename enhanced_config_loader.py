@@ -2,6 +2,7 @@
 import json
 import os
 from datetime import datetime
+from user_auth import load_json_safe
 
 class ConfigLoader:
     def __init__(self, config_file="config.json"):
@@ -11,7 +12,7 @@ class ConfigLoader:
     def load_config(self):
         try:
             with open(self.config_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                return load_json_safe(f)
         except FileNotFoundError:
             return self.create_default_config()
         except json.JSONDecodeError as e:

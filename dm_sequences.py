@@ -3,7 +3,7 @@ from personas import PERSONAS, match_persona
 import json
 import os
 import re
-
+from user_auth import load_json_safe
 # Import multilingual capabilities
 try:
     from multilingual_dm_generator import (
@@ -33,7 +33,7 @@ PLATFORM_SETTINGS = {
 # Load keyword config once
 try:
     with open("persona_keywords.json", "r") as f:
-        PERSONA_KEYWORDS = json.load(f)
+        PERSONA_KEYWORDS = load_json_safe(f)
 except Exception as e:
     print(f"⚠️ Could not load persona_keywords.json: {e}")
     PERSONA_KEYWORDS = {}

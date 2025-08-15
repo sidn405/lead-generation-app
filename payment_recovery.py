@@ -4,13 +4,14 @@ import streamlit as st
 import datetime
 import json
 import os
+from user_auth import load_json_safe
 
 def try_save_user_to_database(username, user_data):
     try:
         users = {}
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = json.load(f)
+                users = load_json_safe(f)
 
         users[username] = user_data
 

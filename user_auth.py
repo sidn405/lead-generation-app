@@ -19,6 +19,45 @@ from cryptography.fernet import Fernet
 from email.message import EmailMessage
 from emailer import EMAIL_ADDRESS, EMAIL_PASSWORD
 
+import json, os, io, time
+
+def _atomic_write_json(path: str, data: dict) -> None:
+    tmp = f"{path}.tmp.{int(time.time()*1000)}"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(tmp, path)
+
+def load_json_safe(path: str, default: dict) -> dict:
+    """Load JSON handling: missing file, empty file, BOM, and corrupt JSON.
+    Returns default and repairs the file if needed.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    # 1) If file missing or zero bytes -> create with default
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        _atomic_write_json(path, default)
+        return default
+
+    try:
+        # 2) Read with utf-8-sig to tolerate BOM
+        with open(path, "r", encoding="utf-8-sig") as f:
+            text = f.read().strip()
+        if not text:
+            _atomic_write_json(path, default)
+            return default
+        return load_json_safe(text)
+
+    except Exception as e:
+        # 3) Backup bad file and repair with default
+        bad = f"{path}.bad.{int(time.time())}"
+        try:
+            os.replace(path, bad)
+        except Exception:
+            pass
+        _atomic_write_json(path, default)
+        return default
+
 def load_legal_document(filename):
     """Load legal document from markdown file"""
     try:
@@ -131,7 +170,7 @@ def delete_user_data(username):
         try:
             # Read the file
             with open(filename, "r", encoding="utf-8") as f:
-                data = json.load(f)
+                data = load_json_safe(f)
             
             # Check if user exists
             if username in data:
@@ -370,7 +409,7 @@ def load_all_existing_users():
     try:
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users_json = json.load(f)
+                users_json = load_json_safe(f)
                 for username, user_data in users_json.items():
                     all_users[username.lower()] = {
                         'source': 'users.json',
@@ -386,7 +425,7 @@ def load_all_existing_users():
     try:
         if os.path.exists("users_credits.json"):
             with open("users_credits.json", "r") as f:
-                users_credits = json.load(f)
+                users_credits = load_json_safe(f)
                 for username, user_data in users_credits.items():
                     all_users[username.lower()] = {
                         'source': 'users_credits.json',
@@ -1192,7 +1231,7 @@ def load_user_from_both_files(identifier: str) -> Tuple[Optional[Dict], str, str
     try:
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = json.load(f)
+                users = load_json_safe(f)
                 
                 # Check by username
                 for username, user_data in users.items():
@@ -1210,7 +1249,7 @@ def load_user_from_both_files(identifier: str) -> Tuple[Optional[Dict], str, str
     try:
         if os.path.exists("users_credits.json"):
             with open("users_credits.json", "r") as f:
-                users = json.load(f)
+                users = load_json_safe(f)
                 
                 # Check by username
                 for username, user_data in users.items():
@@ -1233,7 +1272,7 @@ def update_user_password(username: str, new_password: str, source_file: str) -> 
         
         # Load the appropriate file
         with open(source_file, "r") as f:
-            users = json.load(f)
+            users = load_json_safe(f)
         
         # Update password and last login
         if username in users:
@@ -1282,7 +1321,7 @@ def verify_current_password(username: str, current_password: str, source_file: s
     """Verify user's current password"""
     try:
         with open(source_file, "r") as f:
-            users = json.load(f)
+            users = load_json_safe(f)
         
         if username in users:
             stored_hash = users[username].get("password_hash", "")
@@ -1621,7 +1660,7 @@ def show_update_password_form():
                     # Add transaction record if using credits system
                     if source_file == "users_credits.json":
                         with open(source_file, "r") as f:
-                            users = json.load(f)
+                            users = load_json_safe(f)
                         
                         if username in users:
                             if "transactions" not in users[username]:
@@ -1789,7 +1828,7 @@ class IntegratedPasswordReset:
             rate_limits = {}
             if os.path.exists(self.rate_limit_file):
                 with open(self.rate_limit_file, "r") as f:
-                    rate_limits = json.load(f)
+                    rate_limits = load_json_safe(f)
             
             now = datetime.now()
             email_lower = email.lower()
@@ -1838,7 +1877,7 @@ class IntegratedPasswordReset:
             rate_limits = {}
             if os.path.exists(self.rate_limit_file):
                 with open(self.rate_limit_file, "r") as f:
-                    rate_limits = json.load(f)
+                    rate_limits = load_json_safe(f)
             
             email_lower = email.lower()
             now = datetime.now()
@@ -2187,7 +2226,7 @@ def integrated_show_password_reset_form():
                             # Update users.json
                             if os.path.exists("users.json"):
                                 with open("users.json", "r") as f:
-                                    users_json = json.load(f)
+                                    users_json = load_json_safe(f)
                                 if username in users_json:
                                     users_json[username]["password_hash"] = new_password_hash
                                     users_json[username]["password_updated_at"] = datetime.now().isoformat()
@@ -2197,7 +2236,7 @@ def integrated_show_password_reset_form():
                             # Update users_credits.json
                             if os.path.exists("users_credits.json"):
                                 with open("users_credits.json", "r") as f:
-                                    users_credits = json.load(f)
+                                    users_credits = load_json_safe(f)
                                 if username in users_credits:
                                     users_credits[username]["password_hash"] = new_password_hash
                                     users_credits[username]["password_updated_at"] = datetime.now().isoformat()

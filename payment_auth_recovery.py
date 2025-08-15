@@ -3,13 +3,13 @@
 Payment Authentication Recovery Module
 Handles authentication restoration after Stripe payment returns
 """
-
 import streamlit as st
 import os
 import json
 import time
 from datetime import datetime
 from typing import Tuple, Optional, Dict, Any
+from user_auth import load_json_safe
 
 def restore_payment_authentication() -> bool:
     """
@@ -75,7 +75,7 @@ def _restore_from_users_json(username: str) -> bool:
     try:
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = json.load(f)
+                users = load_json_safe(f)
             
             if username in users:
                 user_data = users[username]
