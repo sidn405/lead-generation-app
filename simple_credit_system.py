@@ -4,7 +4,6 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple, List
 import hashlib
-from user_auth import load_json_safe
 
 
 class CreditSystem:
@@ -18,6 +17,7 @@ class CreditSystem:
     def load_data(self):
         """Load user credits and transaction data with error handling"""
         print("🔄 Loading credit system data...")
+        from user_auth import load_json_safe
         
         # Initialize defaults first
         self.users = {}
