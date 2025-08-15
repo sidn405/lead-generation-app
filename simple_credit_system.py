@@ -17,7 +17,7 @@ class CreditSystem:
     def load_data(self):
         """Load user credits and transaction data with error handling"""
         print("🔄 Loading credit system data...")
-        from user_auth import load_json_safe
+        from json_utils import load_json_safe
         
         # Initialize defaults first
         self.users = {}

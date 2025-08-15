@@ -84,7 +84,7 @@ from payment_auth_recovery import (
     create_package_stripe_session,  # ← Add this
     debug_authentication_state
 )
-from user_auth import load_json_safe
+from json_utils import load_json_safe
 
 # Import the config manager
 try:

@@ -3,7 +3,7 @@ from personas import PERSONAS, match_persona
 import json
 import os
 import re
-from user_auth import load_json_safe
+from json_utils import load_json_safe
 # Import multilingual capabilities
 try:
     from multilingual_dm_generator import (

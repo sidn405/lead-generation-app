@@ -18,45 +18,8 @@ from simple_credit_system import credit_system
 from cryptography.fernet import Fernet
 from email.message import EmailMessage
 from emailer import EMAIL_ADDRESS, EMAIL_PASSWORD
+from json_utils import load_json_safe
 
-import json, os, io, time
-
-def _atomic_write_json(path: str, data: dict) -> None:
-    tmp = f"{path}.tmp.{int(time.time()*1000)}"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    os.replace(tmp, path)
-
-def load_json_safe(path: str, default: dict) -> dict:
-    """Load JSON handling: missing file, empty file, BOM, and corrupt JSON.
-    Returns default and repairs the file if needed.
-    """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    # 1) If file missing or zero bytes -> create with default
-    if not os.path.exists(path) or os.path.getsize(path) == 0:
-        _atomic_write_json(path, default)
-        return default
-
-    try:
-        # 2) Read with utf-8-sig to tolerate BOM
-        with open(path, "r", encoding="utf-8-sig") as f:
-            text = f.read().strip()
-        if not text:
-            _atomic_write_json(path, default)
-            return default
-        return load_json_safe(text)
-
-    except Exception as e:
-        # 3) Backup bad file and repair with default
-        bad = f"{path}.bad.{int(time.time())}"
-        try:
-            os.replace(path, bad)
-        except Exception:
-            pass
-        _atomic_write_json(path, default)
-        return default
 
 def load_legal_document(filename):
     """Load legal document from markdown file"""

@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
-from user_auth import load_json_safe
+from json_utils import load_json_safe
 
 # Resolve a persistent config dir (Railway or local)
 def _resolve_client_config_dir() -> str:

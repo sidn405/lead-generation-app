@@ -9,7 +9,7 @@ import json
 import time
 from datetime import datetime
 from typing import Tuple, Optional, Dict, Any
-from user_auth import load_json_safe
+from json_utils import load_json_safe
 
 def restore_payment_authentication() -> bool:
     """

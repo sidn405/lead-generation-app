@@ -4,7 +4,7 @@ import streamlit as st
 import datetime
 import json
 import os
-from user_auth import load_json_safe
+from json_utils import load_json_safe
 
 def try_save_user_to_database(username, user_data):
     try:
