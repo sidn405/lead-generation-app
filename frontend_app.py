@@ -7338,6 +7338,9 @@ if MULTILINGUAL_AVAILABLE:
 
 # Continue with the rest of the tabs...
 with tab4:  # Pricing Plans
+    import stripe
+    st.caption(f"Stripe configured: {bool(getattr(stripe, 'api_key', None))}")
+
     
     if "payment_success" in st.query_params:
         from stripe_checkout import handle_payment_success_url
