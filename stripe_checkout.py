@@ -14,6 +14,40 @@ APP_BASE_URL = (
     or "http://localhost:8501"
 )
 
+def _get_secret_env_first(name: str, alt_keys=()):
+    # ENV (Railway)
+    v = os.getenv(name)
+    if v: return v
+    # Streamlit secrets (local dev)
+    try:
+        import streamlit as st
+        v = st.secrets.get(name)
+        if v: return v
+    except Exception:
+        pass
+    # config.json fallback (local dev only)
+    for path in ("config.json", os.path.join(os.getenv("CLIENT_CONFIG_DIR", "client_configs"), "config.json")):
+        try:
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f) or {}
+                for k in (name, *alt_keys):
+                    if cfg.get(k):
+                        return cfg[k]
+        except Exception:
+            pass
+    return ""
+
+def init_stripe() -> bool:
+    if getattr(stripe, "api_key", None):
+        return True
+    key = _get_secret_env_first("STRIPE_SECRET_KEY", ("stripe_secret_key",))
+    stripe.api_key = key or None
+    return bool(stripe.api_key)
+
+# run once on import
+init_stripe()
+
 def _load_from_config_json() -> str:
     """
     Optional: fallback for local dev if you still keep a config.json.
