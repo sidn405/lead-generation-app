@@ -3502,6 +3502,56 @@ with st.sidebar:
         
         for platform, description in preview_platforms.items():
             st.caption(f"{platform} • {description}")
+            
+        st.markdown("---")# --- STORAGE DOCTOR (temporary admin helper) ---
+        import os, json, streamlit as st
+
+        with st.expander("🛠️ Storage doctor (temporary)"):
+            base = os.getenv("CLIENT_CONFIG_DIR", "client_configs")
+            st.write("CLIENT_CONFIG_DIR:", base)
+            os.makedirs(base, exist_ok=True)
+
+            paths = {
+                "users.json": os.path.join(base, "users.json"),
+                "users_credits.json": os.path.join(base, "users_credits.json"),
+                "user_usage.json": os.path.join(base, "user_usage.json"),
+                "transactions_db.json": os.path.join(base, "transactions_db.json"),
+            }
+            if st.button("Initialize/Repair JSON files"):
+                # valid, non-empty JSON for each file
+                defaults = {
+                    "users.json": {},
+                    "users_credits.json": {},
+                    "user_usage.json": {},
+                    "transactions_db.json": [],
+                }
+                for name, p in paths.items():
+                    try:
+                        if not os.path.exists(p) or os.path.getsize(p) == 0:
+                            with open(p, "w", encoding="utf-8") as f:
+                                json.dump(defaults[name], f, ensure_ascii=False, indent=2)
+                                f.write("\n")
+                        else:
+                            # sanity check: load & rewrite to ensure UTF-8 clean
+                            with open(p, "r", encoding="utf-8-sig") as f:
+                                data = f.read().strip() or "{}"
+                            try:
+                                parsed = json.loads(data)
+                            except Exception:
+                                parsed = defaults[name]
+                            with open(p, "w", encoding="utf-8") as f:
+                                json.dump(parsed, f, ensure_ascii=False, indent=2)
+                                f.write("\n")
+                        st.success(f"OK: {name}")
+                    except Exception as e:
+                        st.error(f"Failed {name}: {e}")
+
+            # show existence + sizes
+            for name, p in paths.items():
+                exists = os.path.exists(p)
+                size = os.path.getsize(p) if exists else 0
+                st.caption(f"{name}: {'✅' if exists else '❌'}  {p}  ({size} bytes)")
+        st.markdown("---") # --- end STORAGE DOCTOR ---
         
         st.markdown("---")
         st.subheader("💡 Why Join?")
