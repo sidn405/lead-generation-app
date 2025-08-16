@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple, List
 import hashlib
+from json_utils import load_json_safe, _atomic_write_json
 
 
 class CreditSystem:
@@ -17,7 +18,7 @@ class CreditSystem:
     def load_data(self):
         """Load user credits and transaction data with error handling"""
         print("🔄 Loading credit system data...")
-        from json_utils import load_json_safe
+        
         
         # Initialize defaults first
         self.users = {}

@@ -2,12 +2,15 @@
 import json
 import os
 from datetime import datetime
-from json_utils import load_json_safe
+from json_utils import load_json_safe, _atomic_write_json
+
 
 class ConfigLoader:
     def __init__(self, config_file="config.json"):
         self.config_file = config_file
-        self.config = self.load_config()
+        os.makedirs(os.path.dirname(config_file), exist_ok=True)
+        # load existing or start with dict
+        self.config = load_json_safe(self.config_file, {})
     
     def load_config(self):
         try:
@@ -50,16 +53,13 @@ class ConfigLoader:
         self.save_config(default_config)
         return default_config
     
-    def save_config(self, config=None):
-        if config is None:
-            config = self.config
+    def save_config(self) -> bool:
         try:
-            os.makedirs(os.path.dirname(self.config_file) if os.path.dirname(self.config_file) else ".", exist_ok=True)
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=2)
-            return True
-        except Exception as e:
-            print(f"Error saving config: {e}")
+            _atomic_write_json(self.config_file, self.config or {})
+            # verify round-trip
+            back = load_json_safe(self.config_file, {})
+            return bool(back)  # True if we read something back
+        except Exception:
             return False
     
     def get_excluded_accounts(self, platform=None):
@@ -77,20 +77,12 @@ class ConfigLoader:
         
         return list(set(excluded_accounts))
     
-    def add_excluded_account(self, platform, username):
-        if "excluded_accounts" not in self.config:
-            self.config["excluded_accounts"] = {"enabled": True, "accounts": {}, "global_excludes": []}
-        
-        if "accounts" not in self.config["excluded_accounts"]:
-            self.config["excluded_accounts"]["accounts"] = {}
-        
-        platform_lower = platform.lower()
-        if platform_lower not in self.config["excluded_accounts"]["accounts"]:
-            self.config["excluded_accounts"]["accounts"][platform_lower] = []
-        
-        if username not in self.config["excluded_accounts"]["accounts"][platform_lower]:
-            self.config["excluded_accounts"]["accounts"][platform_lower].append(username)
-            self.save_config()
+    def add_excluded_account(self, platform, handle) -> bool:
+        cfg = self.config
+        cfg.setdefault("exclusions", [])
+        entry = {"platform": platform, "handle": handle}
+        if entry not in cfg["exclusions"]:
+            cfg["exclusions"].append(entry)
             return True
         return False
     
