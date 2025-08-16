@@ -591,6 +591,46 @@ class CreditSystem:
         except Exception as e:
             print(f"❌ Error adding credits for {username}: {e}")
             return False
+        
+    def activate_subscription(self, username: str, plan: str, monthly_credits: int, stripe_session_id: str) -> bool:
+        """Activate a monthly subscription plan"""
+        if username not in self.users:
+            print(f"❌ User {username} not found for subscription activation")
+            return False
+
+        user = self.users[username]
+
+        # Set subscription plan (don't add to existing credits - subscriptions replace)
+        old_plan = user.get("plan", "demo")
+        old_credits = user.get("credits", 0)
+        
+        user["plan"] = plan.lower()
+        user["credits"] = monthly_credits  # Set to monthly amount (replace, don't add)
+        user["subscription_active"] = True
+        user["subscription_started"] = datetime.now().isoformat()
+        user["monthly_credits"] = monthly_credits
+        
+        print(f"✅ Subscription activated: {username}")
+        print(f"   Plan: {old_plan} → {plan}")
+        print(f"   Credits: {old_credits} → {monthly_credits}/month")
+
+        # Log subscription activation
+        transaction = {
+            "username": username,
+            "type": "subscription_activation",
+            "plan": plan,
+            "old_plan": old_plan,
+            "monthly_credits": monthly_credits,
+            "stripe_session_id": stripe_session_id or "unknown",
+            "timestamp": datetime.now().isoformat(),
+            "credits_set": monthly_credits
+        }
+
+        user.setdefault("transactions", []).append(transaction)
+        self.transactions.append(transaction)
+
+        self.save_data()
+        return True
     
     def get_user_stats(self, username: str) -> Dict:
         """Get user statistics with error handling"""
