@@ -7462,7 +7462,7 @@ if MULTILINGUAL_AVAILABLE:
     with tab4:  # Pricing Plans
         
         if "payment_success" in st.query_params:
-            from stripe_checkout import handle_payment_success_url
+            
             if handle_payment_success_url():
                 # Payment success page is showing, exit early
                 st.stop()
