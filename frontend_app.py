@@ -1089,7 +1089,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 from stripe_checkout import handle_payment_success
 
 def handle_payment_success_url():
