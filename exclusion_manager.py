@@ -6,7 +6,6 @@ Use this to test and manage excluded accounts across all platforms
 
 from config_loader import ConfigLoader, should_exclude_account
 
-
 def test_exclusions():
     """Test the exclusion functionality"""
     print("🧪 Testing Exclusion Functionality")

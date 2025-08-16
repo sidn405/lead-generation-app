@@ -4,8 +4,6 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple, List
 import hashlib
-from json_utils import load_json_safe, _atomic_write_json
-
 
 class CreditSystem:
     """Simple credit-based lead system with anti-abuse protection"""
@@ -16,62 +14,20 @@ class CreditSystem:
         self.load_data()
     
     def load_data(self):
-        """Load user credits and transaction data with error handling"""
-        print("🔄 Loading credit system data...")
-        
-        
-        # Initialize defaults first
-        self.users = {}
-        self.transactions = []
-        
+        """Load user credits and transaction data"""
         # Load users with credits
-        try:
-            if os.path.exists(self.users_file):
-                with open(self.users_file, 'r', encoding='utf-8') as f:
-                    content = f.read().strip()
-                    if content and content != "{}":
-                        self.users =load_json_safe(content)
-                        print(f"✅ Loaded {len(self.users)} users from {self.users_file}")
-                    else:
-                        self.users = {}
-                        print("📝 Starting with empty users database")
-            else:
-                self.users = {}
-                print(f"📝 {self.users_file} not found, creating new database")
-        except Exception as e:
-            print(f"⚠️ Error loading {self.users_file}: {e}")
-            print("🔄 Starting with empty users database")
+        if os.path.exists(self.users_file):
+            with open(self.users_file, 'r') as f:
+                self.users = json.load(f)
+        else:
             self.users = {}
         
         # Load transaction history
-        try:
-            if os.path.exists(self.transactions_file):
-                with open(self.transactions_file, 'r', encoding='utf-8') as f:
-                    content = f.read().strip()
-                    if content and content != "[]":
-                        self.transactions = load_json_safe(content)
-                        print(f"✅ Loaded {len(self.transactions)} transactions from {self.transactions_file}")
-                    else:
-                        self.transactions = []
-                        print("📝 Starting with empty transactions database")
-            else:
-                self.transactions = []
-                print(f"📝 {self.transactions_file} not found, creating new database")
-        except Exception as e:
-            print(f"⚠️ Error loading {self.transactions_file}: {e}")
-            print("🔄 Starting with empty transactions database")
+        if os.path.exists(self.transactions_file):
+            with open(self.transactions_file, 'r') as f:
+                self.transactions = json.load(f)
+        else:
             self.transactions = []
-        
-        # Ensure all users have required structure
-        for username, user_data in self.users.items():
-            if 'transactions' not in user_data:
-                user_data['transactions'] = []
-            if 'demo_leads_used' not in user_data:
-                user_data['demo_leads_used'] = 0
-            if 'demo_limit' not in user_data:
-                user_data['demo_limit'] = 5
-        
-        print(f"✅ Credit system loaded: {len(self.users)} users, {len(self.transactions)} transactions")
     
     def save_data(self):
         """Save all data to files"""

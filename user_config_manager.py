@@ -7,37 +7,15 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
-from json_utils import load_json_safe
 
-# Resolve a persistent config dir (Railway or local)
-def _resolve_client_config_dir() -> str:
-    # Preferred: env override (set this in Railway → Variables)
-    base = os.getenv("CLIENT_CONFIG_DIR")
-    if base:
-        os.makedirs(base, exist_ok=True)
-        return base
-
-    # Secondary: running on Railway? default to the mounted path
-    if os.getenv("RAILWAY_ENVIRONMENT"):
-        base = "/app/client_configs"
-        os.makedirs(base, exist_ok=True)
-        return base
-
-    # Local dev fallback
-    base = "client_configs"
-    os.makedirs(base, exist_ok=True)
-    return base
-
-def _sanitize_username(u: str) -> str:
-    return "".join(c for c in (u or "") if c.isalnum() or c in (".","-","_")).lower()
 
 class UserConfigManager:
     """Manages user-specific configurations and syncs with global config"""
     
     def __init__(self, main_config_file: str = "config.json"):
         self.main_config_file = main_config_file
-        self.client_configs_dir = os.getenv("CLIENT_CONFIG_DIR", "client_configs")
-        
+        self.client_configs_dir = "client_configs"
+        self.ensure_directories()
     
     def ensure_directories(self):
         """Ensure required directories exist"""
@@ -45,26 +23,14 @@ class UserConfigManager:
     
     def get_client_config_path(self, username: str) -> str:
         """Get path to client-specific config file"""
-        safe = _sanitize_username(username)
-        path = os.path.join(self.client_configs_dir, f"client_{safe}_config.json")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        return path
-    
-    def get_users_db_path(self) -> str:
-        return os.path.join(self.client_configs_dir, "users.json")
-
-    def get_leads_dir(self) -> str:
-        p = os.path.join(self.client_configs_dir, "leads_output")
-        os.makedirs(p, exist_ok=True)
-        return p
-
+        return os.path.join(self.client_configs_dir, f"client_{username}_config.json")
     
     def load_main_config(self) -> Dict[str, Any]:
         """Load main configuration file"""
         try:
             if os.path.exists(self.main_config_file):
                 with open(self.main_config_file, "r") as f:
-                    return load_json_safe(f)
+                    return json.load(f)
         except Exception as e:
             print(f"Error loading main config: {e}")
         
@@ -80,7 +46,7 @@ class UserConfigManager:
             
             if os.path.exists(client_config_path):
                 with open(client_config_path, "r") as f:
-                    client_config = load_json_safe(f)
+                    client_config = json.load(f)
                 
                 # Extract global settings
                 global_settings = client_config.get("global_settings", {})
@@ -150,12 +116,12 @@ class UserConfigManager:
                 # Load existing client config or create new one
                 if os.path.exists(client_config_path):
                     with open(client_config_path, "r") as f:
-                        client_config = load_json_safe(f)
+                        client_config = json.load(f)
                 else:
                     # Create new client config
                     self.create_client_config(username)
                     with open(client_config_path, "r") as f:
-                        client_config = load_json_safe(f)
+                        client_config = json.load(f)
                 
                 # Update global settings
                 if "global_settings" not in client_config:
@@ -214,7 +180,7 @@ class UserConfigManager:
             if debug_info["files_exist"]["client_config"]:
                 try:
                     with open(client_config_path, "r") as f:
-                        client_config = load_json_safe(f)
+                        client_config = json.load(f)
                     global_settings = client_config.get("global_settings", {})
                     debug_info["client_config"] = {
                         "search_term": global_settings.get("search_term", "NOT_SET"),

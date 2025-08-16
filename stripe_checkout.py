@@ -1,95 +1,16 @@
 # stripe_checkout.py - Updated for better tab organization
 import time
 import os
-import json
 import stripe
 import streamlit as st
 from typing import Tuple, List, Dict
 from simple_credit_system import credit_system
-from json_utils import load_json_safe
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
     or os.getenv("APP_BASE_URL") 
     or "http://localhost:8501"
 )
-
-def _get_secret_env_first(name: str, alt_keys=()):
-    # ENV (Railway)
-    v = os.getenv(name)
-    if v: return v
-    # Streamlit secrets (local dev)
-    try:
-        import streamlit as st
-        v = st.secrets.get(name)
-        if v: return v
-    except Exception:
-        pass
-    # config.json fallback (local dev only)
-    for path in ("config.json", os.path.join(os.getenv("CLIENT_CONFIG_DIR", "client_configs"), "config.json")):
-        try:
-            if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
-                    cfg = json.load(f) or {}
-                for k in (name, *alt_keys):
-                    if cfg.get(k):
-                        return cfg[k]
-        except Exception:
-            pass
-    return ""
-
-def init_stripe() -> bool:
-    if getattr(stripe, "api_key", None):
-        return True
-    key = _get_secret_env_first("STRIPE_SECRET_KEY", ("stripe_secret_key",))
-    stripe.api_key = key or None
-    return bool(stripe.api_key)
-
-# run once on import
-init_stripe()
-
-def _load_from_config_json() -> str:
-    """
-    Optional: fallback for local dev if you still keep a config.json.
-    Tries ENV -> .streamlit/secrets -> config.json.
-    """
-    # 1) ENV (Railway recommended)
-    env = os.getenv("STRIPE_SECRET_KEY")
-    if env:
-        return env
-
-    # 2) Streamlit secrets (local dev)
-    try:
-        import streamlit as st
-        val = st.secrets.get("STRIPE_SECRET_KEY", "")
-        if val:
-            return val
-    except Exception:
-        pass
-
-    # 3) config.json (local dev fallback)
-    for path in ("config.json", os.path.join(os.getenv("CLIENT_CONFIG_DIR", "client_configs"), "config.json")):
-        try:
-            if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
-                    cfg = load_json_safe(f) or {}
-                val = cfg.get("stripe_secret_key") or cfg.get("STRIPE_SECRET_KEY") or ""
-                if val:
-                    return val
-        except Exception:
-            pass
-    return ""
-
-def init_stripe() -> bool:
-    """Idempotently set stripe.api_key; returns True if configured."""
-    if getattr(stripe, "api_key", None):
-        return True
-    key = _load_from_config_json()
-    stripe.api_key = key or None
-    return bool(stripe.api_key)
-
-# call once on import so anything that imports this module is configured
-init_stripe()
 
 def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str:
     """Create Stripe checkout with proper username handling"""
@@ -176,7 +97,7 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
                 
                 # SUCCESS URL with username validation
                 success_url=success_url,
-                cancel_url=f"https://leadgeneratorempire.com/?username={username}&payment_cancelled=true",
+                cancel_url=f"http://localhost:8501?username={username}&payment_cancelled=true",
                 
                 # Customer info
                 customer_email=user_email,
@@ -209,7 +130,7 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
                 
                 # SUCCESS URL with username validation
                 success_url=success_url,
-                cancel_url=f"https://leadgeneratorempire.com/?username={username}&payment_cancelled=true",
+                cancel_url=f"http://localhost:8501?username={username}&payment_cancelled=true",
                 
                 # Customer info
                 customer_email=user_email,

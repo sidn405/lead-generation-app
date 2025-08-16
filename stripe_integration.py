@@ -46,8 +46,8 @@ def create_stripe_session(package_name, price, user_email, user_id):
                 'quantity': 1,
             }],
             mode='payment',
-            success_url=f"{st.secrets.get('app_url', 'https://leadgeneratorempire.com/')}?success=true&session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{st.secrets.get('app_url', 'https://leadgeneratorempire.com/')}?canceled=true",
+            success_url=f"{st.secrets.get('app_url', 'http://localhost:8501')}?success=true&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{st.secrets.get('app_url', 'http://localhost:8501')}?canceled=true",
             customer_email=user_email,
             metadata={
                 'user_id': user_id,

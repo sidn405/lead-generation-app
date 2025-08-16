@@ -1,0 +1,9 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "streamlit run frontend_app.py --server.port $PORT --server.address 0.0.0.0"
+
+# Persistent storage
+[volumes]
+user_configs = { mountPath = "/app/user_configs" }

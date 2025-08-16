@@ -84,7 +84,6 @@ from payment_auth_recovery import (
     create_package_stripe_session,  # ← Add this
     debug_authentication_state
 )
-from json_utils import load_json_safe
 
 # Import the config manager
 try:
@@ -100,7 +99,7 @@ except ImportError as e:
         try:
             if os.path.exists("config.json"):
                 with open("config.json", "r") as f:
-                    config = load_json_safe(f)
+                    config = json.load(f)
                 config = patch_stripe_credentials(config)
                 return {"search_term": config.get("search_term", "crypto trader"), 
                        "max_scrolls": config.get("max_scrolls", 12)}
@@ -112,7 +111,7 @@ except ImportError as e:
         try:
             if os.path.exists("config.json"):
                 with open("config.json", "r") as f:
-                    config = load_json_safe(f)
+                    config = json.load(f)
                 config = patch_stripe_credentials(config)
             else:
                 config = {}
@@ -143,8 +142,8 @@ except ImportError as e:
         print(f"⚠️ CSV User Debug module not available: {e}")
     CSV_USER_DEBUG_AVAILABLE = False
 
+# Replace any auth-related imports with:
 from user_auth import (
-    
     SimpleCreditAuth, simple_auth,
     show_auth_section_if_needed,
     show_enhanced_login_with_forgot_password,
@@ -154,26 +153,34 @@ from user_auth import (
     show_update_password_form,
     show_password_management_menu,
     show_password_security_tips,
-    
+    integrated_show_forgot_password_form,
+    integrated_show_password_reset_form
 )
 
-import os, sys, logging
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logging.info("CLIENT_CONFIG_DIR=%s", os.getenv("CLIENT_CONFIG_DIR"))
-logging.info("Exists? %s", os.path.exists(os.getenv("CLIENT_CONFIG_DIR", "")))
-try:
-    os.makedirs(os.getenv("CLIENT_CONFIG_DIR", "/app/client_configs"), exist_ok=True)
-    testfile = os.path.join(os.getenv("CLIENT_CONFIG_DIR", "/app/client_configs"), ".rw_test")
-    with open(testfile, "w") as f:
-        f.write("ok")
-    logging.info("Writable: created %s", testfile)
-except Exception as e:
-    logging.exception("Volume not writable: %s", e)
-
+from simple_credit_system import credit_system
+from database_setup import setup_purchase_tables
 
 from stripe_integration import handle_payment_flow, show_purchase_buttons
 from package_system import show_package_store, show_my_packages
 from purchases_tracker import automatic_payment_capture
+
+# Initialize database on startup
+@st.cache_resource
+def init_database():
+    """Initialize SQLite database on first run"""
+    try:
+        setup_purchase_tables()
+        print("✅ Database initialized successfully")
+        return True
+    except Exception as e:
+        print(f"❌ Database initialization error: {e}")
+        return False
+
+# Initialize database early in your app
+if 'db_initialized' not in st.session_state:
+    st.session_state.db_initialized = init_database()
+    if st.session_state.db_initialized:
+        st.success("🎯 Database ready!")
 
 # Add this as the FIRST thing in your main app
 payment_handled = automatic_payment_capture()
@@ -222,7 +229,7 @@ def save_dms_callback():
 
     # Load, append, trim, save
     with open(library_file, "r+", encoding="utf-8") as f:
-        data = load_json_safe(f)
+        data = json.load(f)
         campaign = {
             "id":        f"{username}_{datetime.now():%Y%m%d_%H%M%S}",
             "username":  username,
@@ -326,7 +333,7 @@ def load_accurate_empire_stats(username):
         empire_file = f"empire_totals_{username}.json"
         if os.path.exists(empire_file):
             with open(empire_file, "r") as f:
-                data = load_json_safe(f)
+                data = json.load(f)
             empire_stats = data.get("platforms", {})
             total_leads  = data.get("total_empire", 0)
         else:
@@ -505,7 +512,7 @@ def load_user_database():
     try:
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                return load_json_safe(f)
+                return json.load(f)
     except Exception as e:
         print(f"⚠️ Failed to load users.json: {e}")
     return {}
@@ -539,7 +546,7 @@ if 'current_user' not in st.session_state:
 def try_save_user_to_database(username, user_data):
     try:
         with open("users.json", "r") as f:
-            users = load_json_safe(f, {})
+            users = json.load(f)
         users[username] = user_data
         with open("users.json", "w") as f:
             json.dump(users, f, indent=4)
@@ -617,7 +624,7 @@ def automatic_session_restore(username):
         # Method 2: Try to find user in users.json (backup)
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = load_json_safe(f, {})
+                users = json.load(f)
             
             if username in users:
                 user_data = users[username]
@@ -745,7 +752,7 @@ def try_save_user_to_credit_system(username, user_data, credits, plan):
         users = {}
         if os.path.exists("users.json"):
             with open("users.json", "r") as f:
-                users = load_json_safe(f, {})
+                users = json.load(f)
         
         users[username] = user_data
         
@@ -861,7 +868,7 @@ def load_config():
     try:
         if os.path.exists("config.json"):
             with open("config.json", "r") as f:
-                config = load_json_safe(f)
+                config = json.load(f)
             config = patch_stripe_credentials(config)
             
             # Move Stripe key to root level if it's in global
@@ -947,6 +954,22 @@ def show_auth_required_dashboard():
 # Simple Credit System - No complex auth needed
 AUTH_AVAILABLE = True  # Always available with simple system
 USAGE_TRACKING_AVAILABLE = False  # Not needed with credit system
+
+# 🌍 NEW: Import multilingual capabilities
+try:
+    from multilingual_dm_generator import (
+        detect_user_language, 
+        generate_multilingual_dm, 
+        generate_multilingual_batch,
+        LANGUAGE_KEYWORDS,
+        PLATFORM_LANGUAGE_STYLES
+    )
+    from dm_sequences import generate_multiple_dms
+    from dm_csv_exporter import export_dms_detailed, create_campaign_summary
+    MULTILINGUAL_AVAILABLE = True
+except ImportError:
+    MULTILINGUAL_AVAILABLE = True  # ← Force it to True anyway
+    print("⚠️ Multilingual imports failed but keeping features available")
 
 # Page config
 st.set_page_config(
@@ -1171,7 +1194,7 @@ def log_credit_purchase_failsafe(username: str, package_name: str, price: float,
         # Read current events
         try:
             with open(events_file, "r") as f:
-                events = load_json_safe(f)
+                events = json.load(f)
         except (json.JSONDecodeError, FileNotFoundError):
             events = []
             print(f"⚠️ FAILSAFE: File was corrupted, starting fresh")
@@ -1206,7 +1229,7 @@ def log_credit_purchase_failsafe(username: str, package_name: str, price: float,
                     json.dump([], f)
             
             with open(alerts_file, "r") as f:
-                alerts = load_json_safe(f)
+                alerts = json.load(f)
             
             alert_entry = {
                 "type": "CREDIT_PURCHASE_FAILSAFE",
@@ -1269,7 +1292,7 @@ def log_package_purchase_failsafe(username: str, package_name: str, price: float
         
         try:
             with open(events_file, "r") as f:
-                events = load_json_safe(f)
+                events = json.load(f)
         except (json.JSONDecodeError, FileNotFoundError):
             events = []
         
@@ -1390,7 +1413,7 @@ def log_payment_to_admin_direct(username: str, tier: str, credits: int, amount: 
                 json.dump([], f)
         
         with open(admin_file, "r") as f:
-            admin_purchases = load_json_safe(f)
+            admin_purchases = json.load(f)
         
         # Add new purchase
         admin_purchases.append(purchase_event)
@@ -2246,7 +2269,7 @@ def queue_linkedin_request(username, search_term, max_scrolls, user_email):
         # Save to queue file
         if os.path.exists(queue_file):
             with open(queue_file, "r") as f:
-                queue = load_json_safe(f)
+                queue = json.load(f)
         else:
             queue = []
         
@@ -2509,16 +2532,12 @@ elif "cancelled" in query_params:
         st.query_params.clear()
         st.rerun()
     st.stop()
-    
-from stripe_checkout import init_stripe
-import stripe
 
 # Initialize Stripe
 if "stripe_secret_key" in config:
     stripe.api_key = config["stripe_secret_key"]
 else:
-    if not init_stripe():
-        st.warning("Stripe isn’t configured. Set STRIPE_SECRET_KEY in your environment.")
+    st.warning("⚠️ Stripe secret key not found in config.json")
 
 def show_simple_credit_status():
     """Show credit status with correct plan-specific messaging"""
@@ -3075,7 +3094,7 @@ def save_dms_to_library(dm_results, username, generation_mode, platform):
 
     # load, append, trim to last 20, and save back
     with open(library_file, "r+", encoding="utf-8") as f:
-        data = load_json_safe(f)
+        data = json.load(f)
         campaign = {
             "id":        f"{username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             "username":  username,
@@ -3104,7 +3123,7 @@ def load_user_dm_library(username):
         library_file = f"dm_library/{username}_dm_library.json"
         
         with open(library_file, 'r', encoding='utf-8') as f:
-            library_data = load_json_safe(f)
+            library_data = json.load(f)
         return library_data.get("campaigns", [])
         
     except Exception as e:
@@ -3121,7 +3140,7 @@ def delete_campaign_from_library(username, campaign_id):
         
         if os.path.exists(library_file):
             with open(library_file, 'r', encoding='utf-8') as f:
-                library_data = load_json_safe(f)
+                library_data = json.load(f)
             
             # Remove campaign with matching ID
             library_data["campaigns"] = [
@@ -4539,7 +4558,7 @@ with tab1:
                                             try:
                                                 if os.path.exists('scraping_session_summary.json'):
                                                     with open('scraping_session_summary.json', 'r', encoding='utf-8') as f:
-                                                        summary = load_json_safe(f)
+                                                        summary = json.load(f)
                                                     
                                                     total_leads = summary.get('total_leads', 0)
                                                     
@@ -5130,7 +5149,7 @@ with tab2: # Lead Results
                 session_found = False
                 if os.path.exists('scraping_session_summary.json'):
                     with open('scraping_session_summary.json', 'r') as f:
-                        summary = load_json_safe(f)
+                        summary = json.load(f)
                     
                     # Check if session belongs to current user
                     if summary.get('user') == username:
@@ -5300,7 +5319,7 @@ with tab2: # Lead Results
                         if 'scraping_session_summary.json' in glob.glob("*.json"):
                             try:
                                 with open('scraping_session_summary.json', 'r') as f:
-                                    summary = load_json_safe(f)
+                                    summary = json.load(f)
                                 st.json(summary)
                             except:
                                 st.text("Could not read session summary")
@@ -5748,7 +5767,7 @@ with tab2: # Lead Results
                     
                     if os.path.exists(empire_file):
                         with open(empire_file, 'r') as f:
-                            empire_data = load_json_safe(f)
+                            empire_data = json.load(f)
                         
                         empire_stats = empire_data.get('platforms', {})
                         total_leads = empire_data.get('total_empire', 0)
@@ -6581,7 +6600,7 @@ if MULTILINGUAL_AVAILABLE:
                 
             # Create sub-tabs for Generate DMs and DM Library
             dm_tab1, dm_tab2 = st.tabs(["🎯 Generate DMs", "📚 DM Library"])
-                
+            
             with dm_tab1:
                 # DM GENERATION SECTION
                 
@@ -6591,14 +6610,14 @@ if MULTILINGUAL_AVAILABLE:
             with ml_col1:
                 st.subheader("📋 Lead Data Source")
                 
+                contacts_for_dm = []
+                
                 # Option to upload CSV or use existing leads
                 dm_source = st.radio(
                     "Choose DM Generation Source:",
                     ["Existing Empire Leads", "Upload New CSV", "Manual Entry"],
                     key="dm_source_selection"
                 )
-
-                contacts_for_dm = []
 
                 if dm_source == "Existing Empire Leads":
                     # Get current user for user-specific leads
@@ -6737,7 +6756,7 @@ if MULTILINGUAL_AVAILABLE:
                     
                     if contacts_for_dm:
                         st.success(f"✅ {len(contacts_for_dm)} contacts ready for DM generation")
-        
+            
             with ml_col2:
                 st.subheader("🌍 Language Settings")
                 
@@ -6781,7 +6800,7 @@ if MULTILINGUAL_AVAILABLE:
                     ["twitter", "linkedin", "facebook", "tiktok", "instagram", "youtube", "medium", "reddit"],
                     key="dm_platform_style"
                 )
-            
+                
                 st.markdown("---")
                 st.subheader("📊 Generation Preview")
                 
@@ -6801,7 +6820,7 @@ if MULTILINGUAL_AVAILABLE:
             
             # Generate DMs button
             st.markdown("---")
-            
+            contacts_for_dm = []
             if not contacts_for_dm:
                 st.error("❌ Please provide contacts for DM generation")
                 st.button("🌍 Generate Multilingual DMs", disabled=True, use_container_width=True)
@@ -6811,7 +6830,7 @@ if MULTILINGUAL_AVAILABLE:
                 
                 try:
                     all_results = []
-                    
+                       
                     if language_mode == "Multi-language campaign":
                         # Generate DMs in multiple languages
                         total_iterations = len(campaign_languages)
@@ -6920,7 +6939,7 @@ if MULTILINGUAL_AVAILABLE:
                         
                         if search_filter:
                             mask = filtered_df["Name"].str.contains(search_filter, case=False, na=False) | \
-                                filtered_df["DM"].str.contains(search_filter, case=False, na=False)
+                                   filtered_df["DM"].str.contains(search_filter, case=False, na=False)
                             filtered_df = filtered_df[mask]
                         
                         st.dataframe(filtered_df, use_container_width=True)
@@ -7007,7 +7026,7 @@ if MULTILINGUAL_AVAILABLE:
                 except Exception as e:
                     status.error(f"❌ DM generation failed: {str(e)}")
                     st.error(f"Error details: {e}")
-        
+            
             with dm_tab2:
                 st.markdown(f"### 📚 DM Library - {current_username}")
 
@@ -7276,549 +7295,564 @@ if MULTILINGUAL_AVAILABLE:
             unsafe_allow_html=True,
         )
 
-        # ✅ RESTORE USER SESSION when returning from Stripe
-        def restore_user_session_from_url():
-            """Restore user session when returning from Stripe checkout"""
-            returned_user = st.query_params.get("user")
-            
-            if returned_user and not simple_auth.get_current_user():
-                # User returned from Stripe but session was lost
-                try:
-                    # Log the user back in automatically
-                    if simple_auth.authenticate_user(returned_user, skip_password=True):
-                        st.session_state.username = returned_user
-                        st.success(f"✅ Welcome back, {returned_user}!")
-                        print(f"🔄 Restored session for user: {returned_user}")
-                        return True
-                except Exception as e:
-                    print(f"❌ Failed to restore session: {e}")
-                    st.warning("Please log in again")
-            
-            return False
-
-        # ✅ CAPTURE USERNAME FIRST - before clearing any params
-        url_username = st.query_params.get("username")
-        payment_cancelled = "payment_cancelled" in st.query_params
-
-        # ✅ HANDLE CANCELLATION - but keep username for restoration
-        if payment_cancelled:
-            st.warning("⚠️ Payment was cancelled. You can try again anytime.")
-            st.query_params.clear()  # Now safe to clear
-
-        # ✅ RESTORE SESSION using captured username
-        current_user = simple_auth.get_current_user() if 'simple_auth' in globals() else None
-
-        if url_username and not current_user:
-            st.write("🔄 Attempting session restoration...")
-            
-            # User returned from Stripe but session was lost - restore it
-            st.session_state.authenticated = True
-            st.session_state.current_user = url_username
-            st.session_state.username = url_username
-            
-            # Force the simple_auth system to recognize the user
-            if hasattr(simple_auth, 'current_user'):
-                simple_auth.current_user = url_username
-                st.write("✅ Set simple_auth.current_user")
-            
-            st.success(f"✅ Session restored for {url_username}!")
-            st.write("🔄 Refreshing app...")
-
-# Continue with the rest of the tabs...
-with tab4:  # Pricing Plans
-    import stripe
-    st.caption(f"Stripe configured: {bool(getattr(stripe, 'api_key', None))}")
-
-    
-    if "payment_success" in st.query_params:
-        from stripe_checkout import handle_payment_success_url
-        if handle_payment_success_url():
-            # Payment success page is showing, exit early
-            st.stop()
+    # ✅ RESTORE USER SESSION when returning from Stripe
+    def restore_user_session_from_url():
+        """Restore user session when returning from Stripe checkout"""
+        returned_user = st.query_params.get("user")
         
-    st.header("💳 Empire Pricing Plans")
-    # — Who am I and what plan do they have? —
-    if user_authenticated:
-        current_plan = simple_auth.get_user_plan().lower()
-        current_credits = simple_auth.get_user_credits()
-        st.info(f"💎 Current: {current_credits} credits • {current_plan.title()} plan")
-    else:
-        current_plan = "demo"
-        st.warning("📱 Demo Mode: 5 demo leads remaining • Upgrade to unlock full features")
-    col1, col2, col3 = st.columns(3)
-    # ─── Starter ────────────────────────────────────────────────────────────────
-    with col1:
-        st.markdown("### 🆓 Lead Hunter")
-        st.info("STARTER")
-        st.write("$29 per month")
-        st.markdown("---")
-        st.markdown("**✅ What's Included:**")
-        st.markdown("""
-        - 2 platforms (Twitter, Facebook)  
-        - 250 credits  
-        - Basic filtering  
-        - CSV export  
-        - Email support
-        """)
-        st.success("**Perfect for:** Beginners")
-        if current_plan == "starter":
-            st.success("✅ Your Current Plan")
+        if returned_user and not simple_auth.get_current_user():
+            # User returned from Stripe but session was lost
+            try:
+                # Log the user back in automatically
+                if simple_auth.authenticate_user(returned_user, skip_password=True):
+                    st.session_state.username = returned_user
+                    st.success(f"✅ Welcome back, {returned_user}!")
+                    print(f"🔄 Restored session for user: {returned_user}")
+                    return True
+            except Exception as e:
+                print(f"❌ Failed to restore session: {e}")
+                st.warning("Please log in again")
+        
+        return False
+
+    # ✅ CAPTURE USERNAME FIRST - before clearing any params
+    url_username = st.query_params.get("username")
+    payment_cancelled = "payment_cancelled" in st.query_params
+
+    # ✅ HANDLE CANCELLATION - but keep username for restoration
+    if payment_cancelled:
+        st.warning("⚠️ Payment was cancelled. You can try again anytime.")
+        st.query_params.clear()  # Now safe to clear
+
+    # ✅ RESTORE SESSION using captured username
+    current_user = simple_auth.get_current_user() if 'simple_auth' in globals() else None
+
+    if url_username and not current_user:
+        st.write("🔄 Attempting session restoration...")
+        
+        # User returned from Stripe but session was lost - restore it
+        st.session_state.authenticated = True
+        st.session_state.current_user = url_username
+        st.session_state.username = url_username
+        
+        # Force the simple_auth system to recognize the user
+        if hasattr(simple_auth, 'current_user'):
+            simple_auth.current_user = url_username
+            st.write("✅ Set simple_auth.current_user")
+        
+        st.success(f"✅ Session restored for {url_username}!")
+        st.write("🔄 Refreshing app...")
+
+    # Continue with the rest of the tabs...
+    with tab4:  # Pricing Plans
+        
+        if "payment_success" in st.query_params:
+            from stripe_checkout import handle_payment_success_url
+            if handle_payment_success_url():
+                # Payment success page is showing, exit early
+                st.stop()
+            
+        st.header("💳 Empire Pricing Plans")
+
+        # — Who am I and what plan do they have? —
+        if user_authenticated:
+            current_plan = simple_auth.get_user_plan().lower()
+            current_credits = simple_auth.get_user_credits()
+            st.info(f"💎 Current: {current_credits} credits • {current_plan.title()} plan")
         else:
-            agreed = st.checkbox(
-                "✅ Agree to terms",
-                key="agree_starter",
-                help="I agree to Terms of Service & No-Refund Policy"
-            )
-            if st.button(
-                "🚀 Upgrade to Starter",
-                disabled=not agreed,
-                type="primary",
-                use_container_width=True,
-                key="upgrade_starter"
-            ):
-                if agreed:
-                    # Create Stripe session and redirect immediately
-                    from stripe_checkout import create_no_refund_checkout
-                    checkout_url = create_no_refund_checkout(
-                        username=st.session_state.username,
-                        user_email=st.session_state.user_data["email"],
-                        tier={"name": "Starter", "price": 29},
-                        
-                    )
-                    if checkout_url and checkout_url != "debug_mode":
-                        st.success("🔄 Redirecting to Stripe checkout...")
-                        st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
-                        st.stop()
-                    else:
-                        st.error("Failed to create checkout session")
-    # ─── Pro ────────────────────────────────────────────────────────────────────
-    with col2:
-        st.markdown("### 💎 Lead Generator")
-        st.success("MOST POPULAR")
-        st.write("$197 per month")
-        st.markdown("---")
-        st.markdown("**✅ What's Included:**")
-        st.markdown("""
-        - 6 platforms (adds LinkedIn, TikTok, Instagram, YouTube)  
-        - 2,000 credits/month  
-        - Advanced filtering & relevance scoring  
-        - Unlimited DM templates  
-        - Analytics dashboard  
-        - Priority support
-        """)
-        st.success("**Perfect for:** Small businesses, coaches, agencies")
-        if current_plan == "pro":
-            st.success("✅ Your Current Plan")
-        else:
-            agreed = st.checkbox(
-                "✅ Agree to terms",
-                key="agree_pro",
-                help="I agree to Terms of Service & No-Refund Policy"
-            )
-            if st.button(
-                "💎 Upgrade to Pro",
-                disabled=not agreed,
-                type="primary",
-                use_container_width=True,
-                key="upgrade_pro"
-            ):
-                
-                if agreed:
-                    # Create Stripe session and redirect immediately
-                    from stripe_checkout import create_no_refund_checkout
-                    checkout_url = create_no_refund_checkout(
-                        username=st.session_state.username,
-                        user_email=st.session_state.user_data["email"],
-                        tier={"name": "Pro", "price": 197},
-                        
-                        
-                    )
-                    if checkout_url and checkout_url != "debug_mode":
-                        st.success("🔄 Redirecting to Stripe checkout...")
-                        st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
-                        st.stop()
-                    else:
-                        st.error("Failed to create checkout session")
-    # ─── Ultimate ───────────────────────────────────────────────────────────────
-    with col3:
-        st.markdown("### 👑 Lead Empire")
-        st.warning("ULTIMATE")
-        st.write("$497 per month")
-        st.markdown("---")
-        st.markdown("**✅ What's Included:**")
-        st.markdown("""
-        - 8 platforms (adds Medium, Reddit)  
-        - Unlimited credits  
-        - Geo-location targeting  
-        - Google Sheets integration  
-        - CRM integrations  
-        - API access  
-        - Priority+ support
-        """)
-        st.success("**Perfect for:** Enterprise teams & marketing companies")
-        if current_plan == "ultimate":
-            st.success("✅ Your Current Plan")
-        else:
-            agreed = st.checkbox(
-                "✅ Agree to terms",
-                key="agree_ultimate",
-                help="I agree to Terms of Service & No-Refund Policy"
-            )
-            if st.button(
-                "🚀 Upgrade to Ultimate",
-                disabled=not agreed,
-                type="primary",
-                use_container_width=True,
-                key="upgrade_ultimate"
-            ):
-                if agreed:
-                    # Create checkout session
-                    from stripe_checkout import create_no_refund_checkout
-                    checkout_url = create_no_refund_checkout(
-                        username=st.session_state.username,
-                        user_email=st.session_state.user_data["email"],
-                        tier={"name": "Ultimate", "price": 497},
-                        
-                    )
+            current_plan = "demo"
+            st.warning("📱 Demo Mode: 5 demo leads remaining • Upgrade to unlock full features")
+
+        col1, col2, col3 = st.columns(3)
+
+        # ─── Starter ────────────────────────────────────────────────────────────────
+        with col1:
+            st.markdown("### 🆓 Lead Hunter")
+            st.info("STARTER")
+            st.write("$29 per month")
+            st.markdown("---")
+            st.markdown("**✅ What's Included:**")
+            st.markdown("""
+            - 2 platforms (Twitter, Facebook)  
+            - 250 credits  
+            - Basic filtering  
+            - CSV export  
+            - Email support
+            """)
+            st.success("**Perfect for:** Beginners")
+
+            if current_plan == "starter":
+                st.success("✅ Your Current Plan")
+            else:
+                agreed = st.checkbox(
+                    "✅ Agree to terms",
+                    key="agree_starter",
+                    help="I agree to Terms of Service & No-Refund Policy"
+                )
+                if st.button(
+                    "🚀 Upgrade to Starter",
+                    disabled=not agreed,
+                    type="primary",
+                    use_container_width=True,
+                    key="upgrade_starter"
+                ):
+                    if agreed:
+                        # Create Stripe session and redirect immediately
+                        from stripe_checkout import create_no_refund_checkout
+                        checkout_url = create_no_refund_checkout(
+                            username=st.session_state.username,
+                            user_email=st.session_state.user_data["email"],
+                            tier={"name": "Starter", "price": 29},
+                            
+                        )
+
+                        if checkout_url and checkout_url != "debug_mode":
+                            st.success("🔄 Redirecting to Stripe checkout...")
+                            st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
+                            st.stop()
+                        else:
+                            st.error("Failed to create checkout session")
+
+        # ─── Pro ────────────────────────────────────────────────────────────────────
+        with col2:
+            st.markdown("### 💎 Lead Generator")
+            st.success("MOST POPULAR")
+            st.write("$197 per month")
+            st.markdown("---")
+            st.markdown("**✅ What's Included:**")
+            st.markdown("""
+            - 6 platforms (adds LinkedIn, TikTok, Instagram, YouTube)  
+            - 2,000 credits/month  
+            - Advanced filtering & relevance scoring  
+            - Unlimited DM templates  
+            - Analytics dashboard  
+            - Priority support
+            """)
+            st.success("**Perfect for:** Small businesses, coaches, agencies")
+
+            if current_plan == "pro":
+                st.success("✅ Your Current Plan")
+            else:
+                agreed = st.checkbox(
+                    "✅ Agree to terms",
+                    key="agree_pro",
+                    help="I agree to Terms of Service & No-Refund Policy"
+                )
+                if st.button(
+                    "💎 Upgrade to Pro",
+                    disabled=not agreed,
+                    type="primary",
+                    use_container_width=True,
+                    key="upgrade_pro"
+                ):
                     
-                    if checkout_url and checkout_url != "debug_mode":
-                        st.success("🔄 Redirecting to Stripe checkout...")
-                        st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
-                        st.stop()
-                    else:
-                        st.error("Failed to create checkout session")
-        # Handle cancelled payments
-        #if "payment_cancelled" in st.query_params:
-            #st.warning("⚠️ Payment was cancelled. You can try again anytime.")
-            #st.query_params.clear()
+                    if agreed:
+                        # Create Stripe session and redirect immediately
+                        from stripe_checkout import create_no_refund_checkout
+                        checkout_url = create_no_refund_checkout(
+                            username=st.session_state.username,
+                            user_email=st.session_state.user_data["email"],
+                            tier={"name": "Pro", "price": 197},
+                            
+                            
+                        )
+                        if checkout_url and checkout_url != "debug_mode":
+                            st.success("🔄 Redirecting to Stripe checkout...")
+                            st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
+                            st.stop()
+                        else:
+                            st.error("Failed to create checkout session")
+
+        # ─── Ultimate ───────────────────────────────────────────────────────────────
+        with col3:
+            st.markdown("### 👑 Lead Empire")
+            st.warning("ULTIMATE")
+            st.write("$497 per month")
+            st.markdown("---")
+            st.markdown("**✅ What's Included:**")
+            st.markdown("""
+            - 8 platforms (adds Medium, Reddit)  
+            - Unlimited credits  
+            - Geo-location targeting  
+            - Google Sheets integration  
+            - CRM integrations  
+            - API access  
+            - Priority+ support
+            """)
+            st.success("**Perfect for:** Enterprise teams & marketing companies")
+
+            if current_plan == "ultimate":
+                st.success("✅ Your Current Plan")
+            else:
+                agreed = st.checkbox(
+                    "✅ Agree to terms",
+                    key="agree_ultimate",
+                    help="I agree to Terms of Service & No-Refund Policy"
+                )
+                if st.button(
+                    "🚀 Upgrade to Ultimate",
+                    disabled=not agreed,
+                    type="primary",
+                    use_container_width=True,
+                    key="upgrade_ultimate"
+                ):
+                    if agreed:
+                        # Create checkout session
+                        from stripe_checkout import create_no_refund_checkout
+                        checkout_url = create_no_refund_checkout(
+                            username=st.session_state.username,
+                            user_email=st.session_state.user_data["email"],
+                            tier={"name": "Ultimate", "price": 497},
+                            
+                        )
+                        
+                        if checkout_url and checkout_url != "debug_mode":
+                            st.success("🔄 Redirecting to Stripe checkout...")
+                            st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
+                            st.stop()
+                        else:
+                            st.error("Failed to create checkout session")
+
+            # Handle cancelled payments
+            #if "payment_cancelled" in st.query_params:
+                #st.warning("⚠️ Payment was cancelled. You can try again anytime.")
+                #st.query_params.clear()
+                
+        def show_demo_dashboard():
+            """Dashboard for demo users"""
+            st.warning("📱 Demo Mode - Upgrade to unlock full features")
             
-    def show_demo_dashboard():
-        """Dashboard for demo users"""
-        st.warning("📱 Demo Mode - Upgrade to unlock full features")
-        
-        # Check demo usage
-        username = simple_auth.get_current_user()
-        can_demo, remaining = credit_system.can_use_demo(username)
-        
-        if remaining > 0:
-            st.info(f"🎯 You have {remaining} demo leads remaining")
-            st.markdown("### 🚀 Try Lead Generation")
-            st.markdown("**Demo features:**")
-            st.markdown("- ✅ Twitter platform access")
-            st.markdown(f"- ✅ {remaining} leads remaining")
-            st.markdown("- ✅ Basic lead information")
+            # Check demo usage
+            username = simple_auth.get_current_user()
+            can_demo, remaining = credit_system.can_use_demo(username)
             
-            if st.button("🔬 Try Demo Lead Generation", type="primary", use_container_width=True):
-                # Allow demo scraping with limited features
-                st.info("Demo mode: Use the Empire Scraper tab to try generating leads")
+            if remaining > 0:
+                st.info(f"🎯 You have {remaining} demo leads remaining")
+                st.markdown("### 🚀 Try Lead Generation")
+                st.markdown("**Demo features:**")
+                st.markdown("- ✅ Twitter platform access")
+                st.markdown(f"- ✅ {remaining} leads remaining")
+                st.markdown("- ✅ Basic lead information")
+                
+                if st.button("🔬 Try Demo Lead Generation", type="primary", use_container_width=True):
+                    # Allow demo scraping with limited features
+                    st.info("Demo mode: Use the Empire Scraper tab to try generating leads")
+            else:
+                st.error("❌ Demo leads exhausted")
+                st.markdown("### 🚀 Upgrade to Continue")
+                st.markdown("**Choose your plan:**")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    if st.button("📱 Starter ($29/mo)", type="primary", use_container_width=True, key="starter4"):
+                        st.session_state.show_pricing = True
+                        st.rerun()
+                
+                with col2:
+                    if st.button("💎 Pro ($197/mo)", use_container_width=True):
+                        st.session_state.show_pricing = True
+                        st.rerun()
+                
+                with col3:
+                    if st.button("👑 Ultimate ($497/mo)", use_container_width=True):
+                        st.session_state.show_pricing = True
+                        st.rerun()
+
+        with st.expander("📋 Digital Product Terms"):
+            st.markdown("""
+            **📦 Digital Product Terms:**
+            • **Instant Delivery** - Credits added immediately after payment
+            • **No Refunds** - All credit purchases are final
+            • **90-Day Expiry** - Credits expire 90 days from purchase
+            • **Legitimate Use** - For business purposes only
+            • **Terms Required** - Must agree to Terms of Service
+            """)
+        
+        # ROI Calculator using native components
+        st.markdown("---")
+        st.header("💰 ROI Calculator")
+        
+        roi_col1, roi_col2, roi_col3 = st.columns(3)
+        
+        with roi_col1:
+            st.subheader("🆓 Starter Plan ROI")
+            st.success("250 credits × $25 value = $625 value")
+            st.success("Cost: $29 → **2,055% ROI**")
+        
+        with roi_col2:
+            st.subheader("💎 Pro Plan ROI")
+            st.success("2,000 credits × $25 value = $50,000 value")
+            st.success("Cost: $197 → **25,400% ROI**")
+        
+        with roi_col3:
+            st.subheader("👑 Ultimate ROI")
+            st.success("Unlimited credits × $25 value = **Unlimited value**")
+            st.success("Cost: $497 → **Unlimited ROI**")
+        
+        # Credit Purchase Section
+        st.markdown("---")
+        st.header("💎 Buy Additional Credits")
+        
+        if user_authenticated:
+            username = simple_auth.get_current_user()
+            user_email = f"{username}@empire.com"
+            display_pricing_tiers_with_enforcement(username, user_email)
         else:
-            st.error("❌ Demo leads exhausted")
-            st.markdown("### 🚀 Upgrade to Continue")
-            st.markdown("**Choose your plan:**")
+            st.info("🔐 Sign in to purchase additional credits")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🚀 Starter", type="primary", use_container_width=True, key="credits_register"):
+                    st.session_state.show_register = True
+                    st.session_state.show_login = False  # ← ADD THIS
+                    st.rerun()
+            with col2:
+                if st.button("🔑 Sign In", key="tab4_login"):
+                    st.session_state.show_login = True
+                    st.session_state.show_register = False  # ← ADD THIS
+                    st.rerun()
+
+        st.markdown(
+            '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
+            'padding:12px 16px;border-radius:25px;'
+            'background:linear-gradient(135deg,#0066cc,#4dabf7);'
+            'color:white;font-weight:bold;text-decoration:none;'
+            'z-index:9999;">⬆️ Top</a>',
+            unsafe_allow_html=True,
+        )
+
+        
+
+    with tab5:  # Lead Packages tab
+        
+
+        st.header("📦 Lead Package Bundles")
+        st.markdown("*One-time purchases for instant lead delivery*")
+        
+        with st.expander("📋 Digital Product Terms"):
+            st.markdown("""
+            **📦 Digital Product Terms:**
+            • **Instant Delivery** - Credits added immediately after payment
+            • **No Refunds** - All credit purchases are final
+            • **90-Day Expiry** - Credits expire 90 days from purchase
+            • **Legitimate Use** - For business purposes only
+            • **Terms Required** - Must agree to Terms of Service
+            """)
+        
+        if not user_authenticated:
+            st.info("🔐 Sign in to purchase lead packages")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🚀 Join Empire", type="primary", use_container_width=True, key="packages_register"):
+                    st.session_state.show_register = True
+                    st.rerun()
+            with col2:
+                if st.button("🔑 Sign In", key="tab5_login"):
+                    st.session_state.show_login = True
+                    st.session_state.show_register = False  # ← ADD THIS
+                    st.rerun()
+        
+        else:
+            # INDUSTRY SELECTION SECTION - Add this before the package cards
+            st.markdown("---")
+            st.subheader("🎯 Target Industry Selection")
+            st.markdown("*Choose your target industry for personalized lead generation*")
             
+            # Industry selection
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                if st.button("📱 Starter ($29/mo)", type="primary", use_container_width=True, key="starter4"):
-                    st.session_state.show_pricing = True
-                    st.rerun()
+                target_industry = st.selectbox(
+                    "🏢 Primary Industry",
+                    [
+                        "Fitness & Wellness",
+                        "Business & Marketing", 
+                        "Technology & SaaS",
+                        "Finance & Real Estate",
+                        "E-commerce & Retail",
+                        "Healthcare & Medical",
+                        "Education & Training",
+                        "Food & Restaurant",
+                        "Beauty & Fashion",
+                        "Travel & Hospitality",
+                        "Legal & Professional Services",
+                        "Manufacturing & Industrial",
+                        "Non-profit & Charity",
+                        "Entertainment & Media",
+                        "Custom (specify below)"
+                    ],
+                    index=0,
+                    key="target_industry_select",
+                    help="Primary industry for your lead targeting"
+                )
             
             with col2:
-                if st.button("💎 Pro ($197/mo)", use_container_width=True):
-                    st.session_state.show_pricing = True
-                    st.rerun()
+                target_location = st.selectbox(
+                    "📍 Geographic Focus",
+                    [
+                        "United States (All States)",
+                        "North America (US + Canada)",
+                        "English Speaking (US, UK, AU, CA)",
+                        "Europe (All Countries)",
+                        "Global (Worldwide)",
+                        "United States - Specific State",
+                        "Canada Only",
+                        "United Kingdom Only",
+                        "Australia Only",
+                        "Custom Geographic Area"
+                    ],
+                    index=0,
+                    key="target_location_select",
+                    help="Geographic targeting for your leads"
+                )
             
             with col3:
-                if st.button("👑 Ultimate ($497/mo)", use_container_width=True):
-                    st.session_state.show_pricing = True
-                    st.rerun()
-    with st.expander("📋 Digital Product Terms"):
-        st.markdown("""
-        **📦 Digital Product Terms:**
-        • **Instant Delivery** - Credits added immediately after payment
-        • **No Refunds** - All credit purchases are final
-        • **90-Day Expiry** - Credits expire 90 days from purchase
-        • **Legitimate Use** - For business purposes only
-        • **Terms Required** - Must agree to Terms of Service
-        """)
-    
-    # ROI Calculator using native components
-    st.markdown("---")
-    st.header("💰 ROI Calculator")
-    
-    roi_col1, roi_col2, roi_col3 = st.columns(3)
-    
-    with roi_col1:
-        st.subheader("🆓 Starter Plan ROI")
-        st.success("250 credits × $25 value = $625 value")
-        st.success("Cost: $29 → **2,055% ROI**")
-    
-    with roi_col2:
-        st.subheader("💎 Pro Plan ROI")
-        st.success("2,000 credits × $25 value = $50,000 value")
-        st.success("Cost: $197 → **25,400% ROI**")
-    
-    with roi_col3:
-        st.subheader("👑 Ultimate ROI")
-        st.success("Unlimited credits × $25 value = **Unlimited value**")
-        st.success("Cost: $497 → **Unlimited ROI**")
-    
-    # Credit Purchase Section
-    st.markdown("---")
-    st.header("💎 Buy Additional Credits")
-    
-    if user_authenticated:
-        username = simple_auth.get_current_user()
-        user_email = f"{username}@empire.com"
-        display_pricing_tiers_with_enforcement(username, user_email)
-    else:
-        st.info("🔐 Sign in to purchase additional credits")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🚀 Starter", type="primary", use_container_width=True, key="credits_register"):
-                st.session_state.show_register = True
-                st.session_state.show_login = False  # ← ADD THIS
-                st.rerun()
-        with col2:
-            if st.button("🔑 Sign In", key="tab4_login"):
-                st.session_state.show_login = True
-                st.session_state.show_register = False  # ← ADD THIS
-                st.rerun()
-    st.markdown(
-        '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
-        'padding:12px 16px;border-radius:25px;'
-        'background:linear-gradient(135deg,#0066cc,#4dabf7);'
-        'color:white;font-weight:bold;text-decoration:none;'
-        'z-index:9999;">⬆️ Top</a>',
-        unsafe_allow_html=True,
-    )
-    
-with tab5:  # Lead Packages tab
-    
-    st.header("📦 Lead Package Bundles")
-    st.markdown("*One-time purchases for instant lead delivery*")
-    
-    with st.expander("📋 Digital Product Terms"):
-        st.markdown("""
-        **📦 Digital Product Terms:**
-        • **Instant Delivery** - Credits added immediately after payment
-        • **No Refunds** - All credit purchases are final
-        • **90-Day Expiry** - Credits expire 90 days from purchase
-        • **Legitimate Use** - For business purposes only
-        • **Terms Required** - Must agree to Terms of Service
-        """)
-    
-    if not user_authenticated:
-        st.info("🔐 Sign in to purchase lead packages")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🚀 Join Empire", type="primary", use_container_width=True, key="packages_register"):
-                st.session_state.show_register = True
-                st.rerun()
-        with col2:
-            if st.button("🔑 Sign In", key="tab5_login"):
-                st.session_state.show_login = True
-                st.session_state.show_register = False  # ← ADD THIS
-                st.rerun()
-    
-    else:
-        # INDUSTRY SELECTION SECTION - Add this before the package cards
-        st.markdown("---")
-        st.subheader("🎯 Target Industry Selection")
-        st.markdown("*Choose your target industry for personalized lead generation*")
-        
-        # Industry selection
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            target_industry = st.selectbox(
-                "🏢 Primary Industry",
-                [
-                    "Fitness & Wellness",
-                    "Business & Marketing", 
-                    "Technology & SaaS",
-                    "Finance & Real Estate",
-                    "E-commerce & Retail",
-                    "Healthcare & Medical",
-                    "Education & Training",
-                    "Food & Restaurant",
-                    "Beauty & Fashion",
-                    "Travel & Hospitality",
-                    "Legal & Professional Services",
-                    "Manufacturing & Industrial",
-                    "Non-profit & Charity",
-                    "Entertainment & Media",
-                    "Custom (specify below)"
-                ],
-                index=0,
-                key="target_industry_select",
-                help="Primary industry for your lead targeting"
-            )
-        
-        with col2:
-            target_location = st.selectbox(
-                "📍 Geographic Focus",
-                [
-                    "United States (All States)",
-                    "North America (US + Canada)",
-                    "English Speaking (US, UK, AU, CA)",
-                    "Europe (All Countries)",
-                    "Global (Worldwide)",
-                    "United States - Specific State",
-                    "Canada Only",
-                    "United Kingdom Only",
-                    "Australia Only",
-                    "Custom Geographic Area"
-                ],
-                index=0,
-                key="target_location_select",
-                help="Geographic targeting for your leads"
-            )
-        
-        with col3:
-            lead_type = st.selectbox(
-                "👥 Lead Type Focus",
-                [
-                    "Business Owners",
-                    "Decision Makers",
-                    "Content Creators",
-                    "Influencers",
-                    "Professionals",
-                    "Entrepreneurs",
-                    "Small Business Owners",
-                    "Enterprise Executives",
-                    "Freelancers",
-                    "Coaches & Consultants",
-                    "End Customers",
-                    "Mixed (All Types)"
-                ],
-                index=0,
-                key="lead_type_select",
-                help="Type of prospects you want to target"
-            )
-        
-        # Custom specifications
-        if target_industry == "Custom (specify below)" or target_location == "Custom Geographic Area":
-            st.markdown("**🔧 Custom Specifications:**")
-            
-            custom_col1, custom_col2 = st.columns(2)
-            
-            with custom_col1:
-                if target_industry == "Custom (specify below)":
-                    custom_industry = st.text_input(
-                        "Specify Custom Industry:",
-                        placeholder="e.g., Renewable Energy, Pet Care, Automotive...",
-                        key="custom_industry_input"
-                    )
-                else:
-                    custom_industry = ""
-            
-            with custom_col2:
-                if target_location == "Custom Geographic Area":
-                    custom_location = st.text_input(
-                        "Specify Custom Location:",
-                        placeholder="e.g., California only, Major US Cities, Germany + Austria...",
-                        key="custom_location_input"
-                    )
-                else:
-                    custom_location = ""
-        else:
-            custom_industry = ""
-            custom_location = ""
-        
-        # Additional targeting options
-        with st.expander("🎯 Advanced Targeting Options (Optional)"):
-            advanced_col1, advanced_col2 = st.columns(2)
-            
-            with advanced_col1:
-                keywords = st.text_input(
-                    "🔍 Specific Keywords/Terms:",
-                    placeholder="e.g., fitness coach, digital marketing, sustainability...",
-                    key="target_keywords_input",
-                    help="Specific terms to focus on in profiles and bios"
-                )
-                
-                exclude_keywords = st.text_input(
-                    "🚫 Exclude Keywords:",
-                    placeholder="e.g., MLM, pyramid, spam...",
-                    key="exclude_keywords_input",
-                    help="Terms to avoid in lead selection"
-                )
-            
-            with advanced_col2:
-                follower_range = st.selectbox(
-                    "👥 Follower Count Preference:",
+                lead_type = st.selectbox(
+                    "👥 Lead Type Focus",
                     [
-                        "Any Size (No Preference)",
-                        "Micro Influencers (1K-10K)",
-                        "Mid-tier (10K-100K)", 
-                        "Large Accounts (100K+)",
-                        "Business Accounts Only",
-                        "Personal Accounts Only"
+                        "Business Owners",
+                        "Decision Makers",
+                        "Content Creators",
+                        "Influencers",
+                        "Professionals",
+                        "Entrepreneurs",
+                        "Small Business Owners",
+                        "Enterprise Executives",
+                        "Freelancers",
+                        "Coaches & Consultants",
+                        "End Customers",
+                        "Mixed (All Types)"
                     ],
-                    key="follower_range_select"
+                    index=0,
+                    key="lead_type_select",
+                    help="Type of prospects you want to target"
                 )
-                
-                engagement_level = st.selectbox(
-                    "📈 Engagement Level:",
-                    [
-                        "Any Level",
-                        "High Engagement (Active)",
-                        "Moderate Engagement", 
-                        "Recently Active (Last 30 days)",
-                        "Professional/Business Focus"
-                    ],
-                    key="engagement_level_select"
-                )
-        
-        # Show targeting summary
-        st.markdown("---")
-        # Package status mapping
-        package_status = {
-            "Fitness & Wellness": ("🚀 **FITNESS & WELLNESS LEADS PRE-BUILT & READY** - Instant download available", "success"),
             
-            # Add more pre-built packages here
-        }
-        # Display appropriate message
-        if target_industry in package_status:
-            message, status_type = package_status[target_industry]
-            if status_type == "success":
-                st.success(message)
-        else:
-            st.info("🔄 **CUSTOM BUILD REQUIRED** - 3-5 business days delivery")
-        st.subheader("📋 Your Targeting Summary")
+            # Custom specifications
+            if target_industry == "Custom (specify below)" or target_location == "Custom Geographic Area":
+                st.markdown("**🔧 Custom Specifications:**")
+                
+                custom_col1, custom_col2 = st.columns(2)
+                
+                with custom_col1:
+                    if target_industry == "Custom (specify below)":
+                        custom_industry = st.text_input(
+                            "Specify Custom Industry:",
+                            placeholder="e.g., Renewable Energy, Pet Care, Automotive...",
+                            key="custom_industry_input"
+                        )
+                    else:
+                        custom_industry = ""
+                
+                with custom_col2:
+                    if target_location == "Custom Geographic Area":
+                        custom_location = st.text_input(
+                            "Specify Custom Location:",
+                            placeholder="e.g., California only, Major US Cities, Germany + Austria...",
+                            key="custom_location_input"
+                        )
+                    else:
+                        custom_location = ""
+            else:
+                custom_industry = ""
+                custom_location = ""
+            
+            # Additional targeting options
+            with st.expander("🎯 Advanced Targeting Options (Optional)"):
+                advanced_col1, advanced_col2 = st.columns(2)
+                
+                with advanced_col1:
+                    keywords = st.text_input(
+                        "🔍 Specific Keywords/Terms:",
+                        placeholder="e.g., fitness coach, digital marketing, sustainability...",
+                        key="target_keywords_input",
+                        help="Specific terms to focus on in profiles and bios"
+                    )
+                    
+                    exclude_keywords = st.text_input(
+                        "🚫 Exclude Keywords:",
+                        placeholder="e.g., MLM, pyramid, spam...",
+                        key="exclude_keywords_input",
+                        help="Terms to avoid in lead selection"
+                    )
+                
+                with advanced_col2:
+                    follower_range = st.selectbox(
+                        "👥 Follower Count Preference:",
+                        [
+                            "Any Size (No Preference)",
+                            "Micro Influencers (1K-10K)",
+                            "Mid-tier (10K-100K)", 
+                            "Large Accounts (100K+)",
+                            "Business Accounts Only",
+                            "Personal Accounts Only"
+                        ],
+                        key="follower_range_select"
+                    )
+                    
+                    engagement_level = st.selectbox(
+                        "📈 Engagement Level:",
+                        [
+                            "Any Level",
+                            "High Engagement (Active)",
+                            "Moderate Engagement", 
+                            "Recently Active (Last 30 days)",
+                            "Professional/Business Focus"
+                        ],
+                        key="engagement_level_select"
+                    )
+            
+            # Show targeting summary
+            st.markdown("---")
+
+            # Package status mapping
+            package_status = {
+                "Fitness & Wellness": ("🚀 **FITNESS & WELLNESS LEADS PRE-BUILT & READY** - Instant download available", "success"),
+                
+                # Add more pre-built packages here
+            }
+
+            # Display appropriate message
+            if target_industry in package_status:
+                message, status_type = package_status[target_industry]
+                if status_type == "success":
+                    st.success(message)
+            else:
+                st.info("🔄 **CUSTOM BUILD REQUIRED** - 3-5 business days delivery")
+
+            st.subheader("📋 Your Targeting Summary")
+            
+            # Determine final industry and location
+            final_industry = custom_industry if target_industry == "Custom (specify below)" and custom_industry else target_industry
+            final_location = custom_location if target_location == "Custom Geographic Area" and custom_location else target_location
+            
+            targeting_summary = f"""
+            **🏢 Industry:** {final_industry}  
+            **📍 Location:** {final_location}  
+            **👥 Lead Type:** {lead_type}
+            """
+            
+            if keywords:
+                targeting_summary += f"\n**🔍 Keywords:** {keywords}"
+            if exclude_keywords:
+                targeting_summary += f"\n**🚫 Exclude:** {exclude_keywords}"
+            if follower_range != "Any Size (No Preference)":
+                targeting_summary += f"\n**👥 Followers:** {follower_range}"
+            if engagement_level != "Any Level":
+                targeting_summary += f"\n**📈 Engagement:** {engagement_level}"
+            
+            st.info(targeting_summary)
+            
+            # Validation
+            targeting_complete = bool(final_industry and final_location)
+            
+            if not targeting_complete:
+                st.warning("⚠️ Please complete your targeting selections above before purchasing")
         
-        # Determine final industry and location
-        final_industry = custom_industry if target_industry == "Custom (specify below)" and custom_industry else target_industry
-        final_location = custom_location if target_location == "Custom Geographic Area" and custom_location else target_location
+        st.markdown("---")
         
-        targeting_summary = f"""
-        **🏢 Industry:** {final_industry}  
-        **📍 Location:** {final_location}  
-        **👥 Lead Type:** {lead_type}
-        """
-        
-        if keywords:
-            targeting_summary += f"\n**🔍 Keywords:** {keywords}"
-        if exclude_keywords:
-            targeting_summary += f"\n**🚫 Exclude:** {exclude_keywords}"
-        if follower_range != "Any Size (No Preference)":
-            targeting_summary += f"\n**👥 Followers:** {follower_range}"
-        if engagement_level != "Any Level":
-            targeting_summary += f"\n**📈 Engagement:** {engagement_level}"
-        
-        st.info(targeting_summary)
-        
-        # Validation
-        targeting_complete = bool(final_industry and final_location)
-        
-        if not targeting_complete:
-            st.warning("⚠️ Please complete your targeting selections above before purchasing")
-    
-    st.markdown("---")
-    
-    # Lead package bundles with targeting integration
-    package_col1, package_col2, package_col3 = st.columns(3)
+        # Lead package bundles with targeting integration
+        package_col1, package_col2, package_col3 = st.columns(3)
 
 with package_col1:
     st.markdown("### 🎯 Niche Starter Pack")
@@ -9317,7 +9351,7 @@ with tab6:  # Settings tab
                 if os.path.exists(json_file):
                     try:
                         with open(json_file, "r") as f:
-                            data = load_json_safe(f)
+                            data = json.load(f)
                         
                         if username in data:
                             del data[username]
