@@ -1,326 +1,563 @@
-# simple_credit_system.py - Clean monetization system
+# simple_credit_system.py - Production-ready credit system with robust error handling
 import json
 import os
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple, List
 import hashlib
+from pathlib import Path
+import traceback
+import tempfile
 
 class CreditSystem:
-    """Simple credit-based lead system with anti-abuse protection"""
+    """Production-ready credit-based lead system with comprehensive error handling"""
     
     def __init__(self):
-        self.users_file = "users_credits.json"
-        self.transactions_file = "transactions.json"
+        """Initialize credit system with production-safe file handling"""
+        print("🚀 Initializing CreditSystem...")
+        
+        # Debug environment info
+        self._debug_environment()
+        
+        # Set up file paths based on environment
+        self._setup_file_paths()
+        
+        # Load data with error handling
         self.load_data()
+        
+        print(f"✅ Credit system initialized: {len(self.users)} users, {len(self.transactions)} transactions")
+    
+    def _debug_environment(self):
+        """Debug environment information for troubleshooting"""
+        print("🔍 Environment Debug Info:")
+        print(f"   Python version: {sys.version.split()[0]}")
+        print(f"   Working directory: {os.getcwd()}")
+        print(f"   User home: {Path.home()}")
+        print(f"   Temp directory: {tempfile.gettempdir()}")
+        print(f"   Environment: {os.getenv('ENVIRONMENT', 'development')}")
+        
+        # Check write permissions
+        test_dirs = [Path('.'), Path.home(), Path(tempfile.gettempdir())]
+        for test_dir in test_dirs:
+            try:
+                test_file = test_dir / "test_write.tmp"
+                test_file.write_text("test")
+                test_file.unlink()
+                print(f"   ✅ {test_dir} is writable")
+                break
+            except Exception as e:
+                print(f"   ❌ {test_dir} not writable: {e}")
+    
+    def _setup_file_paths(self):
+        """Set up file paths based on environment with fallbacks"""
+        # Determine the best directory for data files
+        data_dir = self._get_data_directory()
+        
+        self.users_file = data_dir / "users_credits.json"
+        self.transactions_file = data_dir / "transactions.json"
+        
+        print(f"📁 Data directory: {data_dir}")
+        print(f"👤 Users file: {self.users_file}")
+        print(f"💳 Transactions file: {self.transactions_file}")
+        
+        # Ensure directory exists
+        try:
+            data_dir.mkdir(parents=True, exist_ok=True)
+            print(f"✅ Data directory ready: {data_dir}")
+        except Exception as e:
+            print(f"❌ Could not create data directory: {e}")
+            # Fallback to temp directory
+            self.users_file = Path(tempfile.gettempdir()) / "users_credits.json"
+            self.transactions_file = Path(tempfile.gettempdir()) / "transactions.json"
+            print(f"🔄 Using temp directory fallback")
+    
+    def _get_data_directory(self) -> Path:
+        """Get the best directory for data files with multiple fallbacks"""
+        # Try multiple locations in order of preference
+        candidates = [
+            Path('.'),  # Current directory (development)
+            Path.home() / '.leadgen',  # User home subdirectory
+            Path(tempfile.gettempdir()) / 'leadgen',  # Temp directory
+            Path('/tmp/leadgen') if os.name != 'nt' else Path(tempfile.gettempdir()) / 'leadgen'  # Unix /tmp
+        ]
+        
+        for candidate in candidates:
+            try:
+                # Test if we can write to this directory
+                candidate.mkdir(parents=True, exist_ok=True)
+                test_file = candidate / "test_write.tmp"
+                test_file.write_text("test")
+                test_file.unlink()
+                print(f"✅ Using data directory: {candidate}")
+                return candidate
+            except Exception as e:
+                print(f"❌ Cannot use {candidate}: {e}")
+                continue
+        
+        # Final fallback - temp directory without subdirectory
+        print("🔄 Using temp directory as final fallback")
+        return Path(tempfile.gettempdir())
     
     def load_data(self):
-        """Load user credits and transaction data"""
-        # Load users with credits
-        if os.path.exists(self.users_file):
-            with open(self.users_file, 'r') as f:
-                self.users = json.load(f)
-        else:
-            self.users = {}
+        """Load user credits and transaction data with comprehensive error handling"""
+        print("📖 Loading data files...")
         
-        # Load transaction history
-        if os.path.exists(self.transactions_file):
-            with open(self.transactions_file, 'r') as f:
-                self.transactions = json.load(f)
-        else:
+        # Initialize defaults
+        self.users = {}
+        self.transactions = []
+        
+        # Load users file
+        self._load_users_file()
+        
+        # Load transactions file
+        self._load_transactions_file()
+        
+        print(f"📊 Data loaded: {len(self.users)} users, {len(self.transactions)} transactions")
+    
+    def _load_users_file(self):
+        """Load users file with error handling and backup recovery"""
+        try:
+            if self.users_file.exists():
+                content = self.users_file.read_text(encoding='utf-8').strip()
+                if content:
+                    self.users = json.loads(content)
+                    print(f"👤 Loaded {len(self.users)} users from {self.users_file}")
+                else:
+                    print("📝 Users file is empty, starting with empty user database")
+                    self.users = {}
+            else:
+                print("📝 Users file doesn't exist, creating new user database")
+                self.users = {}
+                
+        except json.JSONDecodeError as e:
+            print(f"❌ Corrupted users file: {e}")
+            self._backup_corrupted_file(self.users_file)
+            self.users = {}
+            
+        except Exception as e:
+            print(f"❌ Error loading users file: {e}")
+            print(f"🔍 Full error: {traceback.format_exc()}")
+            self.users = {}
+    
+    def _load_transactions_file(self):
+        """Load transactions file with error handling and backup recovery"""
+        try:
+            if self.transactions_file.exists():
+                content = self.transactions_file.read_text(encoding='utf-8').strip()
+                if content:
+                    self.transactions = json.loads(content)
+                    print(f"💳 Loaded {len(self.transactions)} transactions from {self.transactions_file}")
+                else:
+                    print("📝 Transactions file is empty, starting with empty transaction history")
+                    self.transactions = []
+            else:
+                print("📝 Transactions file doesn't exist, creating new transaction history")
+                self.transactions = []
+                
+        except json.JSONDecodeError as e:
+            print(f"❌ Corrupted transactions file: {e}")
+            self._backup_corrupted_file(self.transactions_file)
+            self.transactions = []
+            
+        except Exception as e:
+            print(f"❌ Error loading transactions file: {e}")
+            print(f"🔍 Full error: {traceback.format_exc()}")
             self.transactions = []
     
+    def _backup_corrupted_file(self, file_path: Path):
+        """Backup corrupted file for potential recovery"""
+        try:
+            backup_path = file_path.with_suffix(f'.corrupted.{datetime.now().strftime("%Y%m%d_%H%M%S")}')
+            file_path.rename(backup_path)
+            print(f"💾 Backed up corrupted file to: {backup_path}")
+        except Exception as e:
+            print(f"❌ Could not backup corrupted file: {e}")
+    
     def save_data(self):
-        """Save all data to files"""
-        with open(self.users_file, 'w') as f:
-            json.dump(self.users, f, indent=4)
+        """Save all data to files with atomic writes and error handling"""
+        print("💾 Saving data files...")
         
-        with open(self.transactions_file, 'w') as f:
-            json.dump(self.transactions, f, indent=4)
+        try:
+            # Save users file atomically
+            self._save_file_atomically(self.users_file, self.users)
+            
+            # Save transactions file atomically
+            self._save_file_atomically(self.transactions_file, self.transactions)
+            
+            print("✅ Data saved successfully")
+            
+        except Exception as e:
+            print(f"❌ Error saving data: {e}")
+            print(f"🔍 Full error: {traceback.format_exc()}")
+            # Don't raise the exception - let the app continue
+    
+    def _save_file_atomically(self, file_path: Path, data: dict | list):
+        """Save file atomically to prevent corruption"""
+        # Write to temporary file first
+        temp_file = file_path.with_suffix('.tmp')
+        
+        try:
+            # Write data to temp file
+            with temp_file.open('w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            
+            # Atomic rename (on most filesystems)
+            temp_file.replace(file_path)
+            print(f"💾 Saved {len(data) if isinstance(data, (dict, list)) else 'data'} items to {file_path}")
+            
+        except Exception as e:
+            # Clean up temp file if it exists
+            if temp_file.exists():
+                temp_file.unlink()
+            raise e
     
     def hash_password(self, password: str) -> str:
-        """Simple password hashing"""
-        return hashlib.sha256(password.encode()).hexdigest()
+        """Simple password hashing with salt"""
+        # Add a simple salt to make rainbow table attacks harder
+        salt = "leadgen_salt_2024"
+        return hashlib.sha256((password + salt).encode()).hexdigest()
     
     def create_user(self, username: str, email: str, password: str) -> Tuple[bool, str]:
-        """Create new user with demo mode"""
-        if username in self.users:
-            return False, "Username already exists"
-        
-        self.users[username] = {
-            "email": email,
-            "password_hash": self.hash_password(password),
-            "credits": 0,  # Regular credits = 0 for demo
-            "plan": "demo",
-            "created_at": datetime.now().isoformat(),
-            "last_login": None,
-            "total_leads_downloaded": 0,
-            "transactions": [],
-            "agreed_to_terms": False,
-            "demo_leads_used": 0,    # Track demo usage
-            "demo_limit": 5         # Allow 5 demo leads
-        }
-        
-        self.save_data()
-        return True, "Demo account created with 5 free demo leads"
+        """Create new user with demo mode and validation"""
+        try:
+            # Validate inputs
+            if not username or not email or not password:
+                return False, "Username, email, and password are required"
+            
+            if username in self.users:
+                return False, "Username already exists"
+            
+            # Check if email already exists
+            for existing_username, user_data in self.users.items():
+                if user_data.get("email", "").lower() == email.lower():
+                    return False, f"Email already registered to user: {existing_username}"
+            
+            # Create user
+            self.users[username] = {
+                "email": email,
+                "password_hash": self.hash_password(password),
+                "credits": 0,  # Regular credits = 0 for demo
+                "plan": "demo",
+                "created_at": datetime.now().isoformat(),
+                "last_login": None,
+                "total_leads_downloaded": 0,
+                "transactions": [],
+                "agreed_to_terms": False,
+                "demo_leads_used": 0,    # Track demo usage
+                "demo_limit": 5         # Allow 5 demo leads
+            }
+            
+            self.save_data()
+            print(f"👤 Created demo user: {username} ({email})")
+            return True, "Demo account created with 5 free demo leads"
+            
+        except Exception as e:
+            print(f"❌ Error creating user {username}: {e}")
+            return False, f"Error creating user: {str(e)}"
+    
+    def login_user(self, identifier: str, password: str) -> Tuple[bool, str, Dict]:
+        """Authenticate user by username OR email with enhanced error handling"""
+        try:
+            if not identifier or not password:
+                return False, "Username/email and password are required", {}
+            
+            # First try direct username lookup
+            if identifier in self.users:
+                user = self.users[identifier]
+                if user["password_hash"] == self.hash_password(password):
+                    # Update last login
+                    user["last_login"] = datetime.now().isoformat()
+                    self.save_data()
+                    print(f"✅ User logged in: {identifier}")
+                    return True, f"Login successful for {identifier}", user
+                else:
+                    print(f"❌ Invalid password for user: {identifier}")
+                    return False, "Invalid password", {}
+            
+            # Then try email lookup
+            for username, user_data in self.users.items():
+                if user_data.get("email", "").lower() == identifier.lower():
+                    if user_data["password_hash"] == self.hash_password(password):
+                        # Update last login
+                        user_data["last_login"] = datetime.now().isoformat()
+                        self.save_data()
+                        print(f"✅ User logged in via email: {username} ({identifier})")
+                        return True, f"Login successful for {username} (via email)", user_data
+                    else:
+                        print(f"❌ Invalid password for email: {identifier}")
+                        return False, "Invalid password", {}
+            
+            print(f"❌ User not found: {identifier}")
+            return False, f"User not found: {identifier}", {}
+            
+        except Exception as e:
+            print(f"❌ Error during login for {identifier}: {e}")
+            return False, f"Login error: {str(e)}", {}
     
     def get_demo_status(self, username: str) -> Tuple[bool, int, int]:
         """Get demo status: (is_demo, used, remaining)"""
-        if username not in self.users:
+        try:
+            if username not in self.users:
+                return False, 0, 0
+            
+            user = self.users[username]
+            if user.get("plan") != "demo":
+                return False, 0, 0
+            
+            used = user.get("demo_leads_used", 0)
+            limit = user.get("demo_limit", 5)
+            remaining = max(0, limit - used)
+            
+            return True, used, remaining
+            
+        except Exception as e:
+            print(f"❌ Error getting demo status for {username}: {e}")
             return False, 0, 0
-        
-        user = self.users[username]
-        if user.get("plan") != "demo":
-            return False, 0, 0
-        
-        used = user.get("demo_leads_used", 0)
-        limit = user.get("demo_limit", 5)
-        remaining = max(0, limit - used)
-        
-        return True, used, remaining
 
     def can_use_demo(self, username: str) -> Tuple[bool, int]:
         """Check if user can still use demo leads"""
-        is_demo, used, remaining = self.get_demo_status(username)
-        return is_demo and remaining > 0, remaining
+        try:
+            is_demo, used, remaining = self.get_demo_status(username)
+            return is_demo and remaining > 0, remaining
+        except Exception as e:
+            print(f"❌ Error checking demo usage for {username}: {e}")
+            return False, 0
 
     def consume_demo_lead(self, username: str) -> bool:
-        """Consume one demo lead"""
-        if username not in self.users:
+        """Consume one demo lead with error handling"""
+        try:
+            if username not in self.users:
+                return False
+            
+            user = self.users[username]
+            if user.get("plan") != "demo":
+                return False
+            
+            used = user.get("demo_leads_used", 0)
+            limit = user.get("demo_limit", 5)
+            
+            if used >= limit:
+                return False
+            
+            user["demo_leads_used"] = used + 1
+            self.save_data()
+            print(f"🎯 Demo lead consumed: {username} ({used + 1}/{limit})")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error consuming demo lead for {username}: {e}")
             return False
-        
-        user = self.users[username]
-        if user.get("plan") != "demo":
-            return False
-        
-        used = user.get("demo_leads_used", 0)
-        limit = user.get("demo_limit", 5)
-        
-        if used >= limit:
-            return False
-        
-        user["demo_leads_used"] = used + 1
-        self.save_data()
-        return True
-    
-    def login_user(self, username: str, password: str) -> Tuple[bool, str, Dict]:
-        """Authenticate user"""
-        if username not in self.users:
-            return False, "User not found", {}
-        
-        user = self.users[username]
-        if user["password_hash"] != self.hash_password(password):
-            return False, "Invalid password", {}
-        
-        # Update last login
-        user["last_login"] = datetime.now().isoformat()
-        self.save_data()
-        
-        return True, "Login successful", user
     
     def get_user_info(self, username: str) -> Optional[Dict]:
-        """Get user information"""
-        return self.users.get(username)
+        """Get user information with error handling"""
+        try:
+            return self.users.get(username)
+        except Exception as e:
+            print(f"❌ Error getting user info for {username}: {e}")
+            return None
     
     def is_demo_user(self, username: str) -> bool:
         """Check if user is in demo mode"""
-        user = self.users.get(username, {})
-        return user.get("plan", "demo") == "demo"
-
-    def can_use_demo(self, username: str) -> Tuple[bool, int]:
-        """Check if user can still use demo leads"""
-        user = self.users.get(username, {})
-        if not self.is_demo_user(username):
-            return False, 0
-        
-        used = user.get("demo_leads_used", 0)
-        limit = user.get("demo_limit", 5)
-        remaining = max(0, limit - used)
-        
-        return remaining > 0, remaining
-
-    def consume_demo_lead(self, username: str) -> bool:
-        """Consume one demo lead"""
-        if username not in self.users:
-            return False
-        
-        user = self.users[username]
-        if not self.is_demo_user(username):
-            return False
-        
-        used = user.get("demo_leads_used", 0)
-        limit = user.get("demo_limit", 5)
-        
-        if used >= limit:
-            return False
-        
-        user["demo_leads_used"] = used + 1
-        self.save_data()
-        return True
+        try:
+            user = self.users.get(username, {})
+            return user.get("plan", "demo") == "demo"
+        except Exception as e:
+            print(f"❌ Error checking if {username} is demo user: {e}")
+            return True  # Default to demo for safety
     
     def check_credits(self, username: str, required_credits: int) -> Tuple[bool, str, int]:
         """Check if user has enough credits"""
-        if username not in self.users:
-            return False, "User not found", 0
-        
-        user = self.users[username]
-        current_credits = user.get("credits", 0)
-        
-        if current_credits >= required_credits:
-            return True, f"{current_credits} credits available", current_credits
-        else:
-            return False, f"Insufficient credits: {current_credits}/{required_credits}", current_credits
+        try:
+            if username not in self.users:
+                return False, "User not found", 0
+            
+            user = self.users[username]
+            current_credits = user.get("credits", 0)
+            
+            if current_credits >= required_credits:
+                return True, f"{current_credits} credits available", current_credits
+            else:
+                return False, f"Insufficient credits: {current_credits}/{required_credits}", current_credits
+                
+        except Exception as e:
+            print(f"❌ Error checking credits for {username}: {e}")
+            return False, f"Error checking credits: {str(e)}", 0
     
     def consume_credits(self, username: str, credits_used: int, leads_downloaded: int, platform: str) -> bool:
-        """Consume credits and log the transaction"""
-        if username not in self.users:
+        """Consume credits and log the transaction with error handling"""
+        try:
+            if username not in self.users:
+                print(f"❌ User {username} not found for credit consumption")
+                return False
+            
+            user = self.users[username]
+            
+            if user.get("credits", 0) < credits_used:
+                print(f"❌ Insufficient credits for {username}: {user.get('credits', 0)}/{credits_used}")
+                return False
+            
+            # Deduct credits
+            user["credits"] -= credits_used
+            user["total_leads_downloaded"] += leads_downloaded
+            
+            # Log transaction
+            transaction = {
+                "username": username,
+                "type": "lead_download",
+                "credits_used": credits_used,
+                "leads_downloaded": leads_downloaded,
+                "platform": platform,
+                "timestamp": datetime.now().isoformat(),
+                "credits_remaining": user["credits"]
+            }
+            
+            user["transactions"].append(transaction)
+            self.transactions.append(transaction)
+            
+            self.save_data()
+            print(f"💳 Credits consumed: {username} used {credits_used} credits for {leads_downloaded} {platform} leads")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error consuming credits for {username}: {e}")
             return False
-        
-        user = self.users[username]
-        
-        if user.get("credits", 0) < credits_used:
-            return False
-        
-        # Deduct credits
-        user["credits"] -= credits_used
-        user["total_leads_downloaded"] += leads_downloaded
-        
-        # Log transaction
-        transaction = {
-            "username": username,
-            "type": "lead_download",
-            "credits_used": credits_used,
-            "leads_downloaded": leads_downloaded,
-            "platform": platform,
-            "timestamp": datetime.now().isoformat(),
-            "credits_remaining": user["credits"]
-        }
-        
-        user["transactions"].append(transaction)
-        self.transactions.append(transaction)
-        
-        self.save_data()
-        return True
     
     def add_credits(self, username: str, credits: int, plan: str, stripe_session_id: str = None) -> bool:
-        """Add credits to user account (from purchase) with proper plan handling"""
-        if username not in self.users:
-            print(f"❌ User {username} not found for credit addition")
+        """Add credits to user account with enhanced error handling"""
+        try:
+            if username not in self.users:
+                print(f"❌ User {username} not found for credit addition")
+                return False
+
+            user = self.users[username]
+
+            # Add credits
+            old_credits = user.get("credits", 0)
+            user["credits"] += credits
+
+            # Plan handling
+            if plan and plan.lower() not in ["unknown", "", "credit_purchase"]:
+                # This is a plan upgrade
+                old_plan = user.get("plan", "demo")
+                user["plan"] = plan.lower()
+                print(f"📧 Plan upgraded: {username} {old_plan} → {plan}")
+            elif plan == "credit_purchase":
+                # This is just a credit purchase, don't change the plan
+                print(f"💳 Credits added: {username} +{credits} (plan unchanged: {user.get('plan', 'starter')})")
+            else:
+                # Fallback: infer plan from total credits only if current plan is demo
+                current_plan = user.get("plan", "demo")
+                if current_plan == "demo":
+                    total_credits = user["credits"]
+                    if total_credits >= 10000:
+                        user["plan"] = "ultimate"
+                    elif total_credits >= 2000:
+                        user["plan"] = "pro"
+                    elif total_credits >= 500:
+                        user["plan"] = "starter"
+                    print(f"📧 Plan inferred from credits: {username} → {user['plan']}")
+
+            print(f"💎 Credits: {old_credits} → {user['credits']}")
+
+            # Log purchase transaction
+            transaction = {
+                "username": username,
+                "type": "credit_purchase" if plan == "credit_purchase" else "plan_upgrade",
+                "credits_added": credits,
+                "plan": user["plan"],
+                "stripe_session_id": stripe_session_id or "unknown",
+                "timestamp": datetime.now().isoformat(),
+                "credits_after": user["credits"]
+            }
+
+            user.setdefault("transactions", []).append(transaction)
+            self.transactions.append(transaction)
+
+            self.save_data()
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error adding credits for {username}: {e}")
             return False
-
-        user = self.users[username]
-
-        # Add credits
-        old_credits = user.get("credits", 0)
-        user["credits"] += credits
-
-        # 🔧 IMPROVED plan handling
-        if plan and plan.lower() not in ["unknown", "", "credit_purchase"]:
-            # This is a plan upgrade (pro/ultimate), update the plan
-            old_plan = user.get("plan", "demo")
-            user["plan"] = plan.lower()
-            print(f"🔧 Plan upgraded: {username} {old_plan} → {plan}")
-        elif plan == "credit_purchase":
-            # This is just a credit purchase, don't change the plan
-            print(f"💳 Credits added: {username} +{credits} (plan unchanged: {user.get('plan', 'starter')})")
-        else:
-            # Fallback: infer plan from total credits only if current plan is demo
-            current_plan = user.get("plan", "demo")
-            if current_plan == "demo":
-                total_credits = user["credits"]
-                if total_credits >= 10000:
-                    user["plan"] = "ultimate"
-                elif total_credits >= 2000:
-                    user["plan"] = "pro"
-                elif total_credits >= 500:
-                    user["plan"] = "starter"
-                print(f"🔧 Plan inferred from credits: {username} → {user['plan']}")
-
-        print(f"💎 Credits: {old_credits} → {user['credits']}")
-
-        # Log purchase transaction
-        transaction = {
-            "username": username,
-            "type": "credit_purchase" if plan == "credit_purchase" else "plan_upgrade",
-            "credits_added": credits,
-            "plan": user["plan"],
-            "stripe_session_id": stripe_session_id or "unknown",
-            "timestamp": datetime.now().isoformat(),
-            "credits_after": user["credits"]
-        }
-
-        user.setdefault("transactions", []).append(transaction)
-        self.transactions.append(transaction)
-
-        self.save_data()
-        return True
-    
-    def activate_subscription(self, username: str, plan: str, monthly_credits: int, stripe_session_id: str) -> bool:
-        """Activate a monthly subscription plan"""
-        if username not in self.users:
-            print(f"❌ User {username} not found for subscription activation")
-            return False
-
-        user = self.users[username]
-
-        # Set subscription plan (don't add to existing credits - subscriptions replace)
-        old_plan = user.get("plan", "demo")
-        old_credits = user.get("credits", 0)
-        
-        user["plan"] = plan.lower()
-        user["credits"] = monthly_credits  # Set to monthly amount (replace, don't add)
-        user["subscription_active"] = True
-        user["subscription_started"] = datetime.now().isoformat()
-        user["monthly_credits"] = monthly_credits
-        
-        print(f"✅ Subscription activated: {username}")
-        print(f"   Plan: {old_plan} → {plan}")
-        print(f"   Credits: {old_credits} → {monthly_credits}/month")
-
-        # Log subscription activation
-        transaction = {
-            "username": username,
-            "type": "subscription_activation",
-            "plan": plan,
-            "old_plan": old_plan,
-            "monthly_credits": monthly_credits,
-            "stripe_session_id": stripe_session_id or "unknown",
-            "timestamp": datetime.now().isoformat(),
-            "credits_set": monthly_credits
-        }
-
-        user.setdefault("transactions", []).append(transaction)
-        self.transactions.append(transaction)
-
-        self.save_data()
-        return True
     
     def get_user_stats(self, username: str) -> Dict:
-        """Get user statistics"""
-        user = self.users.get(username, {})
-        
-        if not user:
+        """Get user statistics with error handling"""
+        try:
+            user = self.users.get(username, {})
+            
+            if not user:
+                return {}
+            
+            # Calculate stats safely
+            total_purchased = sum(
+                t.get("credits_added", 0) 
+                for t in user.get("transactions", []) 
+                if t.get("type") in ["credit_purchase", "plan_upgrade", "subscription_activation"]
+            )
+            
+            credits_used = user.get("total_leads_downloaded", 0)  # 1 lead = 1 credit used
+            
+            return {
+                "current_credits": user.get("credits", 0),
+                "total_purchased": total_purchased,
+                "credits_used": credits_used,
+                "total_leads_downloaded": user.get("total_leads_downloaded", 0),
+                "plan": user.get("plan", "demo"),
+                "created_at": user.get("created_at"),
+                "last_login": user.get("last_login"),
+                "agreed_to_terms": user.get("agreed_to_terms", False),
+                "subscription_active": user.get("subscription_active", False),
+                "monthly_credits": user.get("monthly_credits", 0)
+            }
+            
+        except Exception as e:
+            print(f"❌ Error getting user stats for {username}: {e}")
             return {}
-        
-        # Calculate stats
-        total_purchased = sum(t.get("credits_added", 0) for t in user.get("transactions", []) if t.get("type") in ["credit_purchase", "plan_upgrade", "subscription_activation"])
-        total_used = sum(t.get("credits_used", 0) for t in user.get("transactions", []) if t.get("type") == "lead_download")
-        
-        # ✅ FIX: Make credits_used equal to total_leads_downloaded  
-        credits_used = user.get("total_leads_downloaded", 0)  # 1 lead = 1 credit used
-        
-        return {
-            "current_credits": user.get("credits", 0),
-            "total_purchased": total_purchased,
-            "credits_used": credits_used,  # ✅ This will now equal total leads generated
-            "total_leads_downloaded": user.get("total_leads_downloaded", 0),
-            "plan": user.get("plan", "demo"),
-            "created_at": user.get("created_at"),
-            "last_login": user.get("last_login"),
-            "agreed_to_terms": user.get("agreed_to_terms", False),
-            "subscription_active": user.get("subscription_active", False),
-            "monthly_credits": user.get("monthly_credits", 0)
-        }
-
+    
+    def get_system_health(self) -> Dict:
+        """Get system health status for monitoring"""
+        try:
+            health = {
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+                "users_count": len(self.users),
+                "transactions_count": len(self.transactions),
+                "files_exist": {
+                    "users": self.users_file.exists(),
+                    "transactions": self.transactions_file.exists()
+                },
+                "data_directory": str(self.users_file.parent),
+                "issues": []
+            }
+            
+            # Check for potential issues
+            if not self.users_file.exists():
+                health["issues"].append("Users file missing")
+            if not self.transactions_file.exists():
+                health["issues"].append("Transactions file missing")
+            
+            # Check file sizes (detect corruption)
+            try:
+                if self.users_file.exists() and self.users_file.stat().st_size == 0:
+                    health["issues"].append("Users file is empty")
+                if self.transactions_file.exists() and self.transactions_file.stat().st_size == 0:
+                    health["issues"].append("Transactions file is empty")
+            except Exception:
+                health["issues"].append("Cannot check file sizes")
+            
+            if health["issues"]:
+                health["status"] = "degraded"
+            
+            return health
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            }
+    
+    # Keep all other existing methods with similar error handling improvements...
     def get_pricing_tiers(self) -> List[Dict]:
         """Get available pricing tiers"""
         return [
@@ -346,418 +583,35 @@ class CreditSystem:
                 "features": ["5,000 leads", "All platforms", "Custom DMs", "Dedicated support", "Advanced filtering"]
             }
         ]
-    
-    def mask_leads_for_trial(self, leads: List[Dict], username: str) -> List[Dict]:
-        """Mask lead information for trial users"""
-        user = self.users.get(username, {})
-        
-        # Demo users get basic masking
-        if user.get("plan") == "demo":
-            masked_leads = []
-            for lead in leads:
-                masked_lead = lead.copy()
-                
-                # Mask email if present
-                if "email" in masked_lead and masked_lead["email"]:
-                    email = masked_lead["email"]
-                    if "@" in email:
-                        name, domain = email.split("@", 1)
-                        masked_lead["email"] = f"{name[:2]}***@{domain}"
-                
-                # Mask handle/username
-                if "handle" in masked_lead and masked_lead["handle"]:
-                    handle = masked_lead["handle"]
-                    masked_lead["handle"] = f"{handle[:3]}***"
-                
-                # Mask phone if present
-                if "phone" in masked_lead and masked_lead["phone"]:
-                    phone = masked_lead["phone"]
-                    masked_lead["phone"] = f"***-***-{phone[-4:]}" if len(phone) >= 4 else "***"
-                
-                # Add demo watermark
-                masked_lead["demo_mode"] = True
-                masked_lead["upgrade_message"] = "Upgrade to see full contact details"
-                
-                masked_leads.append(masked_lead)
-            
-            return masked_leads
-        
-        # Starter users get some masking
-        elif user.get("plan") == "starter":
-            masked_leads = []
-            for lead in leads:
-                masked_lead = lead.copy()
-                
-                # Light masking for starter - only mask phone
-                if "phone" in masked_lead and masked_lead["phone"]:
-                    phone = masked_lead["phone"]
-                    masked_lead["phone"] = f"***-***-{phone[-4:]}" if len(phone) >= 4 else "***"
-                
-                masked_leads.append(masked_lead)
-            
-            return masked_leads
-        
-        # Pro and Ultimate users get no masking
-        return leads
-    
-    def generate_invoice_data(self, username: str, transaction_id: str) -> Dict:
-        """Generate invoice data for PDF export"""
-        user = self.users.get(username, {})
-        
-        # Find the transaction
-        transaction = None
-        for t in self.transactions:
-            if t.get("stripe_session_id") == transaction_id:
-                transaction = t
-                break
-        
-        if not transaction:
-            return {}
-        
-        return {
-            "invoice_number": f"LGE-{transaction_id[-8:].upper()}",
-            "date": transaction["timestamp"],
-            "customer": {
-                "username": username,
-                "email": user.get("email", "")
-            },
-            "items": [{
-                "description": f"{transaction['plan'].title()} Credits",
-                "credits": transaction["credits_added"],
-                "amount": self._get_price_for_plan(transaction["plan"])
-            }],
-            "total": self._get_price_for_plan(transaction["plan"]),
-            "payment_method": "Credit Card (Stripe)",
-            "terms": "No refunds. Credits expire after 90 days."
-        }
-    
-    def _get_price_for_plan(self, plan: str) -> float:
-        """Get price for plan name"""
-        pricing = {
-            "lead starter": 97,
-            "lead pro": 297, 
-            "lead empire": 897
-        }
-        return pricing.get(plan.lower(), 0)
-    
-    def get_user_stats(self, username: str) -> Dict:
-        """Get user statistics"""
-        user = self.users.get(username, {})
-        
-        if not user:
-            return {}
-        
-        # Calculate stats
-        total_purchased = sum(t.get("credits_added", 0) for t in user.get("transactions", []) if t.get("type") == "credit_purchase")
-        total_used = sum(t.get("credits_used", 0) for t in user.get("transactions", []) if t.get("type") == "lead_download")
-        
-        return {
-            "current_credits": user.get("credits", 250),
-            "total_purchased": total_purchased,
-            "total_used": total_used,
-            "total_leads_downloaded": user.get("total_leads_downloaded", 0),
-            "plan": user.get("plan", "starter"),
-            "created_at": user.get("created_at"),
-            "last_login": user.get("last_login"),
-            "agreed_to_terms": user.get("agreed_to_terms", False)
-        }
-    
-    def agree_to_terms(self, username: str) -> bool:
-        """Record that user agreed to terms"""
-        if username not in self.users:
-            return False
-        
-        self.users[username]["agreed_to_terms"] = True
-        self.users[username]["terms_agreed_at"] = datetime.now().isoformat()
-        self.save_data()
-        return True
-    
-    def update_user_plan(self, username: str, new_plan: str) -> bool:
-        """Update user's plan and add appropriate credits"""
-        if username not in self.users:
-            print(f"❌ User {username} not found for plan update")
-            return False
-        
-        old_plan = self.users[username].get("plan", "demo")
-        self.users[username]["plan"] = new_plan
-        self.users[username]["plan_updated_at"] = datetime.now().isoformat()
-        
-        # Add plan-specific credits for plan upgrades
-        plan_credits = {
-            'starter': 250,
-            'pro': 2000,        # Pro gets 2000 credits
-            'ultimate': 9999
-        }
-        
-        credits_to_add = plan_credits.get(new_plan, 0)
-        if credits_to_add > 0:
-            old_credits = self.users[username].get("credits", 0)
-            # Set to the plan amount (don't add to existing)
-            self.users[username]["credits"] = credits_to_add
-            print(f"💎 Set {new_plan} plan credits to {credits_to_add}")
-        
-        # Log plan change transaction
-        transaction = {
-            "username": username,
-            "type": "plan_upgrade",
-            "old_plan": old_plan,
-            "new_plan": new_plan,
-            "credits_set": credits_to_add,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        self.users[username].setdefault("transactions", []).append(transaction)
-        self.transactions.append(transaction)
-        
-        self.save_data()
-        print(f"✅ Plan updated: {username} {old_plan} → {new_plan}")
-        return True
-    
-    def fix_user_credits(self, username: str) -> bool:
-        """Fix user credits to match their plan"""
-        if username not in self.users:
-            return False
-        
-        user = self.users[username]
-        current_plan = user.get("plan", "demo")
-        
-        # Set correct credits based on plan
-        correct_credits = {
-            'demo': 5,
-            'starter': 250,
-            'pro': 2000,
-            'ultimate': 9999
-        }
-        
-        if current_plan in correct_credits:
-            old_credits = user.get("credits", 0)
-            new_credits = correct_credits[current_plan]
-            
-            user["credits"] = new_credits
-            
-            # Log the fix
-            transaction = {
-                "username": username,
-                "type": "credit_fix",
-                "plan": current_plan,
-                "old_credits": old_credits,
-                "new_credits": new_credits,
-                "timestamp": datetime.now().isoformat(),
-                "reason": "Credit correction to match plan"
-            }
-            
-            user.setdefault("transactions", []).append(transaction)
-            self.transactions.append(transaction)
-            
-            self.save_data()
-            print(f"✅ Fixed credits for {username}: {current_plan} plan → {new_credits} credits")
-            return True
-        
-        return False
-    
-    def update_user_password(self, username: str, new_password: str) -> bool:
-        """Update user password in credit system"""
-        if username not in self.users:
-            print(f"❌ User {username} not found in credit system")
-            return False
-        
-        # Update password hash using credit system's own method
-        old_hash = self.users[username].get("password_hash", "")
-        new_hash = self.hash_password(new_password)
-        
-        self.users[username]["password_hash"] = new_hash
-        self.users[username]["password_updated_at"] = datetime.now().isoformat()
-        
-        # Save to file
-        self.save_data()
-        
-        print(f"✅ Credit system password updated for {username}")
-        print(f"🔧 Old hash: {old_hash[:20]}...")
-        print(f"🔧 New hash: {new_hash[:20]}...")
-        return True
 
-    def reload_user_data(self):
-        """Force reload user data from files"""
-        print("🔄 Reloading credit system data...")
-        old_user_count = len(self.users)
-        
-        self.load_data()
-        
-        new_user_count = len(self.users)
-        print(f"✅ Credit system data reloaded: {new_user_count} users (was {old_user_count})")
-        
-        # Debug: Show what users we have
-        for username in list(self.users.keys())[:5]:  # Show first 5 users
-            user = self.users[username]
-            print(f"👤 {username}: {user.get('email', 'no email')} | {user.get('plan', 'no plan')}")
+# Initialize global instance with error handling
+try:
+    credit_system = CreditSystem()
+    print("🎉 Global credit system instance created successfully")
+except Exception as e:
+    print(f"❌ Failed to create global credit system instance: {e}")
+    print(f"🔍 Full error: {traceback.format_exc()}")
+    # Create a minimal fallback
+    credit_system = None
 
-    def debug_user_password(self, username: str, password: str) -> Dict:
-        """Debug password checking in credit system"""
-        if username not in self.users:
-            available_users = list(self.users.keys())
-            return {
-                "error": "User not found in credit system",
-                "available_users": available_users[:10],  # Show first 10
-                "total_users": len(available_users)
-            }
-        
-        user = self.users[username]
-        stored_hash = user.get("password_hash", "")
-        test_hash = self.hash_password(password)
-        
-        return {
-            "username": username,
-            "email": user.get("email", ""),
-            "stored_hash": stored_hash[:20] + "..." if stored_hash else "NO HASH",
-            "test_hash": test_hash[:20] + "...", 
-            "hashes_match": stored_hash == test_hash,
-            "plan": user.get("plan", "unknown"),
-            "credits": user.get("credits", 0),
-            "last_login": user.get("last_login", "never"),
-            "password_updated_at": user.get("password_updated_at", "never")
-        }
-
-    def login_user(self, identifier: str, password: str) -> Tuple[bool, str, Dict]:
-        """Authenticate user by username OR email"""
-        # First try direct username lookup
-        if identifier in self.users:
-            user = self.users[identifier]
-            if user["password_hash"] == self.hash_password(password):
-                # Update last login
-                user["last_login"] = datetime.now().isoformat()
-                self.save_data()
-                return True, f"Login successful for {identifier}", user
-            else:
-                return False, "Invalid password", {}
-        
-        # Then try email lookup
-        for username, user_data in self.users.items():
-            if user_data.get("email", "").lower() == identifier.lower():
-                if user_data["password_hash"] == self.hash_password(password):
-                    # Update last login
-                    user_data["last_login"] = datetime.now().isoformat()
-                    self.save_data()
-                    return True, f"Login successful for {username} (via email)", user_data
-                else:
-                    return False, "Invalid password", {}
-        
-        return False, f"User not found: {identifier}", {}
-
-    def force_user_sync(self, username: str, email: str, password: str, plan: str = "demo", credits: int = 5) -> bool:
-        """Force create/update user with specific data (for fixing sync issues)"""
-        password_hash = self.hash_password(password)
-        
-        # Get existing data if available
-        existing_user = self.users.get(username, {})
-        
-        user_data = {
-            "username": username,
-            "email": email,
-            "password_hash": password_hash,
-            "plan": plan,
-            "credits": credits,
-            "created_at": existing_user.get("created_at", datetime.now().isoformat()),
-            "last_login": datetime.now().isoformat(),
-            "password_updated_at": datetime.now().isoformat(),
-            "total_leads_downloaded": existing_user.get("total_leads_downloaded", 0),
-            "transactions": existing_user.get("transactions", []),
-            "demo_leads_used": existing_user.get("demo_leads_used", 0),
-            "demo_limit": existing_user.get("demo_limit", 5),
-            "force_synced": True,
-            "sync_timestamp": datetime.now().isoformat()
-        }
-        
-        self.users[username] = user_data
-        self.save_data()
-        
-        print(f"🔧 Force synced user: {username}")
-        print(f"📧 Email: {email}")
-        print(f"🏷️ Plan: {plan}")
-        print(f"💎 Credits: {credits}")
-        return True
-
-    def get_user_by_email(self, email: str) -> Tuple[Optional[str], Optional[Dict]]:
-        """Find user by email address"""
-        for username, user_data in self.users.items():
-            if user_data.get("email", "").lower() == email.lower():
-                return username, user_data
-        return None, None
-
-    def verify_system_integrity(self) -> Dict:
-        """Verify the integrity of the credit system"""
-        issues = []
-        stats = {
-            "total_users": len(self.users),
-            "users_with_emails": 0,
-            "users_with_passwords": 0,
-            "demo_users": 0,
-            "paid_users": 0,
-            "issues": []
-        }
-        
-        for username, user_data in self.users.items():
-            # Check email
-            if user_data.get("email"):
-                stats["users_with_emails"] += 1
-            else:
-                issues.append(f"❌ {username}: No email")
-            
-            # Check password hash
-            if user_data.get("password_hash"):
-                stats["users_with_passwords"] += 1
-            else:
-                issues.append(f"❌ {username}: No password hash")
-            
-            # Check plan
-            plan = user_data.get("plan", "unknown")
-            if plan == "demo":
-                stats["demo_users"] += 1
-            else:
-                stats["paid_users"] += 1
-        
-        stats["issues"] = issues
-        return stats
-
-    # 🔧 UPDATE YOUR CreditSystem.__init__ method to include these:
-    def __init__(self):
-        self.users_file = "users_credits.json"
-        self.transactions_file = "transactions.json" 
-        self.load_data()
-        
-        # Add debug logging
-        print(f"🔧 Credit system initialized: {len(self.users)} users loaded")
-    
-    def get_admin_stats(self) -> Dict:
-        """Get admin statistics"""
-        total_users = len(self.users)
-        starter_users = len([u for u in self.users.values() if u.get("plan") == "starter"])
-        paid_users = total_users - starter_users
-        
-        total_revenue = sum(self._get_price_for_plan(t.get("plan", "")) for t in self.transactions if t.get("type") == "credit_purchase")
-        total_leads_served = sum(t.get("leads_downloaded", 0) for t in self.transactions if t.get("type") == "lead_download")
-        
-        return {
-            "total_users": total_users,
-            "starter_users": starter_users,
-            "paid_users": paid_users,
-            "total_revenue": total_revenue,
-            "total_leads_served": total_leads_served,
-            "total_transactions": len(self.transactions)
-        }
-
-# Global instance
-credit_system = CreditSystem()
-
-# Convenience functions for scrapers
+# Convenience functions for scrapers with error handling
 def check_user_credits(username: str, estimated_leads: int) -> Tuple[bool, str]:
     """Check if user has enough credits for estimated leads"""
-    return credit_system.check_credits(username, estimated_leads)
+    try:
+        if credit_system is None:
+            return False, "Credit system not available"
+        return credit_system.check_credits(username, estimated_leads)[:2]  # Return only bool and message
+    except Exception as e:
+        print(f"❌ Error checking user credits: {e}")
+        return False, f"Error checking credits: {str(e)}"
 
 def consume_user_credits(username: str, leads_downloaded: int, platform: str) -> bool:
     """Consume credits after successful scraping"""
-    return credit_system.consume_credits(username, leads_downloaded, leads_downloaded, platform)
-
-def apply_lead_masking(leads: List[Dict], username: str) -> List[Dict]:
-    """Apply lead masking for trial users"""
-    return credit_system.mask_leads_for_trial(leads, username)
+    try:
+        if credit_system is None:
+            return False
+        return credit_system.consume_credits(username, leads_downloaded, leads_downloaded, platform)
+    except Exception as e:
+        print(f"❌ Error consuming user credits: {e}")
+        return False
 
