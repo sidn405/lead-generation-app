@@ -18,7 +18,7 @@ from simple_credit_system import credit_system
 from cryptography.fernet import Fernet
 from email.message import EmailMessage
 from emailer import EMAIL_ADDRESS, EMAIL_PASSWORD
-from json_utils import load_json_safe
+from json_utils import load_json_safe, _atomic_write_json
 from enhanced_config_loader import ConfigLoader
 
 BASE = os.getenv("CLIENT_CONFIG_DIR", "client_configs")
@@ -996,110 +996,110 @@ def show_realtime_registration():
                         st.session_state.reg_email,
                         st.session_state.reg_password
                     )
-                    
-                    # ▶️ drop-in replacement for the whole try/except block
-                    try:
-                        import os, uuid, json
-                        from datetime import datetime
-                        from enhanced_config_loader import ConfigLoader
-
-                        # --- resolve storage base (uses Railway volume if set) ---
-                        BASE_DIR = os.getenv("CLIENT_CONFIG_DIR", "client_configs")
-                        os.makedirs(BASE_DIR, exist_ok=True)
-
-                        # --- normalize username + compute file path ---
-                        raw_username = st.session_state.reg_username
-                        safe_username = "".join(c for c in (raw_username or "") if c.isalnum() or c in "-_.").lower()
-                        client_id = str(uuid.uuid4())[:8]
-                        config_file = os.path.join(BASE_DIR, f"client_{safe_username}_config.json")
-
-                        print(f"🔧 Config base: {BASE_DIR}")
-                        print(f"🔧 Creating/using config file: {config_file}")
-
-                        # --- init loader (works even if file doesn't exist yet) ---
-                        config_loader = ConfigLoader(config_file)
-
-                        # --- ensure basic structure exists before we add exclusions ---
-                        cfg = getattr(config_loader, "config", {}) or {}
-                        if "user_settings" not in cfg:
-                            cfg["user_settings"] = {}
-                        cfg["user_settings"].update({
-                            "user_id": client_id,
-                            "username": safe_username,
-                            "company_name": st.session_state.get("reg_company_name", ""),
-                            "monthly_lead_target": 10000,
-                            "created_date": datetime.utcnow().isoformat()
-                        })
-                        # keep an exclusions array in the raw dict so save_config writes it even if no adds
-                        cfg.setdefault("exclusions", [])
-
-                        # push the structure back into the loader (so save_config writes it)
-                        config_loader.config = cfg
-
-                        # --- collect exclusions from registration form ---
-                        social_accounts = (registration_data or {}).get("social_accounts", {}) or {}
-                        excluded_count = 0
-
-                        # accept either dict of {platform: handle} or iterable of handles
-                        def _as_list(x):
-                            if isinstance(x, dict):
-                                return [v for v in x.values()]
-                            if isinstance(x, (list, tuple, set)):
-                                return list(x)
-                            return [x] if x else []
-
-                        for handle in _as_list(social_accounts):
-                            if not isinstance(handle, str):
-                                continue
-                            handle = handle.strip().lstrip("@")
-                            if not handle:
-                                continue
-                            # rely on your existing API to append into the exclusions structure
-                            added = config_loader.add_excluded_account("platform", handle)  # or pass actual platform if you have it
-                            if added:
-                                excluded_count += 1
-                                print(f"✅ Excluded: {handle}")
-                            else:
-                                print(f"⚠️ Skipped (duplicate/invalid): {handle}")
-
-                        # --- save and verify ---
-                        config_saved = bool(config_loader.save_config())
-
-                        # optional: one-line verify readback
+                    if success:
+                        # ▶️ drop-in replacement for the whole try/except block
                         try:
-                            with open(config_file, "r", encoding="utf-8") as f:
-                                _ = json.load(f)
-                            roundtrip_ok = True
-                        except Exception as _e:
-                            roundtrip_ok = False
-                            print(f"⚠️ Round-trip read failed: {_e}")
+                            import os, uuid, json
+                            from datetime import datetime
+                            from enhanced_config_loader import ConfigLoader
 
-                        # --- UX feedback ---
-                        if config_saved and roundtrip_ok:
-                            if excluded_count > 0:
-                                st.success(f"✅ Account created with {excluded_count} social account exclusions!")
-                                st.info("🚫 Those accounts will be excluded from lead results.")
+                            # --- resolve storage base (uses Railway volume if set) ---
+                            BASE_DIR = os.getenv("CLIENT_CONFIG_DIR", "client_configs")
+                            os.makedirs(BASE_DIR, exist_ok=True)
+
+                            # --- normalize username + compute file path ---
+                            raw_username = st.session_state.reg_username
+                            safe_username = "".join(c for c in (raw_username or "") if c.isalnum() or c in "-_.").lower()
+                            client_id = str(uuid.uuid4())[:8]
+                            config_file = os.path.join(BASE_DIR, f"client_{safe_username}_config.json")
+
+                            print(f"🔧 Config base: {BASE_DIR}")
+                            print(f"🔧 Creating/using config file: {config_file}")
+
+                            # --- init loader (works even if file doesn't exist yet) ---
+                            config_loader = ConfigLoader(config_file)
+
+                            # --- ensure basic structure exists before we add exclusions ---
+                            cfg = getattr(config_loader, "config", {}) or {}
+                            if "user_settings" not in cfg:
+                                cfg["user_settings"] = {}
+                            cfg["user_settings"].update({
+                                "user_id": client_id,
+                                "username": safe_username,
+                                "company_name": st.session_state.get("reg_company_name", ""),
+                                "monthly_lead_target": 10000,
+                                "created_date": datetime.utcnow().isoformat()
+                            })
+                            # keep an exclusions array in the raw dict so save_config writes it even if no adds
+                            cfg.setdefault("exclusions", [])
+
+                            # push the structure back into the loader (so save_config writes it)
+                            config_loader.config = cfg
+
+                            # --- collect exclusions from registration form ---
+                            social_accounts = (registration_data or {}).get("social_accounts", {}) or {}
+                            excluded_count = 0
+
+                            # accept either dict of {platform: handle} or iterable of handles
+                            def _as_list(x):
+                                if isinstance(x, dict):
+                                    return [v for v in x.values()]
+                                if isinstance(x, (list, tuple, set)):
+                                    return list(x)
+                                return [x] if x else []
+
+                            for handle in _as_list(social_accounts):
+                                if not isinstance(handle, str):
+                                    continue
+                                handle = handle.strip().lstrip("@")
+                                if not handle:
+                                    continue
+                                # rely on your existing API to append into the exclusions structure
+                                added = config_loader.add_excluded_account("platform", handle)  # or pass actual platform if you have it
+                                if added:
+                                    excluded_count += 1
+                                    print(f"✅ Excluded: {handle}")
+                                else:
+                                    print(f"⚠️ Skipped (duplicate/invalid): {handle}")
+
+                            # --- save and verify ---
+                            config_saved = bool(config_loader.save_config())
+
+                            # optional: one-line verify readback
+                            try:
+                                with open(config_file, "r", encoding="utf-8") as f:
+                                    _ = json.load(f)
+                                roundtrip_ok = True
+                            except Exception as _e:
+                                roundtrip_ok = False
+                                print(f"⚠️ Round-trip read failed: {_e}")
+
+                            # --- UX feedback ---
+                            if config_saved and roundtrip_ok:
+                                if excluded_count > 0:
+                                    st.success(f"✅ Account created with {excluded_count} social account exclusions!")
+                                    st.info("🚫 Those accounts will be excluded from lead results.")
+                                else:
+                                    st.success("✅ Account created successfully!")
+                                    st.info("💡 No social accounts to exclude — you can add them later in Settings.")
                             else:
-                                st.success("✅ Account created successfully!")
-                                st.info("💡 No social accounts to exclude — you can add them later in Settings.")
-                        else:
-                            st.warning("⚠️ Account created but exclusions may not be saved properly")
-                            st.caption(f"Path: {config_file}")
+                                st.warning("⚠️ Account created but exclusions may not be saved properly")
+                                st.caption(f"Path: {config_file}")
 
-                        print(f"✅ Config setup completed for {safe_username}")
+                            print(f"✅ Config setup completed for {safe_username}")
 
-                    except ImportError as e:
-                        st.warning("⚠️ Account created but exclusions not available: enhanced_config_loader not found")
-                        print(f"❌ Import error: {e}")
+                        except ImportError as e:
+                            st.warning("⚠️ Account created but exclusions not available: enhanced_config_loader not found")
+                            print(f"❌ Import error: {e}")
 
-                    except FileNotFoundError as e:
-                        st.warning("⚠️ Account created but config directory not accessible")
-                        print(f"❌ File error: {e}")
+                        except FileNotFoundError as e:
+                            st.warning("⚠️ Account created but config directory not accessible")
+                            print(f"❌ File error: {e}")
 
-                    except Exception as e:
-                        st.warning(f"⚠️ Account created but exclusion setup failed: {e}")
-                        print(f"❌ Config setup error: {e}")
-                        import traceback; traceback.print_exc()
+                        except Exception as e:
+                            st.warning(f"⚠️ Account created but exclusion setup failed: {e}")
+                            print(f"❌ Config setup error: {e}")
+                            import traceback; traceback.print_exc()
 
                         
                         # Continue with success message regardless
