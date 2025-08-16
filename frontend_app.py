@@ -22,7 +22,7 @@ from stripe_checkout import show_compact_credit_terms, display_compact_credit_ad
 import streamlit.components.v1 as components
 import traceback
 from datetime import datetime, timedelta
-from simple_credit_system import credit_system, check_user_credits, consume_user_credits, apply_lead_masking
+from simple_credit_system import credit_system, check_user_credits, consume_user_credits
 from stripe_checkout import (
     display_pricing_tiers_with_enforcement, 
     handle_payment_success, 
@@ -954,22 +954,6 @@ def show_auth_required_dashboard():
 # Simple Credit System - No complex auth needed
 AUTH_AVAILABLE = True  # Always available with simple system
 USAGE_TRACKING_AVAILABLE = False  # Not needed with credit system
-
-# 🌍 NEW: Import multilingual capabilities
-try:
-    from multilingual_dm_generator import (
-        detect_user_language, 
-        generate_multilingual_dm, 
-        generate_multilingual_batch,
-        LANGUAGE_KEYWORDS,
-        PLATFORM_LANGUAGE_STYLES
-    )
-    from dm_sequences import generate_multiple_dms
-    from dm_csv_exporter import export_dms_detailed, create_campaign_summary
-    MULTILINGUAL_AVAILABLE = True
-except ImportError:
-    MULTILINGUAL_AVAILABLE = True  # ← Force it to True anyway
-    print("⚠️ Multilingual imports failed but keeping features available")
 
 # Page config
 st.set_page_config(
