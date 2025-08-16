@@ -251,24 +251,6 @@ def safe_load_user_info():
     except:
         return {"username": "demo_user", "plan": "demo", "credits": 5, "demo_leads_used": 0}
 
-# Fix 2: Empire Stats Calculation
-def calculate_empire_from_csvs():
-    """Fix empire statistics calculation"""
-    try:
-        from simple_credit_system import credit_system
-        
-        if credit_system:
-            total_leads = sum(t.get("leads_downloaded", 0) for t in credit_system.transactions if t.get("type") == "lead_download")
-            return {
-                "total_leads_generated": total_leads,
-                "total_users": len(credit_system.users),
-                "platforms_used": ["instagram", "twitter", "linkedin", "tiktok"],
-                "total_revenue": len(credit_system.users) * 97  # Rough estimate
-            }
-        else:
-            return {"total_leads_generated": 0, "total_users": 1, "platforms_used": [], "total_revenue": 0}
-    except:
-        return {"total_leads_generated": 0, "total_users": 1, "platforms_used": [], "total_revenue": 0}
 
 # === END FIXES ===
 
@@ -495,23 +477,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-def load_accurate_empire_stats(username):
-    """Load accurate, up-to-date empire stats for specific user"""
-    empire_stats = {}
-    total_leads  = 0
-    try:
-        empire_file = f"empire_totals_{username}.json"
-        if os.path.exists(empire_file):
-            with open(empire_file, "r") as f:
-                data = json.load(f)
-            empire_stats = data.get("platforms", {})
-            total_leads  = data.get("total_empire", 0)
-        else:
-            empire_stats = calculate_empire_from_csvs(username)
-            total_leads  = sum(empire_stats.values())
-    except Exception as e:
-        st.error(f"❌ Could not load empire stats: {e}")
-    return empire_stats, total_leads
+
 
 # ✅ ADD THESE FUNCTIONS RIGHT AFTER YOUR IMPORTS
 def get_demo_status_with_refresh():
