@@ -174,42 +174,154 @@ class CreditSystem:
             print(f"❌ Could not backup corrupted file: {e}")
     
     def save_data(self):
-        """Save all data to files with atomic writes and error handling"""
+        """Save all data to files with comprehensive error handling and recovery"""
         print("💾 Saving data files...")
         
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                # Pre-save validation
+                self._validate_data_before_save()
+                
+                # Save users file atomically
+                self._save_file_atomically(self.users_file, self.users)
+                
+                # Save transactions file atomically
+                self._save_file_atomically(self.transactions_file, self.transactions)
+                
+                print("✅ Data saved successfully")
+                return True
+                
+            except Exception as e:
+                retry_count += 1
+                print(f"❌ Save attempt {retry_count} failed: {e}")
+                
+                if retry_count < max_retries:
+                    print(f"🔄 Retrying save operation... ({retry_count}/{max_retries})")
+                    # Wait a bit before retrying
+                    import time
+                    time.sleep(1)
+                else:
+                    print(f"💥 All save attempts failed. Data may be lost!")
+                    # Try emergency backup
+                    self._emergency_data_backup()
+                    return False
+    
+    def _validate_data_before_save(self):
+        """Validate data structure before saving"""
+        # Validate users data
+        if not isinstance(self.users, dict):
+            raise ValueError("Users data must be a dictionary")
+        
+        # Validate transactions data
+        if not isinstance(self.transactions, list):
+            raise ValueError("Transactions data must be a list")
+        
+        # Check for any problematic data
+        for username, user_data in self.users.items():
+            if not isinstance(user_data, dict):
+                raise ValueError(f"User data for {username} must be a dictionary")
+            
+            # Ensure required fields exist
+            required_fields = ['email', 'password_hash', 'plan', 'credits']
+            for field in required_fields:
+                if field not in user_data:
+                    print(f"⚠️ Missing field {field} for user {username}, adding default")
+                    if field == 'email':
+                        user_data[field] = ''
+                    elif field == 'password_hash':
+                        user_data[field] = ''
+                    elif field == 'plan':
+                        user_data[field] = 'demo'
+                    elif field == 'credits':
+                        user_data[field] = 0
+    
+    def _emergency_data_backup(self):
+        """Create emergency backup when normal save fails"""
         try:
-            # Save users file atomically
-            self._save_file_atomically(self.users_file, self.users)
+            import tempfile
+            backup_dir = Path(tempfile.gettempdir()) / 'leadgen_emergency_backup'
+            backup_dir.mkdir(exist_ok=True)
             
-            # Save transactions file atomically
-            self._save_file_atomically(self.transactions_file, self.transactions)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             
-            print("✅ Data saved successfully")
+            # Backup users
+            emergency_users_file = backup_dir / f"emergency_users_{timestamp}.json"
+            with emergency_users_file.open('w', encoding='utf-8') as f:
+                json.dump(self.users, f, indent=4, default=str)
+            
+            # Backup transactions
+            emergency_trans_file = backup_dir / f"emergency_transactions_{timestamp}.json"
+            with emergency_trans_file.open('w', encoding='utf-8') as f:
+                json.dump(self.transactions, f, indent=4, default=str)
+            
+            print(f"🆘 Emergency backup saved to {backup_dir}")
+            print(f"   Users: {emergency_users_file}")
+            print(f"   Transactions: {emergency_trans_file}")
             
         except Exception as e:
-            print(f"❌ Error saving data: {e}")
-            print(f"🔍 Full error: {traceback.format_exc()}")
-            # Don't raise the exception - let the app continue
+            print(f"💥 Emergency backup also failed: {e}")
+            # Last resort - print data to console
+            print("🆘 LAST RESORT - Data dump to console:")
+            print("USERS:", json.dumps(self.users, indent=2, default=str)[:1000], "...")
+            print("TRANSACTIONS:", json.dumps(self.transactions, indent=2, default=str)[:1000], "...")
     
     def _save_file_atomically(self, file_path: Path, data: dict | list):
-        """Save file atomically to prevent corruption"""
+        """Save file atomically with enhanced encoding safety"""
         # Write to temporary file first
         temp_file = file_path.with_suffix('.tmp')
         
         try:
-            # Write data to temp file
-            with temp_file.open('w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
+            # Ensure data is JSON-serializable and clean
+            cleaned_data = self._clean_data_for_json(data)
+            
+            # Write data to temp file with strict UTF-8 encoding
+            with temp_file.open('w', encoding='utf-8', newline='') as f:
+                json.dump(cleaned_data, f, indent=4, ensure_ascii=False, separators=(',', ': '))
+                f.flush()  # Force write to disk
+                os.fsync(f.fileno())  # Force OS to write to storage
+            
+            # Verify the file was written correctly by reading it back
+            with temp_file.open('r', encoding='utf-8') as f:
+                verification = json.load(f)
             
             # Atomic rename (on most filesystems)
             temp_file.replace(file_path)
             print(f"💾 Saved {len(data) if isinstance(data, (dict, list)) else 'data'} items to {file_path}")
             
+            # Additional verification - read the final file
+            try:
+                with file_path.open('r', encoding='utf-8') as f:
+                    final_verification = json.load(f)
+                print(f"✅ Final verification successful for {file_path}")
+            except Exception as verify_error:
+                print(f"⚠️ Final verification failed for {file_path}: {verify_error}")
+            
         except Exception as e:
             # Clean up temp file if it exists
             if temp_file.exists():
                 temp_file.unlink()
+            print(f"❌ Failed to save {file_path}: {e}")
             raise e
+    
+    def _clean_data_for_json(self, data):
+        """Clean data to ensure JSON serialization safety"""
+        if isinstance(data, dict):
+            cleaned = {}
+            for key, value in data.items():
+                # Ensure keys are strings and clean
+                clean_key = str(key).encode('utf-8', errors='ignore').decode('utf-8')
+                cleaned[clean_key] = self._clean_data_for_json(value)
+            return cleaned
+        elif isinstance(data, list):
+            return [self._clean_data_for_json(item) for item in data]
+        elif isinstance(data, str):
+            # Clean string data - remove null bytes and ensure valid UTF-8
+            return data.encode('utf-8', errors='ignore').decode('utf-8').replace('\x00', '')
+        else:
+            return data
     
     def hash_password(self, password: str) -> str:
         """Simple password hashing with salt"""
@@ -514,48 +626,159 @@ class CreditSystem:
             print(f"❌ Error getting user stats for {username}: {e}")
             return {}
     
-    def get_system_health(self) -> Dict:
-        """Get system health status for monitoring"""
-        try:
-            health = {
-                "status": "healthy",
-                "timestamp": datetime.now().isoformat(),
-                "users_count": len(self.users),
-                "transactions_count": len(self.transactions),
-                "files_exist": {
-                    "users": self.users_file.exists(),
-                    "transactions": self.transactions_file.exists()
-                },
-                "data_directory": str(self.users_file.parent),
-                "issues": []
-            }
-            
-            # Check for potential issues
-            if not self.users_file.exists():
-                health["issues"].append("Users file missing")
-            if not self.transactions_file.exists():
-                health["issues"].append("Transactions file missing")
-            
-            # Check file sizes (detect corruption)
+    def force_data_persistence(self):
+        """Force data to persist even in problematic environments"""
+        print("🔒 Forcing data persistence...")
+        
+        # Try multiple persistence strategies
+        strategies = [
+            self._persist_to_main_files,
+            self._persist_to_backup_location,
+            self._persist_to_temp_directory,
+            self._persist_to_environment_variable
+        ]
+        
+        success_count = 0
+        for strategy in strategies:
             try:
-                if self.users_file.exists() and self.users_file.stat().st_size == 0:
-                    health["issues"].append("Users file is empty")
-                if self.transactions_file.exists() and self.transactions_file.stat().st_size == 0:
-                    health["issues"].append("Transactions file is empty")
-            except Exception:
-                health["issues"].append("Cannot check file sizes")
+                if strategy():
+                    success_count += 1
+                    print(f"✅ Persistence strategy succeeded: {strategy.__name__}")
+                else:
+                    print(f"❌ Persistence strategy failed: {strategy.__name__}")
+            except Exception as e:
+                print(f"💥 Persistence strategy error {strategy.__name__}: {e}")
+        
+        if success_count > 0:
+            print(f"✅ Data persisted using {success_count} strategies")
+            return True
+        else:
+            print("💥 All persistence strategies failed!")
+            return False
+    
+    def _persist_to_main_files(self):
+        """Persist to main data files"""
+        return self.save_data()
+    
+    def _persist_to_backup_location(self):
+        """Persist to backup location"""
+        try:
+            backup_dir = self.users_file.parent / 'backup'
+            backup_dir.mkdir(exist_ok=True)
             
-            if health["issues"]:
-                health["status"] = "degraded"
+            backup_users = backup_dir / 'users_credits_backup.json'
+            backup_trans = backup_dir / 'transactions_backup.json'
             
-            return health
+            self._save_file_atomically(backup_users, self.users)
+            self._save_file_atomically(backup_trans, self.transactions)
+            return True
+        except:
+            return False
+    
+    def _persist_to_temp_directory(self):
+        """Persist to temp directory"""
+        try:
+            import tempfile
+            temp_dir = Path(tempfile.gettempdir()) / 'leadgen_persistent'
+            temp_dir.mkdir(exist_ok=True)
             
-        except Exception as e:
-            return {
-                "status": "error",
-                "timestamp": datetime.now().isoformat(),
-                "error": str(e)
-            }
+            temp_users = temp_dir / 'users_credits.json'
+            temp_trans = temp_dir / 'transactions.json'
+            
+            self._save_file_atomically(temp_users, self.users)
+            self._save_file_atomically(temp_trans, self.transactions)
+            return True
+        except:
+            return False
+    
+    def _persist_to_environment_variable(self):
+        """Persist critical data to environment variable as last resort"""
+        try:
+            # Only store essential user data
+            essential_data = {}
+            for username, user_data in self.users.items():
+                essential_data[username] = {
+                    'email': user_data.get('email', ''),
+                    'plan': user_data.get('plan', 'demo'),
+                    'credits': user_data.get('credits', 0),
+                    'demo_leads_used': user_data.get('demo_leads_used', 0)
+                }
+            
+            # Store as compressed JSON string
+            import json
+            essential_json = json.dumps(essential_data, separators=(',', ':'))
+            
+            # Store in session state as fallback
+            if 'streamlit' in sys.modules:
+                import streamlit as st
+                st.session_state['leadgen_persistent_data'] = essential_json
+                return True
+            
+            return False
+        except:
+            return False
+    
+    def recover_from_persistent_storage(self):
+        """Recover data from persistent storage locations"""
+        print("🔄 Attempting data recovery from persistent storage...")
+        
+        recovery_sources = [
+            self._recover_from_backup_location,
+            self._recover_from_temp_directory,
+            self._recover_from_environment_variable
+        ]
+        
+        for recovery_source in recovery_sources:
+            try:
+                recovered_data = recovery_source()
+                if recovered_data:
+                    self.users = recovered_data.get('users', {})
+                    self.transactions = recovered_data.get('transactions', [])
+                    print(f"✅ Data recovered from {recovery_source.__name__}")
+                    return True
+            except Exception as e:
+                print(f"❌ Recovery failed from {recovery_source.__name__}: {e}")
+        
+        print("❌ No recoverable data found")
+        return False
+    
+    def _recover_from_backup_location(self):
+        """Recover from backup location"""
+        backup_dir = self.users_file.parent / 'backup'
+        backup_users = backup_dir / 'users_credits_backup.json'
+        backup_trans = backup_dir / 'transactions_backup.json'
+        
+        if backup_users.exists() and backup_trans.exists():
+            users = json.loads(backup_users.read_text(encoding='utf-8'))
+            transactions = json.loads(backup_trans.read_text(encoding='utf-8'))
+            return {'users': users, 'transactions': transactions}
+        return None
+    
+    def _recover_from_temp_directory(self):
+        """Recover from temp directory"""
+        import tempfile
+        temp_dir = Path(tempfile.gettempdir()) / 'leadgen_persistent'
+        temp_users = temp_dir / 'users_credits.json'
+        temp_trans = temp_dir / 'transactions.json'
+        
+        if temp_users.exists() and temp_trans.exists():
+            users = json.loads(temp_users.read_text(encoding='utf-8'))
+            transactions = json.loads(temp_trans.read_text(encoding='utf-8'))
+            return {'users': users, 'transactions': transactions}
+        return None
+    
+    def _recover_from_environment_variable(self):
+        """Recover from environment variable"""
+        try:
+            if 'streamlit' in sys.modules:
+                import streamlit as st
+                if 'leadgen_persistent_data' in st.session_state:
+                    essential_json = st.session_state['leadgen_persistent_data']
+                    users = json.loads(essential_json)
+                    return {'users': users, 'transactions': []}
+            return None
+        except:
+            return None
     
     # Keep all other existing methods with similar error handling improvements...
     def get_pricing_tiers(self) -> List[Dict]:
@@ -614,4 +837,3 @@ def consume_user_credits(username: str, leads_downloaded: int, platform: str) ->
     except Exception as e:
         print(f"❌ Error consuming user credits: {e}")
         return False
-
