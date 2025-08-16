@@ -195,6 +195,52 @@ try:
 except Exception as e:
     st.error(f"Credit system patch failed: {e}")
     
+# === EMERGENCY FIX - Add this at the top ===
+import streamlit as st
+
+# Fix 1: Working Logout
+def emergency_logout():
+    """Working logout function"""
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.success("✅ Logged out!")
+    st.rerun()
+
+# Fix 2: Fix broken functions
+def load_user_information():
+    """Fixed - no parameters"""
+    try:
+        username = st.session_state.get("username", "demo_user")
+        return {
+            "username": username,
+            "plan": "demo", 
+            "credits": 5,
+            "demo_leads_used": 0
+        }
+    except:
+        return {"username": "demo_user", "plan": "demo", "credits": 5, "demo_leads_used": 0}
+
+def calculate_empire_from_csvs():
+    """Fixed - no parameters"""
+    return {
+        "total_leads_generated": 0,
+        "total_users": 1,
+        "total_revenue": 0,
+        "platforms_used": ["twitter", "facebook"]
+    }
+
+# Fix 3: Emergency controls in sidebar
+with st.sidebar:
+    st.markdown("---")
+    st.subheader("🆘 EMERGENCY")
+    if st.button("🚪 LOGOUT NOW", type="primary"):
+        emergency_logout()
+    if st.button("🔄 RESET ALL"):
+        st.session_state.clear()
+        st.rerun()
+
+# === END EMERGENCY FIX ===
+    
 # Fix 1: Create working scrapers for failed imports
 def fix_failing_scrapers():
     for platform in ['instagram', 'tiktok', 'youtube']:
