@@ -164,6 +164,68 @@ from stripe_integration import handle_payment_flow, show_purchase_buttons
 from package_system import show_package_store, show_my_packages
 from purchases_tracker import automatic_payment_capture
 
+# Set page config
+st.set_page_config(
+    page_title="Lead Generation Empire",
+    page_icon="🎯",
+    layout="wide"
+)
+
+def initialize_system_with_recovery():
+    """Initialize system with comprehensive error recovery"""
+    try:
+        # Try to import credit system
+        from simple_credit_system import credit_system
+        
+        if credit_system is None:
+            st.error("❌ Credit system failed to initialize")
+            return None
+        
+        # Try to recover data if main files are corrupted
+        if not credit_system.users and hasattr(credit_system, 'recover_from_persistent_storage'):
+            st.info("🔄 Attempting data recovery...")
+            credit_system.recover_from_persistent_storage()
+        
+        # Force data persistence
+        if hasattr(credit_system, 'force_data_persistence'):
+            credit_system.force_data_persistence()
+        
+        st.success("✅ System initialized successfully")
+        return credit_system
+        
+    except Exception as e:
+        st.error(f"❌ System initialization failed: {e}")
+        
+        # Show debug option
+        if st.button("🔧 Open Debug Center"):
+            st.session_state['show_debug'] = True
+            st.rerun()
+        
+        return None
+
+# Initialize system
+if 'credit_system' not in st.session_state:
+    credit_system = initialize_system_with_recovery()
+    st.session_state['credit_system'] = credit_system
+else:
+    credit_system = st.session_state['credit_system']
+
+# Show debug interface if requested
+if st.session_state.get('show_debug', False):
+    from debug_interface import show_debug_interface
+    show_debug_interface()
+    
+    if st.button("❌ Close Debug"):
+        st.session_state['show_debug'] = False
+        st.rerun()
+    
+    st.stop()  # Don't show main app while debugging
+
+# Only continue if credit system is working
+if not credit_system:
+    st.error("🚨 System unavailable. Please use the Debug Center above.")
+    st.stop()
+
 # Initialize database on startup
 @st.cache_resource
 def init_database():
@@ -3471,6 +3533,11 @@ with st.sidebar:
             st.caption(lang) 
         
         st.markdown("---")
+        
+        st.markdown("---")
+        if st.button("🔧 Debug Center"):
+            st.session_state['show_debug'] = True
+            st.rerun()
     
     # Different sidebar content based on authentication status
     if not user_authenticated:
