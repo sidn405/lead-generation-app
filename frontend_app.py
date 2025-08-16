@@ -477,7 +477,23 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
+def load_accurate_empire_stats(username):
+    """Load accurate, up-to-date empire stats for specific user"""
+    empire_stats = {}
+    total_leads  = 0
+    try:
+        empire_file = f"empire_totals_{username}.json"
+        if os.path.exists(empire_file):
+            with open(empire_file, "r") as f:
+                data = json.load(f)
+            empire_stats = data.get("platforms", {})
+            total_leads  = data.get("total_empire", 0)
+        else:
+            empire_stats = calculate_empire_from_csvs(username)
+            total_leads  = sum(empire_stats.values())
+    except Exception as e:
+        st.error(f"❌ Could not load empire stats: {e}")
+    return empire_stats, total_leads
 
 # ✅ ADD THESE FUNCTIONS RIGHT AFTER YOUR IMPORTS
 def get_demo_status_with_refresh():
