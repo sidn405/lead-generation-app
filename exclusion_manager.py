@@ -5,38 +5,6 @@ Use this to test and manage excluded accounts across all platforms
 """
 
 from config_loader import ConfigLoader, should_exclude_account
-import os, json, time
-
-def _atomic_write(path, data):
-    tmp = f"{path}.tmp.{int(time.time()*1000)}"
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2); f.write("\n")
-    os.replace(tmp, path)
-
-class ExclusionManager:
-    def __init__(self, username: str, base_dir: str):
-        safe = "".join(c for c in (username or "") if c.isalnum() or c in "-_.").lower()
-        self.path = os.path.join(base_dir, f"client_{safe}_config.json")
-        self.last_error = None
-
-    def save_exclusions(self, exclusions: list[str]) -> bool:
-        try:
-            payload = {"exclusions": exclusions}
-            # merge with existing config if present
-            if os.path.exists(self.path):
-                with open(self.path, "r", encoding="utf-8-sig") as f:
-                    existing = (json.load(f) or {})
-                existing["exclusions"] = exclusions
-                payload = existing
-            _atomic_write(self.path, payload)
-            # verify round-trip
-            with open(self.path, "r", encoding="utf-8") as f:
-                back = json.load(f)
-            return back.get("exclusions", []) == exclusions
-        except Exception as e:
-            self.last_error = str(e)
-            return False
 
 
 def test_exclusions():

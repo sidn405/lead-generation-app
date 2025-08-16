@@ -15,7 +15,7 @@ else:
     print("[OK] Subprocess patch protection enabled")
 import subprocess
 from datetime import datetime
-from user_auth import load_json_safe
+from json_utils import load_json_safe
 
 # ✅ FIXED: Import centralized config properly
 from config_loader import get_platform_config, config_loader
