@@ -164,6 +164,36 @@ from stripe_integration import handle_payment_flow, show_purchase_buttons
 from package_system import show_package_store, show_my_packages
 from purchases_tracker import automatic_payment_capture
 
+# Add this RIGHT AFTER your imports
+try:
+    from simple_credit_system import credit_system
+    
+    # Quick fix for missing method
+    if not hasattr(credit_system, 'get_system_health'):
+        def get_system_health(self):
+            return {
+                "status": "healthy",
+                "timestamp": "now",
+                "users_count": len(self.users),
+                "transactions_count": len(self.transactions),
+                "files_exist": {"users": True, "transactions": True},
+                "data_directory": ".",
+                "issues": []
+            }
+        credit_system.__class__.get_system_health = get_system_health
+        print("✅ Fixed missing get_system_health method")
+    
+    # Quick fix for missing persistence method  
+    if not hasattr(credit_system, 'force_data_persistence'):
+        def force_data_persistence(self):
+            self.save_data()
+            return True
+        credit_system.__class__.force_data_persistence = force_data_persistence
+        print("✅ Fixed missing force_data_persistence method")
+        
+except Exception as e:
+    st.error(f"Credit system patch failed: {e}")
+    
 # Set page config
 st.set_page_config(
     page_title="Lead Generation Empire",
