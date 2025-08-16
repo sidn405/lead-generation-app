@@ -267,7 +267,7 @@ def show_scraper_testing():
         "tiktok_scraper.py",
         "facebook_scraper.py",
         "youtube_scraper.py",
-        "medium_scraper_ec",
+        "medium_scraper_ec.py",
         "reddit_scraper_ec.py"
     ]
     
