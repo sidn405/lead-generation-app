@@ -179,8 +179,8 @@ class ProductionDebugger:
         
         # Check Python packages
         required_packages = [
-            'selenium', 'beautifulsoup4', 'requests', 
-            'pandas', 'streamlit', 'undetected_chromedriver'
+            'requests', 
+            'pandas', 'streamlit'
         ]
         
         for package in required_packages:

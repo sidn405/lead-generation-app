@@ -9,6 +9,8 @@ requests
 pandas
 numpy
 reportlab
+selenium
+beautifulsoup4
 # SQLite3 is built into Python, no need to add it
 psycopg2-binary
 sqlalchemy
