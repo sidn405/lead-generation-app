@@ -198,7 +198,8 @@ class ProductionDebugger:
             'tiktok_scraper.py',
             'youtube_scraper.py',
             'medium_scraper_ec.py',
-            'reddit_scraper_ec.py'
+            'reddit_scraper_ec.py',
+            'facebook_scraper.py'
         ]
         
         for scraper_file in scraper_files:
@@ -255,12 +256,12 @@ class ProductionDebugger:
         self.log("🐍 Testing Python imports...")
         
         critical_imports = [
-            ('json', 'json'),
-            ('os', 'os'),
-            ('sys', 'sys'),
+            ('json', None),  # Import as 'import json'
+            ('os', None),    # Import as 'import os'  
+            ('sys', None),   # Import as 'import sys'
             ('pathlib', 'Path'),
             ('datetime', 'datetime'),
-            ('streamlit', 'st'),
+            ('streamlit', None),  # Import as 'import streamlit as st'
             ('simple_credit_system', 'credit_system')
         ]
         
@@ -268,11 +269,16 @@ class ProductionDebugger:
             try:
                 if item:
                     exec(f"from {module} import {item}")
+                    self.log(f"✅ Import successful: from {module} import {item}")
                 else:
-                    exec(f"import {module}")
-                self.log(f"✅ Import successful: from {module} import {item}")
+                    if module == 'streamlit':
+                        exec(f"import {module} as st")
+                        self.log(f"✅ Import successful: import {module} as st")
+                    else:
+                        exec(f"import {module}")
+                        self.log(f"✅ Import successful: import {module}")
             except Exception as e:
-                self.log(f"❌ Import failed: from {module} import {item} - {e}", "ERROR")
+                self.log(f"❌ Import failed: {module} - {e}", "ERROR")
     
     def create_missing_dm_library(self, username):
         """Create missing DM library file for user"""

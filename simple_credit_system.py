@@ -625,6 +625,65 @@ class CreditSystem:
         except Exception as e:
             print(f"❌ Error getting user stats for {username}: {e}")
             return {}
+
+    def mask_leads_for_trial(self, leads: List[Dict], username: str) -> List[Dict]:
+        """Mask lead information for trial users with error handling"""
+        try:
+            user = self.users.get(username, {})
+            
+            # Demo users get basic masking
+            if user.get("plan") == "demo":
+                masked_leads = []
+                for lead in leads:
+                    masked_lead = lead.copy()
+                    
+                    # Mask email if present
+                    if "email" in masked_lead and masked_lead["email"]:
+                        email = masked_lead["email"]
+                        if "@" in email:
+                            name, domain = email.split("@", 1)
+                            masked_lead["email"] = f"{name[:2]}***@{domain}"
+                    
+                    # Mask handle/username
+                    if "handle" in masked_lead and masked_lead["handle"]:
+                        handle = masked_lead["handle"]
+                        masked_lead["handle"] = f"{handle[:3]}***"
+                    
+                    # Mask phone if present
+                    if "phone" in masked_lead and masked_lead["phone"]:
+                        phone = masked_lead["phone"]
+                        masked_lead["phone"] = f"***-***-{phone[-4:]}" if len(phone) >= 4 else "***"
+                    
+                    # Add demo watermark
+                    masked_lead["demo_mode"] = True
+                    masked_lead["upgrade_message"] = "Upgrade to see full contact details"
+                    
+                    masked_leads.append(masked_lead)
+                
+                return masked_leads
+            
+            # Starter users get some masking
+            elif user.get("plan") == "starter":
+                masked_leads = []
+                for lead in leads:
+                    masked_lead = lead.copy()
+                    
+                    # Light masking for starter - only mask phone
+                    if "phone" in masked_lead and masked_lead["phone"]:
+                        phone = masked_lead["phone"]
+                        masked_lead["phone"] = f"***-***-{phone[-4:]}" if len(phone) >= 4 else "***"
+                    
+                    masked_leads.append(masked_lead)
+                
+                return masked_leads
+            
+            # Pro and Ultimate users get no masking
+            return leads
+            
+        except Exception as e:
+            print(f"❌ Error masking leads for {username}: {e}")
+            # Return original leads if masking fails
+            return leads
     
     def force_data_persistence(self):
         """Force data to persist even in problematic environments"""
@@ -780,6 +839,67 @@ class CreditSystem:
         except:
             return None
     
+    def get_system_health(self) -> Dict:
+        """Get system health status for monitoring"""
+        try:
+            health = {
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+                "users_count": len(self.users),
+                "transactions_count": len(self.transactions),
+                "files_exist": {
+                    "users": self.users_file.exists(),
+                    "transactions": self.transactions_file.exists()
+                },
+                "data_directory": str(self.users_file.parent),
+                "issues": []
+            }
+            
+            # Check for potential issues
+            if not self.users_file.exists():
+                health["issues"].append("Users file missing")
+            if not self.transactions_file.exists():
+                health["issues"].append("Transactions file missing")
+            
+            # Check file sizes (detect corruption)
+            try:
+                if self.users_file.exists() and self.users_file.stat().st_size == 0:
+                    health["issues"].append("Users file is empty")
+                if self.transactions_file.exists() and self.transactions_file.stat().st_size == 0:
+                    health["issues"].append("Transactions file is empty")
+            except Exception:
+                health["issues"].append("Cannot check file sizes")
+            
+            # Check data integrity
+            if not isinstance(self.users, dict):
+                health["issues"].append("Users data is not a dictionary")
+            if not isinstance(self.transactions, list):
+                health["issues"].append("Transactions data is not a list")
+            
+            # Check for UTF-8 issues in user data
+            try:
+                json.dumps(self.users, ensure_ascii=False)
+                json.dumps(self.transactions, ensure_ascii=False)
+            except Exception as e:
+                health["issues"].append(f"Data encoding issues: {str(e)}")
+            
+            if health["issues"]:
+                health["status"] = "degraded"
+            
+            return health
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+                "users_count": 0,
+                "transactions_count": 0,
+                "files_exist": {"users": False, "transactions": False},
+                "data_directory": "unknown",
+                "issues": [f"Health check failed: {str(e)}"]
+            }
+    
     # Keep all other existing methods with similar error handling improvements...
     def get_pricing_tiers(self) -> List[Dict]:
         """Get available pricing tiers"""
@@ -837,3 +957,13 @@ def consume_user_credits(username: str, leads_downloaded: int, platform: str) ->
     except Exception as e:
         print(f"❌ Error consuming user credits: {e}")
         return False
+
+def apply_lead_masking(leads: List[Dict], username: str) -> List[Dict]:
+    """Apply lead masking for trial users"""
+    try:
+        if credit_system is None:
+            return leads  # Return unmasked if system unavailable
+        return credit_system.mask_leads_for_trial(leads, username)
+    except Exception as e:
+        print(f"❌ Error applying lead masking: {e}")
+        return leads  # Return original leads if masking fails
