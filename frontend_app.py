@@ -477,6 +477,52 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Debug function 1: Find user loading issue
+def debug_user_issue():
+    st.write("🔍 **Debugging User Information Issue**")
+    
+    try:
+        # Check session state
+        st.write(f"Session state username: {st.session_state.get('username', 'NOT FOUND')}")
+        
+        # Check credit system
+        from simple_credit_system import credit_system
+        st.write(f"Credit system available: {credit_system is not None}")
+        if credit_system:
+            st.write(f"Users in system: {list(credit_system.users.keys())[:5]}")
+        
+    except Exception as e:
+        st.error(f"User debug error: {e}")
+        st.code(traceback.format_exc())
+
+# Debug function 2: Find empire stats issue  
+def debug_empire_issue():
+    st.write("🔍 **Debugging Empire Stats Issue**")
+    
+    try:
+        # Check if function exists
+        import sys
+        current_module = sys.modules[__name__]
+        
+        # List all functions with 'calculate' in name
+        calc_functions = [name for name in dir(current_module) if 'calculate' in name.lower()]
+        st.write(f"Calculate functions found: {calc_functions}")
+        
+        # Check the specific function
+        if hasattr(current_module, 'calculate_empire_from_csvs'):
+            st.write("✅ calculate_empire_from_csvs EXISTS")
+        else:
+            st.write("❌ calculate_empire_from_csvs MISSING")
+            
+        if hasattr(current_module, 'calculate_empire_from_cs'):
+            st.write("✅ calculate_empire_from_cs EXISTS")
+        else:
+            st.write("❌ calculate_empire_from_cs MISSING")
+        
+    except Exception as e:
+        st.error(f"Empire debug error: {e}")
+        st.code(traceback.format_exc())
+
 def load_accurate_empire_stats(username):
     """Load accurate, up-to-date empire stats for specific user"""
     empire_stats = {}
@@ -589,6 +635,61 @@ def display_demo_status():
         
         st.sidebar.info(f"**{remaining}** leads remaining")
         st.sidebar.caption(f"Used {used}/5 demo leads")
+
+# === WORKING FUNCTION REPLACEMENTS ===
+
+def load_user_information():
+    """Working replacement for user information loading"""
+    try:
+        username = st.session_state.get("username", "demo_user")
+        
+        from simple_credit_system import credit_system
+        if credit_system and username in credit_system.users:
+            user_data = credit_system.users[username]
+            return {
+                "username": username,
+                "plan": user_data.get("plan", "demo"),
+                "credits": user_data.get("credits", 5),
+                "demo_leads_used": user_data.get("demo_leads_used", 0)
+            }
+        else:
+            return {"username": username, "plan": "demo", "credits": 5, "demo_leads_used": 0}
+    except Exception as e:
+        st.error(f"User loading failed: {e}")
+        return {"username": "error_user", "plan": "demo", "credits": 5, "demo_leads_used": 0}
+
+def calculate_empire_from_csvs():
+    """Working replacement for empire stats calculation"""
+    try:
+        from simple_credit_system import credit_system
+        
+        stats = {
+            "total_leads_generated": 0,
+            "total_users": 1,
+            "total_revenue": 0,
+            "platforms_used": ["instagram", "twitter"]
+        }
+        
+        if credit_system:
+            stats["total_users"] = len(credit_system.users)
+            stats["total_leads_generated"] = sum(
+                t.get("leads_downloaded", 0) 
+                for t in credit_system.transactions 
+                if t.get("type") == "lead_download"
+            )
+        
+        return stats
+        
+    except Exception as e:
+        st.error(f"Empire stats failed: {e}")
+        return {"total_leads_generated": 0, "total_users": 1, "total_revenue": 0, "platforms_used": []}
+
+# Also create the misspelled version that might be called
+def calculate_empire_from_cs():
+    """Fix for misspelled function name"""
+    return calculate_empire_from_csvs()
+
+# === END REPLACEMENTS ===
 
 def launch_scraper_with_demo_check():
     """Launch scraper with proper demo status checking"""
@@ -3622,6 +3723,11 @@ with st.sidebar:
             st.caption(lang) 
         
         st.markdown("---")
+        if st.button("🔍 Debug User Issue"):
+            debug_user_issue()
+        if st.button("🔍 Debug Empire Issue"): 
+            debug_empire_issue()
+# === END DEBUG CODE ===
         
         st.markdown("---")
         if st.button("🔧 Debug Center"):
