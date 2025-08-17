@@ -6600,7 +6600,7 @@ if MULTILINGUAL_AVAILABLE:
                 
             # Create sub-tabs for Generate DMs and DM Library
             dm_tab1, dm_tab2 = st.tabs(["🎯 Generate DMs", "📚 DM Library"])
-            
+                
             with dm_tab1:
                 # DM GENERATION SECTION
                 
@@ -6610,14 +6610,14 @@ if MULTILINGUAL_AVAILABLE:
             with ml_col1:
                 st.subheader("📋 Lead Data Source")
                 
-                contacts_for_dm = []
-                
                 # Option to upload CSV or use existing leads
                 dm_source = st.radio(
                     "Choose DM Generation Source:",
                     ["Existing Empire Leads", "Upload New CSV", "Manual Entry"],
                     key="dm_source_selection"
                 )
+
+                contacts_for_dm = []
 
                 if dm_source == "Existing Empire Leads":
                     # Get current user for user-specific leads
@@ -6756,7 +6756,7 @@ if MULTILINGUAL_AVAILABLE:
                     
                     if contacts_for_dm:
                         st.success(f"✅ {len(contacts_for_dm)} contacts ready for DM generation")
-            
+        
             with ml_col2:
                 st.subheader("🌍 Language Settings")
                 
@@ -6800,7 +6800,7 @@ if MULTILINGUAL_AVAILABLE:
                     ["twitter", "linkedin", "facebook", "tiktok", "instagram", "youtube", "medium", "reddit"],
                     key="dm_platform_style"
                 )
-                
+            
                 st.markdown("---")
                 st.subheader("📊 Generation Preview")
                 
@@ -6820,7 +6820,7 @@ if MULTILINGUAL_AVAILABLE:
             
             # Generate DMs button
             st.markdown("---")
-            contacts_for_dm = []
+            
             if not contacts_for_dm:
                 st.error("❌ Please provide contacts for DM generation")
                 st.button("🌍 Generate Multilingual DMs", disabled=True, use_container_width=True)
@@ -6830,7 +6830,7 @@ if MULTILINGUAL_AVAILABLE:
                 
                 try:
                     all_results = []
-                       
+                    
                     if language_mode == "Multi-language campaign":
                         # Generate DMs in multiple languages
                         total_iterations = len(campaign_languages)
@@ -6939,7 +6939,7 @@ if MULTILINGUAL_AVAILABLE:
                         
                         if search_filter:
                             mask = filtered_df["Name"].str.contains(search_filter, case=False, na=False) | \
-                                   filtered_df["DM"].str.contains(search_filter, case=False, na=False)
+                                filtered_df["DM"].str.contains(search_filter, case=False, na=False)
                             filtered_df = filtered_df[mask]
                         
                         st.dataframe(filtered_df, use_container_width=True)
@@ -7026,7 +7026,7 @@ if MULTILINGUAL_AVAILABLE:
                 except Exception as e:
                     status.error(f"❌ DM generation failed: {str(e)}")
                     st.error(f"Error details: {e}")
-            
+        
             with dm_tab2:
                 st.markdown(f"### 📚 DM Library - {current_username}")
 
