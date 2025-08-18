@@ -1,0 +1,10 @@
+{
+  "fitness": ["fitness coach", "personal trainer", "workout", "bodybuilding", "strength training"],
+  "crypto": ["crypto", "bitcoin", "blockchain", "web3", "defi", "crypto investor"],
+  "finance": ["investor", "stock trader", "hedge fund", "day trader", "portfolio manager"],
+  "real_estate": ["real estate", "realtor", "property", "broker", "real estate agent"],
+  "ecommerce": ["ecommerce", "shopify", "online store", "product launch", "ecom"],
+  "retail": ["retail", "brick and mortar", "store manager", "inventory", "retail sales"],
+  "travel": ["travel agent", "travel blogger", "luxury travel", "flight deals", "wanderlust"],
+  "transportation": ["logistics", "transportation", "freight", "shipping", "fleet manager"]
+}

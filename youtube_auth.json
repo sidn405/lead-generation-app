@@ -1,0 +1,73 @@
+{
+  "cookies": [
+    {
+      "name": "VISITOR_INFO1_LIVE",
+      "value": "_9fQ2tI1Bdg",
+      "domain": ".youtube.com",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "YSC",
+      "value": "NfFhI-hK83s",
+      "domain": ".youtube.com",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "SAPISID",
+      "value": "TfjlOuZJfxhcJun0/APl_49cbExUkEpXo0",
+      "domain": ".youtube.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "HSID",
+      "value": "AZl7cV1RwWmQR51k6",
+      "domain": ".youtube.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "SSID",
+      "value": "AsO4M3Vd4xKpAd6lw",
+      "domain": ".youtube.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "APISID",
+      "value": "Hdj0dOdAJWu_JzFG/AbHSOW17MpCQyiZ5J",
+      "domain": ".youtube.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "SID",
+      "value": "g.a000yghdEYKhDnO4bC0sgRoQTyB65CWc1-5v5bkdU5j3kNw1MIwkG1zOCNx5VnLF7eXVasvdzAACgYKAboSARESFQHGX2Mi_3iRCy0lO2Ax72XygIIyYxoVAUF8yKp0rnvdk-_OJmg0ZShgcT6O0076",
+      "domain": ".youtube.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://www.youtube.com",
+      "localStorage": []
+    }
+  ]
+}
