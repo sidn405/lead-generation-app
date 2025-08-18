@@ -3471,6 +3471,80 @@ show_auth_section_if_needed()
 # Sidebar
 with st.sidebar:
     st.header("📊 Empire Stats")
+    
+    def debug_scraper_files():
+        """Debug what scraper files are missing"""
+        st.subheader("🔍 Scraper File Debug")
+        
+        # Check main files
+        required_files = [
+            'run_daily_scraper_complete.py',
+            'parallel_scraper_runner.py',
+            'instagram_scraper.py',
+            'twitter_scraper.py',
+            'facebook_scraper.py',
+            'linkedin_scraper.py',
+            'tiktok_scraper.py',
+            'medium_scraper_ec.py',
+            'reddit_scraper_ec.py',
+            'youtube_scraper.py'
+        ]
+        
+        st.write("**Main Scraper Files:**")
+        missing_files = []
+        for file in required_files:
+            if os.path.exists(file):
+                st.success(f"✅ {file}")
+            else:
+                st.error(f"❌ {file} - MISSING")
+                missing_files.append(file)
+        
+        # Check directories
+        st.write("**Required Directories:**")
+        required_dirs = ['dm_library', 'exports', 'lead_data']
+        for dir_name in required_dirs:
+            if os.path.exists(dir_name):
+                st.success(f"✅ {dir_name}/")
+            else:
+                st.error(f"❌ {dir_name}/ - MISSING")
+        
+        # Check current directory contents
+        st.write("**All Files in Current Directory:**")
+        try:
+            files = os.listdir('.')
+            py_files = [f for f in files if f.endswith('.py')]
+            st.write(f"Python files: {py_files}")
+            
+            json_files = [f for f in files if f.endswith('.json')]
+            st.write(f"JSON files: {json_files}")
+            
+        except Exception as e:
+            st.error(f"Error listing files: {e}")
+        
+        # Test scraper execution
+        st.write("**Scraper Execution Test:**")
+        if st.button("🧪 Test Scraper Execution"):
+            try:
+                result = subprocess.run([
+                    sys.executable, '-c', 'print("Python execution test successful")'
+                ], capture_output=True, text=True, timeout=10)
+                
+                if result.returncode == 0:
+                    st.success("✅ Python execution works")
+                    st.code(result.stdout)
+                else:
+                    st.error("❌ Python execution failed")
+                    st.code(result.stderr)
+                    
+            except Exception as e:
+                st.error(f"Execution test failed: {e}")
+        
+        return missing_files
+
+    # Add this button to your sidebar for debugging
+    with st.sidebar:
+        if st.button("🔍 Debug Scraper Files"):
+            debug_scraper_files()
 
     # In sidebar
     show_user_selector()  # Lets you switch users
