@@ -3472,79 +3472,87 @@ show_auth_section_if_needed()
 with st.sidebar:
     st.header("📊 Empire Stats")
     
-    def debug_scraper_files():
-        """Debug what scraper files are missing"""
-        st.subheader("🔍 Scraper File Debug")
+    def debug_scraper_dependencies():
+        """Debug all scraper dependencies"""
+        st.subheader("🔍 Complete Scraper Dependency Check")
         
-        # Check main files
-        required_files = [
+        # Check main scraper files
+        scraper_files = [
             'run_daily_scraper_complete.py',
-            'parallel_scraper_runner.py',
-            'instagram_scraper.py',
-            'twitter_scraper.py',
             'facebook_scraper.py',
-            'linkedin_scraper.py',
-            'tiktok_scraper.py',
-            'medium_scraper_ec.py',
-            'reddit_scraper_ec.py',
-            'youtube_scraper.py'
+            'instagram_scraper.py',
+            'twitter_scraper.py'
         ]
         
         st.write("**Main Scraper Files:**")
-        missing_files = []
-        for file in required_files:
+        for file in scraper_files:
             if os.path.exists(file):
                 st.success(f"✅ {file}")
             else:
-                st.error(f"❌ {file} - MISSING")
-                missing_files.append(file)
+                st.error(f"❌ {file}")
         
-        # Check directories
-        st.write("**Required Directories:**")
-        required_dirs = ['dm_library', 'exports', 'lead_data']
-        for dir_name in required_dirs:
-            if os.path.exists(dir_name):
-                st.success(f"✅ {dir_name}/")
+        # Check dependency modules
+        dependency_modules = [
+            'dm_sequences.py',
+            'usage_tracker.py', 
+            'smart_duplicate_handler.py',
+            'deduplication_config.py',
+            'enhanced_config_loader.py',
+            'config_loader.py',
+            'daily_emailer.py'
+        ]
+        
+        st.write("**Dependency Modules:**")
+        missing_deps = []
+        for module in dependency_modules:
+            if os.path.exists(module):
+                st.success(f"✅ {module}")
             else:
-                st.error(f"❌ {dir_name}/ - MISSING")
+                st.error(f"❌ {module}")
+                missing_deps.append(module)
         
-        # Check current directory contents
-        st.write("**All Files in Current Directory:**")
-        try:
-            files = os.listdir('.')
-            py_files = [f for f in files if f.endswith('.py')]
-            st.write(f"Python files: {py_files}")
-            
-            json_files = [f for f in files if f.endswith('.json')]
-            st.write(f"JSON files: {json_files}")
-            
-        except Exception as e:
-            st.error(f"Error listing files: {e}")
+        # Check auth files
+        auth_files = [
+            'facebook_auth.json',
+            'twitter_auth.json', 
+            'instagram_auth.json'
+        ]
         
-        # Test scraper execution
-        st.write("**Scraper Execution Test:**")
-        if st.button("🧪 Test Scraper Execution"):
+        st.write("**Authentication Files:**")
+        for file in auth_files:
+            if os.path.exists(file):
+                st.success(f"✅ {file}")
+            else:
+                st.warning(f"⚠️ {file}")
+        
+        # Check Python packages
+        st.write("**Python Packages:**")
+        packages = ['playwright', 'pandas', 'gspread', 'selenium']
+        for package in packages:
             try:
-                result = subprocess.run([
-                    sys.executable, '-c', 'print("Python execution test successful")'
-                ], capture_output=True, text=True, timeout=10)
-                
-                if result.returncode == 0:
-                    st.success("✅ Python execution works")
-                    st.code(result.stdout)
-                else:
-                    st.error("❌ Python execution failed")
-                    st.code(result.stderr)
-                    
-            except Exception as e:
-                st.error(f"Execution test failed: {e}")
+                __import__(package)
+                st.success(f"✅ {package}")
+            except ImportError:
+                st.error(f"❌ {package}")
         
-        return missing_files
+        # Test import of your scraper
+        st.write("**Scraper Import Test:**")
+        try:
+            import facebook_scraper
+            st.success("✅ facebook_scraper imports successfully")
+        except ImportError as e:
+            st.error(f"❌ facebook_scraper import failed: {e}")
+        except Exception as e:
+            st.error(f"❌ facebook_scraper error: {e}")
+        
+        return missing_deps
 
-    # Add this button to your sidebar for debugging
-    with st.sidebar:
-        if st.button("🔍 Debug Scraper Files"):
-            debug_scraper_files()
+    # Add this button to your debug section
+    if st.button("🔍 Check All Dependencies"):
+        missing = debug_scraper_dependencies()
+        if missing:
+            st.error(f"Missing {len(missing)} critical dependencies!")
+            st.write("Upload these files to Railway:", missing)
 
     # In sidebar
     show_user_selector()  # Lets you switch users
