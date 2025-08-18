@@ -1,0 +1,14 @@
+{
+  "total_leads": 0,
+  "successful_platforms": 0,
+  "results_by_platform": {
+    "youtube": 0,
+    "twitter": 0,
+    "tiktok": 0,
+    "instagram": 0,
+    "reddit": 0,
+    "medium": 0,
+    "facebook": 0
+  },
+  "execution_mode": "parallel"
+}
