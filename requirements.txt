@@ -13,3 +13,5 @@ chromedriver
 # SQLite3 is built into Python, no need to add it
 psycopg2-binary
 sqlalchemy
+gspread
+selenium
