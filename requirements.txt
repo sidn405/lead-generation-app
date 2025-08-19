@@ -9,7 +9,8 @@ requests
 pandas
 numpy
 reportlab
-ChromeDriver
+webdriver-manager>=4.0.0
+undetected-chromedriver>=3.5.0
 # SQLite3 is built into Python, no need to add it
 psycopg2-binary
 sqlalchemy
@@ -17,4 +18,4 @@ gspread
 google-auth>=2.22.0
 google-auth-oauthlib>=1.0.0
 google-auth-httplib2>=0.1.0
-selenium
+selenium>=4.15.0
