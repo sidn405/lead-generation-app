@@ -3471,34 +3471,6 @@ show_auth_section_if_needed()
 # Sidebar
 with st.sidebar:
     st.header("📊 Empire Stats")
-    
-    # Add this debug function to see what's happening
-def debug_deployment_status():
-    """Debug what's available in deployment"""
-    import sys
-    import os
-    
-    st.write("**Python Environment:**")
-    st.write(f"Python version: {sys.version}")
-    st.write(f"Platform: {sys.platform}")
-    
-    st.write("**Environment Variables:**")
-    env_vars = {k: v for k, v in os.environ.items() if not k.startswith('GOOGLE_')}
-    st.write(f"Environment variables: {len(env_vars)} total")
-    
-    st.write("**Installed Packages:**")
-    try:
-        import pkg_resources
-        installed = [pkg.project_name for pkg in pkg_resources.working_set]
-        st.write(f"Installed packages: {sorted(installed)}")
-    except:
-        st.write("Could not list packages")
-
-# Add debug button
-if st.sidebar.button("🔍 Debug Deployment"):
-    debug_deployment_status()
-
-    
 
     # In sidebar
     show_user_selector()  # Lets you switch users
