@@ -22,7 +22,8 @@ from stripe_checkout import show_compact_credit_terms, display_compact_credit_ad
 import streamlit.components.v1 as components
 import traceback
 from datetime import datetime, timedelta
-from simple_credit_system import credit_system, check_user_credits, consume_user_credits, apply_lead_masking
+#from simple_credit_system import credit_system, check_user_credits, consume_user_credits
+from postgres_credit_system import postgres_credit_system as credit_system, initialize_postgres_credit_system, consume_user_credits
 from stripe_checkout import (
     display_pricing_tiers_with_enforcement, 
     handle_payment_success, 
@@ -189,6 +190,13 @@ if payment_handled:
 
 # if any auth modal flag is set, show it and stop
 show_auth_section_if_needed()
+
+# Add initialization check
+if not credit_system:
+    success, message = initialize_postgres_credit_system()
+    if not success:
+        st.error(f"❌ Database initialization failed: {message}")
+        st.stop()
 
 if st.session_state.get("show_login", False):
     show_enhanced_login_with_forgot_password()
@@ -559,7 +567,7 @@ is_payment_return = restore_payment_authentication()
 # ✅ THEN set your page config
 st.set_page_config(
     page_title="Lead Generator Empire", 
-    page_icon="🚀",
+    page_icon="favicon_16.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -3471,110 +3479,6 @@ show_auth_section_if_needed()
 # Sidebar
 with st.sidebar:
     st.header("📊 Empire Stats")
-    
-    def diagnose_environment_differences():
-        """Diagnose what's different between local and Railway"""
-        import os
-        import time
-        from pathlib import Path
-        
-        st.subheader("🔍 Environment Diagnosis")
-        
-        # Check environment
-        st.write("**Environment Detection:**")
-        st.write(f"- PORT env var: {os.getenv('PORT', 'Not set')}")
-        st.write(f"- RAILWAY env var: {os.getenv('RAILWAY_ENVIRONMENT', 'Not set')}")
-        st.write(f"- PWD: {os.getenv('PWD', 'Not set')}")
-        
-        # Check file timestamps to see if files persist
-        st.write("**File Persistence Check:**")
-        json_files = ['users_credits.json', 'transactions.json']
-        for filename in json_files:
-            if os.path.exists(filename):
-                mtime = os.path.getmtime(filename)
-                age = time.time() - mtime
-                st.write(f"- {filename}: {age/60:.1f} minutes old")
-            else:
-                st.write(f"- {filename}: Missing")
-        
-        # Check session state keys that DO persist vs those that DON'T
-        st.write("**Session State Analysis:**")
-        persistent_keys = []
-        missing_keys = []
-        
-        for key in st.session_state.keys():
-            if 'search' in key.lower() or 'exclusion' in key.lower():
-                persistent_keys.append(key)
-            elif 'user' in key.lower() or 'auth' in key.lower():
-                if st.session_state[key]:
-                    persistent_keys.append(key)
-                else:
-                    missing_keys.append(key)
-        
-        st.write(f"- Keys that persist: {persistent_keys}")
-        st.write(f"- Auth keys missing/empty: {missing_keys}")
-
-    # Add to sidebar
-    if st.sidebar.button("🔍 Diagnose Environment"):
-        diagnose_environment_differences()
-        
-    def ensure_credit_system_ready():
-        """Ensure credit system is fully loaded before checking auth"""
-        try:
-            from simple_credit_system import credit_system
-            
-            # Force reload if needed
-            if not credit_system or not credit_system.users:
-                credit_system.load_data()
-            
-            # Verify it's actually loaded
-            if credit_system and credit_system.users:
-                return True, len(credit_system.users)
-            else:
-                return False, 0
-                
-        except Exception as e:
-            return False, str(e)
-
-    # Add this check before any authentication logic
-    def check_auth_with_retry():
-        """Check authentication with retry for Railway timing issues"""
-        
-        # Ensure credit system is ready
-        ready, user_count = ensure_credit_system_ready()
-        if not ready:
-            st.warning(f"🔄 Credit system loading... ({user_count})")
-            time.sleep(1)  # Brief delay for Railway
-            st.rerun()
-            return False
-        
-        # Now check authentication normally
-        username = st.session_state.get('username')
-        if username and username in credit_system.users:
-            return True
-        
-        return False
-    
-    # Emergency session restore
-    if st.sidebar.button("🆘 Restore Sam's Session"):
-        try:
-            from simple_credit_system import credit_system
-            if 'sam' in credit_system.users:
-                user_data = credit_system.users['sam']
-                
-                # Force restore all session variables
-                st.session_state.username = 'sam'
-                st.session_state.user_authenticated = True
-                st.session_state.user_data = user_data
-                st.session_state.user_plan = user_data.get('plan', 'demo')
-                st.session_state.user_credits = user_data.get('credits', 0)
-                
-                st.success("🔧 Emergency session restore complete!")
-                st.rerun()
-            else:
-                st.error("Sam not found in credit system")
-        except Exception as e:
-            st.error(f"Emergency restore failed: {e}")
 
     # In sidebar
     show_user_selector()  # Lets you switch users
