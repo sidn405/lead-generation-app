@@ -574,19 +574,72 @@ st.set_page_config(
 
 # Inject extra favicons for multi-platform support
 st.markdown("""
-    <!-- Favicons -->
+    <!-- FAVICONS -->
     <link rel="icon" href="assets/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 
-    <!-- Manifest for PWA support -->
-    <link rel="manifest" href="assets/manifest.json">
+    <!-- PWA MANIFEST (fullscreen) -->
+    <link rel="manifest" href="assets/manifest-fullscreen.json">
 
-    <!-- Theme colors -->
+    <!-- THEME COLORS (dark + light fallbacks) -->
     <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+
+    <!-- iOS fullscreen support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 """, unsafe_allow_html=True)
+
+# 3) Register service worker (keep file at project root as: service-worker.js)
+st.markdown("""
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/assets/service-worker.js').catch((err) => {
+        console.log('ServiceWorker registration failed:', err);
+      });
+    });
+  }
+</script>
+""", unsafe_allow_html=True)
+
+# 4) Dark theme polish (optional, tweak to taste)
+st.markdown("""
+<style>
+  .stApp { background-color: #121212; color: #E0E0E0; }
+  /* Links use your accent color */
+  .stMarkdown a, a { color: #00C896; }
+  /* Cards, code blocks, widgets */
+  .st-cq, .stCodeBlock, .stTextInput, .stSelectbox, .stNumberInput, .stCheckbox,
+  .stButton>button, .stDownloadButton>button {
+      background: #1E1E1E;
+      color: #E0E0E0;
+      border-radius: 12px;
+      border: 1px solid #2A2A2A;
+  }
+  .stButton>button:hover, .stDownloadButton>button:hover {
+      border-color: #00C896;
+  }
+  /* Success / error accents */
+  .stAlert[data-baseweb="notification"][kind="success"] { border-left: 4px solid #00C896; }
+  .stAlert[data-baseweb="notification"][kind="error"]   { border-left: 4px solid #FF5252; }
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- Your app content below ----------------
+st.title("👑 Lead Generator Empire")
+st.write("PWA enabled, fullscreen on mobile, with a branded favicon bundle and dark theme.")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.success("✅ Install on Android: Chrome → ⋮ → Add to Home screen.")
+    st.info("ℹ️ Install on iOS: Safari → Share → Add to Home Screen.")
+with col2:
+    st.download_button("Download Apple Touch Icon", "assets/apple-touch-icon.png")
+
+st.markdown("Try a hard refresh (Ctrl+Shift+R) after deploy to bust cache.")
 
 def restore_auth_after_payment():
     """Improved automatic authentication restoration after Stripe payment"""
