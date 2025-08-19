@@ -125,7 +125,7 @@ class CreditSystem:
             except:
                 self.user_count = 0
         else:
-            self.user_count = len(getattr(self, 'users', {}))
+            self.user_count = len(getattr(self, '_users', {}))
 
     # === JSON FALLBACK METHODS ===
     def load_data(self):
@@ -136,9 +136,9 @@ class CreditSystem:
         # Load users with credits
         if os.path.exists(self.users_file):
             with open(self.users_file, 'r') as f:
-                self.users = json.load(f)
+                self._users = json.load(f)
         else:
-            self.users = {}
+            self._users = {}
         
         # Load transaction history
         if os.path.exists(self.transactions_file):
@@ -153,7 +153,7 @@ class CreditSystem:
             return
             
         with open(self.users_file, 'w') as f:
-            json.dump(self.users, f, indent=4)
+            json.dump(self._users, f, indent=4)
         
         with open(self.transactions_file, 'w') as f:
             json.dump(self.transactions, f, indent=4)
@@ -165,7 +165,7 @@ class CreditSystem:
             users = self._execute_query("SELECT * FROM users", fetch=True)
             return {user['username']: dict(user) for user in users} if users else {}
         else:
-            return getattr(self, 'users', {})
+            return getattr(self, '_users', {})
 
     @property 
     def users(self) -> Dict:
@@ -195,10 +195,10 @@ class CreditSystem:
             
         else:
             # JSON fallback
-            if username in self.users:
+            if username in self._users:
                 return False, "Username already exists"
             
-            self.users[username] = {
+            self._users[username] = {
                 "email": email,
                 "password_hash": self.hash_password(password),
                 "credits": 0,
@@ -251,10 +251,10 @@ class CreditSystem:
             return rows > 0
         else:
             # JSON fallback
-            if username not in self.users:
+            if username not in self._users:
                 return False
             
-            user = self.users[username]
+            user = self._users[username]
             if not self.is_demo_user(username):
                 return False
             
@@ -291,8 +291,8 @@ class CreditSystem:
                 return False, "Invalid password", {}
         else:
             # JSON fallback - original logic
-            if identifier in self.users:
-                user = self.users[identifier]
+            if identifier in self._users:
+                user = self._users[identifier]
                 if user["password_hash"] == password_hash:
                     user["last_login"] = datetime.now().isoformat()
                     self.save_data()
@@ -301,7 +301,7 @@ class CreditSystem:
                     return False, "Invalid password", {}
             
             # Try email lookup
-            for username, user_data in self.users.items():
+            for username, user_data in self._users.items():
                 if user_data.get("email", "").lower() == identifier.lower():
                     if user_data["password_hash"] == password_hash:
                         user_data["last_login"] = datetime.now().isoformat()
@@ -320,7 +320,7 @@ class CreditSystem:
             )
             return dict(user[0]) if user else None
         else:
-            return self.users.get(username)
+            return self._users.get(username)
 
     def is_demo_user(self, username: str) -> bool:
         """Check if user is in demo mode"""
@@ -628,11 +628,11 @@ class CreditSystem:
             """, (username,))
             return rows > 0
         else:
-            if username not in self.users:
+            if username not in self._users:
                 return False
             
-            self.users[username]["agreed_to_terms"] = True
-            self.users[username]["terms_agreed_at"] = datetime.now().isoformat()
+            self._users[username]["agreed_to_terms"] = True
+            self._users[username]["terms_agreed_at"] = datetime.now().isoformat()
             self.save_data()
             return True
 
@@ -674,11 +674,11 @@ class CreditSystem:
                 VALUES (%s, %s, %s, %s, %s)
             """, (username, "plan_upgrade", old_plan, new_plan, credits_to_add))
         else:
-            self.users[username]["plan"] = new_plan
-            self.users[username]["plan_updated_at"] = datetime.now().isoformat()
+            self._users[username]["plan"] = new_plan
+            self._users[username]["plan_updated_at"] = datetime.now().isoformat()
             
             if credits_to_add > 0:
-                self.users[username]["credits"] = credits_to_add
+                self._users[username]["credits"] = credits_to_add
                 print(f"💎 Set {new_plan} plan credits to {credits_to_add}")
             
             # Log plan change transaction
@@ -691,7 +691,7 @@ class CreditSystem:
                 "timestamp": datetime.now().isoformat()
             }
             
-            self.users[username].setdefault("transactions", []).append(transaction)
+            self._users[username].setdefault("transactions", []).append(transaction)
             self.transactions.append(transaction)
             self.save_data()
         
@@ -730,7 +730,7 @@ class CreditSystem:
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """, (username, "credit_fix", current_plan, old_credits, new_credits, "Credit correction to match plan"))
             else:
-                self.users[username]["credits"] = new_credits
+                self._users[username]["credits"] = new_credits
                 
                 # Log the fix
                 transaction = {
@@ -743,7 +743,7 @@ class CreditSystem:
                     "reason": "Credit correction to match plan"
                 }
                 
-                self.users[username].setdefault("transactions", []).append(transaction)
+                self._users[username].setdefault("transactions", []).append(transaction)
                 self.transactions.append(transaction)
                 self.save_data()
             
@@ -769,8 +769,8 @@ class CreditSystem:
                 WHERE username = %s
             """, (new_hash, username))
         else:
-            self.users[username]["password_hash"] = new_hash
-            self.users[username]["password_updated_at"] = datetime.now().isoformat()
+            self._users[username]["password_hash"] = new_hash
+            self._users[username]["password_updated_at"] = datetime.now().isoformat()
             self.save_data()
         
         print(f"✅ Credit system password updated for {username}")
@@ -787,14 +787,14 @@ class CreditSystem:
             new_user_count = self.user_count
             print(f"✅ PostgreSQL data reloaded: {new_user_count} users")
         else:
-            old_user_count = len(self.users)
+            old_user_count = len(self._users)
             self.load_data()
-            new_user_count = len(self.users)
+            new_user_count = len(self._users)
             print(f"✅ JSON data reloaded: {new_user_count} users (was {old_user_count})")
             
             # Debug: Show what users we have
-            for username in list(self.users.keys())[:5]:
-                user = self.users[username]
+            for username in list(self._users.keys())[:5]:
+                user = self._users[username]
                 print(f"👤 {username}: {user.get('email', 'no email')} | {user.get('plan', 'no plan')}")
 
     def debug_user_password(self, username: str, password: str) -> Dict:
@@ -846,7 +846,7 @@ class CreditSystem:
             """, (username, email, password_hash, plan, credits, 0, 5, 0, True, True))
         else:
             # JSON fallback - get existing data if available
-            existing_user = self.users.get(username, {})
+            existing_user = self._users.get(username, {})
             
             user_data = {
                 "username": username,
@@ -865,7 +865,7 @@ class CreditSystem:
                 "sync_timestamp": datetime.now().isoformat()
             }
             
-            self.users[username] = user_data
+            self._users[username] = user_data
             self.save_data()
         
         print(f"🔧 Force synced user: {username}")
@@ -885,7 +885,7 @@ class CreditSystem:
                 return user_data['username'], user_data
             return None, None
         else:
-            for username, user_data in self.users.items():
+            for username, user_data in self._users.items():
                 if user_data.get("email", "").lower() == email.lower():
                     return username, user_data
             return None, None
@@ -970,6 +970,11 @@ class CreditSystem:
             "total_leads_served": total_leads_served,
             "total_transactions": total_transactions
         }
+
+# Initialize functions for backwards compatibility
+def initialize_postgres_credit_system():
+    """Initialize the PostgreSQL credit system (for compatibility)"""
+    return credit_system
 
 # Global instance
 credit_system = CreditSystem()

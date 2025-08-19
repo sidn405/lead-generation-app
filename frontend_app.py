@@ -574,10 +574,18 @@ st.set_page_config(
 
 # Inject extra favicons for multi-platform support
 st.markdown("""
+    <!-- Favicons -->
     <link rel="icon" href="assets/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+    <!-- Manifest for PWA support -->
+    <link rel="manifest" href="assets/manifest.json">
+
+    <!-- Theme colors -->
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 """, unsafe_allow_html=True)
 
 def restore_auth_after_payment():
