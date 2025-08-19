@@ -13,4 +13,3 @@ reportlab
 psycopg2-binary
 sqlalchemy
 gspread
-selenium
