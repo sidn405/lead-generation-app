@@ -698,19 +698,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- Your app UI below ----------------
-st.title("👑 Lead Generator Empire")
-st.write("PWA enabled (fullscreen on mobile), with a branded favicon bundle and a dark theme using your gold #C29D41.")
-
-col1, col2 = st.columns(2)
-with col1:
-    st.success("Android: Chrome → menu → Add to Home screen → launch → fullscreen.")
-    st.info("iOS: Safari → Share → Add to Home Screen → launch → fullscreen.")
-with col2:
-    st.markdown('<span class="lge-badge">Premium</span>', unsafe_allow_html=True)
-
-st.markdown("After deploy, do a **hard refresh** (Ctrl+Shift+R) to bust caches.")
-
 def restore_auth_after_payment():
     """Improved automatic authentication restoration after Stripe payment"""
     query_params = st.query_params
