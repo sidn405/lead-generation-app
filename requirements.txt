@@ -1,8 +1,12 @@
 streamlit>=1.28.0
-stripe
+stripe>=6.0.0
 cryptography
 pandas>=2.0.0
 playwright>=1.40.0
 requests>=2.31.0
 python-dotenv>=1.0.0
-
+gspread>=5.10.0
+google-auth>=2.22.0
+google-auth-oauthlib>=1.0.0
+pathlib
+reportlab
