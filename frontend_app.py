@@ -598,7 +598,7 @@ st.markdown("""
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // If the file is at the project root (recommended):
-    navigator.serviceWorker.register('/service-worker.js')
+    navigator.serviceWorker.register('/assets/service-worker.js')
       .then(reg => console.log('✅ Service Worker registered with scope:', reg.scope))
       .catch(err => console.log('❌ Service Worker registration failed:', err));
   });
