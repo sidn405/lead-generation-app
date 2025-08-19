@@ -58,7 +58,7 @@
     "global": {
         "search_term": "pastry chef",
         "max_scrolls": 50,
-        "enable_multilingual": false,
+        "enable_multilingual": true,
         "default_dm": "Hi there! I love your content and would be excited to connect. Let's chat!",
         "fallback_dm": "Hey! Just came across your profile and really impressed by your work. Would love to connect!",
         "excluded_accounts": [
@@ -145,7 +145,7 @@
     },
     "dm_template_rules": [],
     "multilingual": {
-        "enabled": false
+        "enabled": true
     },
     "usage_limits": {
         "starter": {

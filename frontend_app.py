@@ -3472,87 +3472,33 @@ show_auth_section_if_needed()
 with st.sidebar:
     st.header("📊 Empire Stats")
     
-    def debug_scraper_dependencies():
-        """Debug all scraper dependencies"""
-        st.subheader("🔍 Complete Scraper Dependency Check")
-        
-        # Check main scraper files
-        scraper_files = [
-            'run_daily_scraper_complete.py',
-            'facebook_scraper.py',
-            'instagram_scraper.py',
-            'twitter_scraper.py'
-        ]
-        
-        st.write("**Main Scraper Files:**")
-        for file in scraper_files:
-            if os.path.exists(file):
-                st.success(f"✅ {file}")
-            else:
-                st.error(f"❌ {file}")
-        
-        # Check dependency modules
-        dependency_modules = [
-            'dm_sequences.py',
-            'usage_tracker.py', 
-            'smart_duplicate_handler.py',
-            'deduplication_config.py',
-            'enhanced_config_loader.py',
-            'config_loader.py',
-            'daily_emailer.py'
-        ]
-        
-        st.write("**Dependency Modules:**")
-        missing_deps = []
-        for module in dependency_modules:
-            if os.path.exists(module):
-                st.success(f"✅ {module}")
-            else:
-                st.error(f"❌ {module}")
-                missing_deps.append(module)
-        
-        # Check auth files
-        auth_files = [
-            'facebook_auth.json',
-            'twitter_auth.json', 
-            'instagram_auth.json'
-        ]
-        
-        st.write("**Authentication Files:**")
-        for file in auth_files:
-            if os.path.exists(file):
-                st.success(f"✅ {file}")
-            else:
-                st.warning(f"⚠️ {file}")
-        
-        # Check Python packages
-        st.write("**Python Packages:**")
-        packages = ['playwright', 'pandas', 'gspread', 'selenium']
-        for package in packages:
-            try:
-                __import__(package)
-                st.success(f"✅ {package}")
-            except ImportError:
-                st.error(f"❌ {package}")
-        
-        # Test import of your scraper
-        st.write("**Scraper Import Test:**")
-        try:
-            import facebook_scraper
-            st.success("✅ facebook_scraper imports successfully")
-        except ImportError as e:
-            st.error(f"❌ facebook_scraper import failed: {e}")
-        except Exception as e:
-            st.error(f"❌ facebook_scraper error: {e}")
-        
-        return missing_deps
+    # Add this debug function to see what's happening
+def debug_deployment_status():
+    """Debug what's available in deployment"""
+    import sys
+    import os
+    
+    st.write("**Python Environment:**")
+    st.write(f"Python version: {sys.version}")
+    st.write(f"Platform: {sys.platform}")
+    
+    st.write("**Environment Variables:**")
+    env_vars = {k: v for k, v in os.environ.items() if not k.startswith('GOOGLE_')}
+    st.write(f"Environment variables: {len(env_vars)} total")
+    
+    st.write("**Installed Packages:**")
+    try:
+        import pkg_resources
+        installed = [pkg.project_name for pkg in pkg_resources.working_set]
+        st.write(f"Installed packages: {sorted(installed)}")
+    except:
+        st.write("Could not list packages")
 
-    # Add this button to your debug section
-    if st.button("🔍 Check All Dependencies"):
-        missing = debug_scraper_dependencies()
-        if missing:
-            st.error(f"Missing {len(missing)} critical dependencies!")
-            st.write("Upload these files to Railway:", missing)
+# Add debug button
+if st.sidebar.button("🔍 Debug Deployment"):
+    debug_deployment_status()
+
+    
 
     # In sidebar
     show_user_selector()  # Lets you switch users

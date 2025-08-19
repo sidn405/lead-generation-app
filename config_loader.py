@@ -67,7 +67,7 @@ class ConfigLoader:
         return {
             "enabled": True,
             "stripe_secret_key": os.getenv("STRIPE_SECRET_KEY", ""),
-            "publishable_key": "pk_test_your_publishable_key_here",
+            "publishable_key": os.getenv("PUBLISHABLE_KEY", ""),
             "webhook_secret": "whsec_your_webhook_secret_here",
             "currency": "usd",
             "success_url": "https://leadgeneratorempire.com/success",

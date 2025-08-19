@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ["...", "chromium", "chromedriver"]
-
-[phases.build]
-cmds = ["pip install -r requirements.txt"]
-
-[start]
-cmd = "streamlit run frontend_app.py --server.port $PORT"
