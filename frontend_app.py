@@ -3622,10 +3622,7 @@ with st.sidebar:
                 if st.sidebar.button("🚀 Start Conquest", key="sidebar_conquest"):
                     st.query_params(tab="scraper")
                     st.rerun()
-                
-       
-    
-    
+                  
     st.markdown("---")
     st.caption("🚀 Lead Generator Empire")
     st.caption(f"Powered by 8 platforms")
