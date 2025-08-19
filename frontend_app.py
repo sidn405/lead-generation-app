@@ -3517,6 +3517,64 @@ with st.sidebar:
     # Add to sidebar
     if st.sidebar.button("🔍 Diagnose Environment"):
         diagnose_environment_differences()
+        
+    def ensure_credit_system_ready():
+        """Ensure credit system is fully loaded before checking auth"""
+        try:
+            from simple_credit_system import credit_system
+            
+            # Force reload if needed
+            if not credit_system or not credit_system.users:
+                credit_system.load_data()
+            
+            # Verify it's actually loaded
+            if credit_system and credit_system.users:
+                return True, len(credit_system.users)
+            else:
+                return False, 0
+                
+        except Exception as e:
+            return False, str(e)
+
+    # Add this check before any authentication logic
+    def check_auth_with_retry():
+        """Check authentication with retry for Railway timing issues"""
+        
+        # Ensure credit system is ready
+        ready, user_count = ensure_credit_system_ready()
+        if not ready:
+            st.warning(f"🔄 Credit system loading... ({user_count})")
+            time.sleep(1)  # Brief delay for Railway
+            st.rerun()
+            return False
+        
+        # Now check authentication normally
+        username = st.session_state.get('username')
+        if username and username in credit_system.users:
+            return True
+        
+        return False
+    
+    # Emergency session restore
+    if st.sidebar.button("🆘 Restore Sam's Session"):
+        try:
+            from simple_credit_system import credit_system
+            if 'sam' in credit_system.users:
+                user_data = credit_system.users['sam']
+                
+                # Force restore all session variables
+                st.session_state.username = 'sam'
+                st.session_state.user_authenticated = True
+                st.session_state.user_data = user_data
+                st.session_state.user_plan = user_data.get('plan', 'demo')
+                st.session_state.user_credits = user_data.get('credits', 0)
+                
+                st.success("🔧 Emergency session restore complete!")
+                st.rerun()
+            else:
+                st.error("Sam not found in credit system")
+        except Exception as e:
+            st.error(f"Emergency restore failed: {e}")
 
     # In sidebar
     show_user_selector()  # Lets you switch users
