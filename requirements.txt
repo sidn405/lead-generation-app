@@ -9,7 +9,6 @@ requests
 pandas
 numpy
 reportlab
-webdriver-manager>=4.0.0
 undetected-chromedriver>=3.5.0
 # SQLite3 is built into Python, no need to add it
 psycopg2-binary
