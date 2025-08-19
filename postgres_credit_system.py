@@ -971,13 +971,16 @@ class CreditSystem:
             "total_transactions": total_transactions
         }
 
+# Global instance
+credit_system = CreditSystem()
+
+# Backwards compatibility alias 
+postgres_credit_system = credit_system
+
 # Initialize functions for backwards compatibility
 def initialize_postgres_credit_system():
     """Initialize the PostgreSQL credit system (for compatibility)"""
     return credit_system
-
-# Global instance
-credit_system = CreditSystem()
 
 # Convenience functions for scrapers (100% compatible)
 def check_user_credits(username: str, estimated_leads: int) -> Tuple[bool, str]:
