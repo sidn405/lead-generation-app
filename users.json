@@ -1,0 +1,215 @@
+{
+    "admin": {
+        "password_hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+        "email": "admin@leadscraperpro.com",
+        "plan": "ultimate",
+        "role": "admin",
+        "created_at": "2025-06-30T14:31:44.523886",
+        "last_login": "2025-08-08T10:22:30.071115"
+    },
+    "Testuser": {
+        "password_hash": "ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae",
+        "email": "test@sample.com",
+        "plan": "pro",
+        "created_at": "2025-06-30T14:41:08.020190",
+        "last_login": "2025-06-30T15:07:41.745870"
+    },
+    "directtest": {
+        "password_hash": "ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae",
+        "email": "direct@test.com",
+        "plan": "free",
+        "role": "user",
+        "created_at": "2025-07-04T16:10:37.249806",
+        "last_login": "2025-07-04T16:10:37.265788"
+    },
+    "directtest1": {
+        "password_hash": "ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae",
+        "email": "1direct@test.com",
+        "plan": "free",
+        "role": "user",
+        "created_at": "2025-07-04T16:12:07.664757",
+        "last_login": "2025-07-04T16:12:07.672764"
+    },
+    "2directtest": {
+        "password_hash": "ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae",
+        "email": "2direct@test.com",
+        "plan": "free",
+        "role": "user",
+        "created_at": "2025-07-04T16:22:48.352493",
+        "last_login": "2025-07-04T16:22:48.376490"
+    },
+    "testfree": {
+        "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "email": "testfree@sample.com",
+        "plan": "free",
+        "role": "user",
+        "created_at": "2025-07-04T16:24:37.462523",
+        "last_login": "2025-07-04T16:26:30.503580"
+    },
+    "debug_user": {
+        "password_hash": "0d9584da261c7de4f773c4777305fd873ac4baba5854104b24eb53e9619fa4c3",
+        "email": "debug@test.com",
+        "plan": "free",
+        "role": "user",
+        "created_at": "2025-07-04T16:30:19.680492",
+        "last_login": null
+    },
+    "test_user_1751664674": {
+        "password_hash": "ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae",
+        "email": "test@test.com",
+        "plan": "free",
+        "role": "user",
+        "created_at": "2025-07-04T16:31:14.742358",
+        "last_login": null
+    },
+    "sarah": {
+        "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "email": "sarah@test.com",
+        "plan": "demoe",
+        "role": "user",
+        "created_at": "2025-07-04T17:19:19.861077",
+        "last_login": "2025-07-04T17:19:19.861077"
+    },
+    "Robert": {
+        "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "email": "rob@test.com",
+        "plan": "pro",
+        "role": "user",
+        "created_at": "2025-07-04T19:22:24.236286",
+        "last_login": "2025-07-06T02:26:11.836471"
+    },
+    "Mike": {
+        "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "email": "mike@pro.com",
+        "plan": "pro",
+        "role": "user",
+        "created_at": "2025-07-04T21:34:33.254312",
+        "last_login": "2025-07-04T21:34:33.272304"
+    },
+    "rob123": {
+        "password_hash": "c1cf024576e9c756b252bd5035efc64c72c17affe236909ded190d266a5bfdf1",
+        "email": "robby@test.com",
+        "plan": "starter",
+        "role": "user",
+        "created_at": "2025-07-06T08:34:19.803921",
+        "last_login": "2025-07-06T08:34:19.803921"
+    },
+    "Sally": {
+        "password_hash": "595a92a9ef887d8f780cb5d77f1a863c3cadad1e1bad06e77adeb3dad8b8e809",
+        "email": "sally@test.com",
+        "plan": "starter",
+        "role": "user",
+        "created_at": "2025-07-06T13:26:49.378213",
+        "last_login": "2025-07-06T13:26:49.402210"
+    },
+    "Kathy": {
+        "password_hash": "ffc121a2210958bf74e5a874668f3d978d24b6a8241496ccff3c0ea245e4f126",
+        "email": "sbsid99@yahoo.com",
+        "plan": "pro",
+        "role": "user",
+        "created_at": "2025-07-06T16:27:44.599018",
+        "last_login": "2025-07-14T18:48:40.546193",
+        "password_updated_at": "2025-07-14T18:48:40.546193"
+    },
+    "bob": {
+        "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "email": "bob@sample.com",
+        "plan": "pro",
+        "role": "user",
+        "created_at": "2025-07-07T01:20:01.300932",
+        "last_login": "2025-07-07T14:07:56.561012"
+    },
+    "sidneym": {
+        "username": "sidneym",
+        "email": "4sbsid99@gmail.com",
+        "password_hash": "0fadf52a4580cfebb99e61162139af3d3a6403c1d36b83e4962b721d1c8cbd0b",
+        "plan": "demo",
+        "credits": 0,
+        "created_at": "2025-07-14T13:15:14.822573",
+        "last_login": "2025-07-15T18:03:02.173578",
+        "password_updated_at": "2025-07-15T18:03:02.247604",
+        "total_leads_downloaded": 0,
+        "transactions": []
+    },
+    "sidm": {
+        "username": "sidm",
+        "email": "sbsid99@yahoo.com",
+        "password_hash": "70aad1a638d63e2cfda255b4d5a2142580703ab6b8ecbfdea27837ca10c9045e",
+        "plan": "pro",
+        "credits": 1879,
+        "created_at": "2025-07-12T15:32:15.915003",
+        "last_login": "2025-07-14T17:11:39.385781",
+        "password_updated_at": "2025-07-14T17:10:36.776866",
+        "total_leads_downloaded": 121,
+        "transactions": [
+            {
+                "username": "sidm",
+                "type": "plan_upgrade",
+                "old_plan": "demo",
+                "new_plan": "starter",
+                "credits_set": 250,
+                "timestamp": "2025-07-12T15:35:19.944468"
+            },
+            {
+                "username": "sidm",
+                "type": "plan_upgrade",
+                "old_plan": "starter",
+                "new_plan": "starter",
+                "credits_set": 250,
+                "timestamp": "2025-07-12T15:35:26.632309"
+            },
+            {
+                "username": "sidm",
+                "type": "plan_upgrade",
+                "old_plan": "starter",
+                "new_plan": "pro",
+                "credits_set": 2000,
+                "timestamp": "2025-07-12T15:57:37.180427"
+            },
+            {
+                "username": "sidm",
+                "type": "plan_upgrade",
+                "old_plan": "pro",
+                "new_plan": "pro",
+                "credits_set": 2000,
+                "timestamp": "2025-07-12T15:57:45.402672"
+            },
+            {
+                "username": "sidm",
+                "type": "lead_download",
+                "credits_used": 33,
+                "leads_downloaded": 33,
+                "platform": "twitter",
+                "timestamp": "2025-07-13T19:22:12.571793",
+                "credits_remaining": 1967
+            },
+            {
+                "username": "sidm",
+                "type": "lead_download",
+                "credits_used": 9,
+                "leads_downloaded": 9,
+                "platform": "facebook",
+                "timestamp": "2025-07-13T19:24:35.846876",
+                "credits_remaining": 1958
+            },
+            {
+                "username": "sidm",
+                "type": "lead_download",
+                "credits_used": 33,
+                "leads_downloaded": 33,
+                "platform": "twitter",
+                "timestamp": "2025-07-13T21:16:23.888898",
+                "credits_remaining": 1925
+            },
+            {
+                "username": "sidm",
+                "type": "lead_download",
+                "credits_used": 46,
+                "leads_downloaded": 46,
+                "platform": "youtube",
+                "timestamp": "2025-07-13T21:57:21.895680",
+                "credits_remaining": 1879
+            }
+        ]
+    }
+}

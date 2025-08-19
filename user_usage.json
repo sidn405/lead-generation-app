@@ -1,0 +1,1220 @@
+{
+    "Ludomonstr": {
+        "total_downloads": 1,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-04T09:32:49.469125",
+                "lead_count": 1,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-04T09:32:49.469125",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 1,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-04T09:32:49.469125",
+                "avg_leads_per_session": 1.0
+            }
+        }
+    },
+    "fitprosarah": {
+        "total_downloads": 2,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-04T09:32:56.465874",
+                "lead_count": 2,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-04T09:32:56.465874",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 2,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-04T09:32:56.465874",
+                "avg_leads_per_session": 2.0
+            }
+        }
+    },
+    "denizen_1": {
+        "total_downloads": 3,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-04T09:33:06.619679",
+                "lead_count": 3,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-04T09:33:06.619679",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 3,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-04T09:33:06.619679",
+                "avg_leads_per_session": 3.0
+            }
+        }
+    },
+    "DaGuyDownstairs": {
+        "total_downloads": 4,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-04T09:33:22.709222",
+                "lead_count": 4,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-04T09:33:22.709222",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 4,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-04T09:33:22.724725",
+                "avg_leads_per_session": 4.0
+            }
+        }
+    },
+    "Robert": {
+        "total_downloads": 25,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-04T21:21:22.878412",
+                "lead_count": 25,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-04T21:26:07.460589",
+                "lead_count": 0,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-04T21:21:22.878412",
+        "platform_usage": {
+            "medium": {
+                "total_leads": 25,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "personal trainer"
+                ],
+                "last_scraped": "2025-07-04T21:26:07.460589",
+                "avg_leads_per_session": 12.5
+            }
+        }
+    },
+    "Mike": {
+        "total_downloads": 79,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-04T22:02:42.368022",
+                "lead_count": 25,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-04T22:04:36.599137",
+                "lead_count": 0,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-04T22:05:18.382113",
+                "lead_count": 0,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-04T22:06:13.276894",
+                "lead_count": 3,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-04T22:07:05.261134",
+                "lead_count": 3,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-04T22:10:39.331995",
+                "lead_count": 21,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-04T22:14:23.787804",
+                "lead_count": 27,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": true,
+        "first_download": "2025-07-04T22:02:42.368022",
+        "platform_usage": {
+            "medium": {
+                "total_leads": 25,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "personal trainer"
+                ],
+                "last_scraped": "2025-07-04T22:02:42.368022",
+                "avg_leads_per_session": 25.0
+            },
+            "instagram": {
+                "total_leads": 6,
+                "scraping_sessions": 4,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-04T22:07:05.264139",
+                "avg_leads_per_session": 1.5
+            },
+            "youtube": {
+                "total_leads": 48,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-04T22:14:23.790799",
+                "avg_leads_per_session": 24.0
+            }
+        },
+        "verification_method": "auto_verified_pattern",
+        "verified_at": "2025-07-04T22:05:18.397777"
+    },
+    "Original_Wish_9946": {
+        "total_downloads": 1,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:09:53.939322",
+                "lead_count": 1,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:09:53.939322",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 1,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:09:53.949317",
+                "avg_leads_per_session": 1.0
+            }
+        }
+    },
+    "Legitimate-Nobody542": {
+        "total_downloads": 2,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:10:01.181781",
+                "lead_count": 2,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:10:01.181781",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 2,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:10:01.185679",
+                "avg_leads_per_session": 2.0
+            }
+        }
+    },
+    "MiserlyOutpost": {
+        "total_downloads": 3,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:10:14.907157",
+                "lead_count": 3,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:10:14.907157",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 3,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:10:14.915168",
+                "avg_leads_per_session": 3.0
+            }
+        }
+    },
+    "yoitsangelo": {
+        "total_downloads": 4,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:10:24.787148",
+                "lead_count": 4,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:10:24.787148",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 4,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:10:24.795074",
+                "avg_leads_per_session": 4.0
+            }
+        }
+    },
+    "missnettiemoore": {
+        "total_downloads": 5,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:10:32.550942",
+                "lead_count": 5,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:10:32.550942",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 5,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:10:32.556943",
+                "avg_leads_per_session": 5.0
+            }
+        }
+    },
+    "PT_hi": {
+        "total_downloads": 6,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:10:40.263267",
+                "lead_count": 6,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:10:40.263267",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 6,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:10:40.267262",
+                "avg_leads_per_session": 6.0
+            }
+        }
+    },
+    "gainitthrowaway1223": {
+        "total_downloads": 7,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:10:57.562780",
+                "lead_count": 7,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:10:57.562780",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 7,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:10:57.562780",
+                "avg_leads_per_session": 7.0
+            }
+        }
+    },
+    "jlucas1212": {
+        "total_downloads": 8,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:11:04.787717",
+                "lead_count": 8,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:11:04.787717",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 8,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:11:04.795720",
+                "avg_leads_per_session": 8.0
+            }
+        }
+    },
+    "HappyCamperHello": {
+        "total_downloads": 9,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:11:13.173679",
+                "lead_count": 9,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:11:13.173679",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 9,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:11:13.179236",
+                "avg_leads_per_session": 9.0
+            }
+        }
+    },
+    "Werdnasape": {
+        "total_downloads": 10,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T00:11:19.984107",
+                "lead_count": 10,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T00:11:19.984107",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 10,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T00:11:19.992008",
+                "avg_leads_per_session": 10.0
+            }
+        }
+    },
+    "twitter_scraper_session": {
+        "total_downloads": 33,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-05T01:51:51.002914",
+                "lead_count": 33,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-05T01:51:51.002914",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 33,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "fitness coach"
+                ],
+                "last_scraped": "2025-07-05T01:51:51.009924",
+                "avg_leads_per_session": 33.0
+            }
+        }
+    },
+    "bob": {
+        "total_downloads": 133,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-07T12:54:02.487273",
+                "lead_count": 0,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-07T13:03:22.825331",
+                "lead_count": 0,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-08T09:54:46.841471",
+                "lead_count": 12,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-09T13:00:14.901287",
+                "lead_count": 32,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-09T13:07:22.805157",
+                "lead_count": 33,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-09T13:09:34.926571",
+                "lead_count": 13,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-10T09:52:40.646729",
+                "lead_count": 33,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-10T09:54:37.106252",
+                "lead_count": 10,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": true,
+        "first_download": "2025-07-07T12:54:02.487273",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 123,
+                "scraping_sessions": 5,
+                "search_terms": [
+                    "fitness coach",
+                    "financial planner",
+                    "nutritionist",
+                    "music instructor"
+                ],
+                "last_scraped": "2025-07-10T09:52:40.656537",
+                "avg_leads_per_session": 24.6
+            },
+            "facebook": {
+                "total_leads": 35,
+                "scraping_sessions": 3,
+                "search_terms": [
+                    "financial planner",
+                    "nutritionist",
+                    "music instructor"
+                ],
+                "last_scraped": "2025-07-10T09:54:37.116060",
+                "avg_leads_per_session": 11.7
+            }
+        },
+        "verification_method": "auto_verified_pattern",
+        "verified_at": "2025-07-09T13:00:14.916920"
+    },
+    "becky": {
+        "total_downloads": 88,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-10T10:36:32.340151",
+                "lead_count": 33,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-10T10:38:41.769961",
+                "lead_count": 10,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-10T11:10:38.830134",
+                "lead_count": 34,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-10T11:12:41.364836",
+                "lead_count": 11,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": true,
+        "first_download": "2025-07-10T10:36:32.340151",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 67,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "music instructor"
+                ],
+                "last_scraped": "2025-07-10T11:10:38.835256",
+                "avg_leads_per_session": 33.5
+            },
+            "facebook": {
+                "total_leads": 21,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "music instructor"
+                ],
+                "last_scraped": "2025-07-10T11:12:41.372856",
+                "avg_leads_per_session": 10.5
+            }
+        },
+        "verification_method": "auto_verified_pattern",
+        "verified_at": "2025-07-10T11:10:38.855329"
+    },
+    "sidm": {
+        "total_downloads": 132,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-13T19:22:11.389793",
+                "lead_count": 33,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-13T19:24:19.027521",
+                "lead_count": 9,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-13T21:16:22.353841",
+                "lead_count": 33,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-13T21:18:19.045999",
+                "lead_count": 11,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-13T21:57:06.466468",
+                "lead_count": 46,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": true,
+        "first_download": "2025-07-13T19:22:11.389793",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 66,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "yoga instructor",
+                    "music instructor"
+                ],
+                "last_scraped": "2025-07-13T21:16:22.357818",
+                "avg_leads_per_session": 33.0
+            },
+            "facebook": {
+                "total_leads": 20,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "yoga instructor",
+                    "music instructor"
+                ],
+                "last_scraped": "2025-07-13T21:18:19.053991",
+                "avg_leads_per_session": 10.0
+            },
+            "youtube": {
+                "total_leads": 46,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "music instructor"
+                ],
+                "last_scraped": "2025-07-13T21:57:06.475476",
+                "avg_leads_per_session": 46.0
+            }
+        },
+        "verification_method": "auto_verified_pattern",
+        "verified_at": "2025-07-13T21:16:22.365827"
+    },
+    "daveyd": {
+        "total_downloads": 199,
+        "bulk_exports": 2,
+        "download_history": [
+            {
+                "timestamp": "2025-07-15T00:05:48.706352",
+                "lead_count": 38,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-15T01:26:59.589618",
+                "lead_count": 12,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-15T02:08:57.761633",
+                "lead_count": 0,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-15T02:15:46.345007",
+                "lead_count": 0,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-15T02:50:48.975100",
+                "lead_count": 2,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-15T02:57:12.249512",
+                "lead_count": 0,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-27T02:50:50.465369",
+                "lead_count": 53,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-27T13:52:39.131127",
+                "lead_count": 3,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-27T13:58:43.101115",
+                "lead_count": 28,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-28T08:46:50.433987",
+                "lead_count": 63,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-28T08:50:47.632153",
+                "lead_count": 3,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T22:46:50.929449",
+                "lead_count": 10,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T23:21:53.788321",
+                "lead_count": 17,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T23:43:59.552838",
+                "lead_count": 5,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-08T10:14:33.381399",
+                "lead_count": 10,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-08T23:42:43.708763",
+                "lead_count": 5,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": true,
+        "first_download": "2025-07-15T00:05:48.706352",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 52,
+                "scraping_sessions": 6,
+                "search_terms": [
+                    "dance teacher",
+                    "music instructor",
+                    "fitness coach",
+                    "gourmet chef",
+                    "pastry chef"
+                ],
+                "last_scraped": "2025-07-15T02:57:12.257481",
+                "avg_leads_per_session": 8.7
+            },
+            "youtube": {
+                "total_leads": 116,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "crypto trader"
+                ],
+                "last_scraped": "2025-07-28T08:46:50.433987",
+                "avg_leads_per_session": 58.0
+            },
+            "medium": {
+                "total_leads": 8,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "crypto trader",
+                    "valet driver"
+                ],
+                "last_scraped": "2025-08-01T23:43:59.559687",
+                "avg_leads_per_session": 4.0
+            },
+            "tiktok": {
+                "total_leads": 48,
+                "scraping_sessions": 3,
+                "search_terms": [
+                    "crypto trader",
+                    "pastry chef"
+                ],
+                "last_scraped": "2025-08-01T23:21:53.803956",
+                "avg_leads_per_session": 16.0
+            },
+            "instagram": {
+                "total_leads": 25,
+                "scraping_sessions": 3,
+                "search_terms": [
+                    "stock broker",
+                    "history teacher",
+                    "makeup artist"
+                ],
+                "last_scraped": "2025-08-08T23:42:43.729125",
+                "avg_leads_per_session": 8.3
+            }
+        },
+        "demo_leads_used": 3,
+        "verification_method": "auto_verified_pattern",
+        "verified_at": "2025-07-27T02:50:50.482314"
+    },
+    "joey": {
+        "total_downloads": 497,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-31T14:36:04.538964",
+                "lead_count": 7,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-31T20:49:19.728181",
+                "lead_count": 29,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-31T21:12:34.649724",
+                "lead_count": 30,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T07:58:12.892266",
+                "lead_count": 10,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T08:20:26.426692",
+                "lead_count": 1,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T08:33:26.876900",
+                "lead_count": 7,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T08:51:56.303046",
+                "lead_count": 5,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T09:08:32.162344",
+                "lead_count": 7,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T09:26:35.152258",
+                "lead_count": 1,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T09:34:59.204637",
+                "lead_count": 9,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T09:56:46.081025",
+                "lead_count": 6,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T10:06:14.086057",
+                "lead_count": 24,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T10:20:59.034150",
+                "lead_count": 29,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T10:32:47.386028",
+                "lead_count": 29,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T10:54:17.092069",
+                "lead_count": 29,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T11:15:46.435955",
+                "lead_count": 30,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T11:32:56.830013",
+                "lead_count": 5,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T12:02:25.261421",
+                "lead_count": 7,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T12:36:57.326903",
+                "lead_count": 13,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T13:13:49.077381",
+                "lead_count": 1,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T14:14:58.820145",
+                "lead_count": 8,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T14:19:38.515961",
+                "lead_count": 21,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T15:08:16.906777",
+                "lead_count": 29,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T15:19:24.251687",
+                "lead_count": 27,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T15:26:41.131888",
+                "lead_count": 19,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T15:37:53.438717",
+                "lead_count": 8,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T19:54:11.212570",
+                "lead_count": 31,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T20:10:02.492476",
+                "lead_count": 1,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T20:45:01.894015",
+                "lead_count": 9,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-01T22:25:58.717965",
+                "lead_count": 1,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": true,
+        "first_download": "2025-07-15T12:25:04.639967",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 9,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "bio medical engineer",
+                    "crypto trader"
+                ],
+                "last_scraped": "2025-07-28T09:10:16.190334",
+                "avg_leads_per_session": 4.5
+            },
+            "instagram": {
+                "total_leads": 406,
+                "scraping_sessions": 30,
+                "search_terms": [
+                    "fashion model",
+                    "fashion photographer",
+                    "wedding planner",
+                    "short order cook",
+                    "pastry chef",
+                    "computer tech",
+                    "software engineer",
+                    "software developer",
+                    "real estate broker",
+                    "registered nurse"
+                ],
+                "last_scraped": "2025-08-01T20:45:01.901337",
+                "avg_leads_per_session": 13.5
+            },
+            "tiktok": {
+                "total_leads": 82,
+                "scraping_sessions": 9,
+                "search_terms": [
+                    "corporate lawyer",
+                    "pilates instructor",
+                    "yoga instructor",
+                    "data analyst",
+                    "art director",
+                    "computer tech",
+                    "real estate agent",
+                    "civil engineer",
+                    "dietician"
+                ],
+                "last_scraped": "2025-08-01T22:25:58.721965",
+                "avg_leads_per_session": 9.1
+            }
+        },
+        "verification_method": "auto_verified_pattern",
+        "verified_at": "2025-07-30T19:10:40.335884"
+    },
+    "test_user": {
+        "total_downloads": 17,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-07-30T19:00:46.736761",
+                "lead_count": 6,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-31T00:16:54.567377",
+                "lead_count": 8,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-07-31T00:23:44.384802",
+                "lead_count": 3,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-07-30T19:00:46.736761",
+        "platform_usage": {
+            "medium": {
+                "total_leads": 14,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "fitness trainer",
+                    "crypto trading"
+                ],
+                "last_scraped": "2025-07-31T00:16:54.578380",
+                "avg_leads_per_session": 7.0
+            },
+            "twitter": {
+                "total_leads": 3,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "gym teacher"
+                ],
+                "last_scraped": "2025-07-31T00:23:44.391608",
+                "avg_leads_per_session": 3.0
+            }
+        }
+    },
+    "sidneym": {
+        "total_downloads": 5,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-08-05T19:21:49.447962",
+                "lead_count": 5,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-08-05T19:21:49.447962",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 5,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "which fitness app is best"
+                ],
+                "last_scraped": "2025-08-05T19:21:49.447962",
+                "avg_leads_per_session": 5.0
+            }
+        }
+    },
+    "bryan": {
+        "total_downloads": 2,
+        "bulk_exports": 0,
+        "verified": false,
+        "first_download": null,
+        "download_history": [
+            {
+                "timestamp": "2025-08-06T10:48:43.142204",
+                "lead_count": 2,
+                "export_type": "scraper"
+            }
+        ],
+        "reset_at": "2025-08-06T10:40:15.442780",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 2,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "pastry chef"
+                ],
+                "last_scraped": "2025-08-06T10:48:43.149200",
+                "avg_leads_per_session": 2.0
+            }
+        }
+    },
+    "sam": {
+        "total_downloads": 1,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-08-06T11:45:32.724870",
+                "lead_count": 1,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-08-06T11:45:32.724870",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 1,
+                "scraping_sessions": 1,
+                "search_terms": [
+                    "dance teacher"
+                ],
+                "last_scraped": "2025-08-06T11:45:32.734346",
+                "avg_leads_per_session": 1.0
+            }
+        }
+    },
+    "carl": {
+        "total_downloads": 10,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-08-09T12:59:11.601954",
+                "lead_count": 5,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-09T13:04:41.789296",
+                "lead_count": 2,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-09T13:31:53.521443",
+                "lead_count": 3,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-08-09T12:59:11.601954",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 10,
+                "scraping_sessions": 3,
+                "search_terms": [
+                    "manager"
+                ],
+                "last_scraped": "2025-08-09T13:31:53.530993",
+                "avg_leads_per_session": 3.3
+            }
+        }
+    },
+    "AI-Leads-Guy": {
+        "total_downloads": 2,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-08-11T19:33:58.047649",
+                "lead_count": 1,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-11T19:43:11.450592",
+                "lead_count": 1,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-08-11T19:33:58.046649",
+        "platform_usage": {
+            "reddit": {
+                "total_leads": 2,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "best chocolate cake",
+                    "personal trainer"
+                ],
+                "last_scraped": "2025-08-11T19:43:11.472589",
+                "avg_leads_per_session": 1.0
+            }
+        }
+    },
+    "craig": {
+        "total_downloads": 10,
+        "bulk_exports": 0,
+        "download_history": [
+            {
+                "timestamp": "2025-08-11T22:40:30.809778",
+                "lead_count": 5,
+                "export_type": "scraper"
+            },
+            {
+                "timestamp": "2025-08-11T22:57:13.076853",
+                "lead_count": 5,
+                "export_type": "scraper"
+            }
+        ],
+        "verified": false,
+        "first_download": "2025-08-11T22:40:30.809778",
+        "platform_usage": {
+            "twitter": {
+                "total_leads": 10,
+                "scraping_sessions": 2,
+                "search_terms": [
+                    "mommy fitness",
+                    "mechanic"
+                ],
+                "last_scraped": "2025-08-11T22:57:13.090851",
+                "avg_leads_per_session": 5.0
+            }
+        }
+    }
+}
