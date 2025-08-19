@@ -567,10 +567,18 @@ is_payment_return = restore_payment_authentication()
 # ✅ THEN set your page config
 st.set_page_config(
     page_title="Lead Generator Empire", 
-    page_icon="favicon_16.png",
+    page_icon="assets/favicon.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Inject extra favicons for multi-platform support
+st.markdown("""
+    <link rel="icon" href="assets/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+""", unsafe_allow_html=True)
 
 def restore_auth_after_payment():
     """Improved automatic authentication restoration after Stripe payment"""
