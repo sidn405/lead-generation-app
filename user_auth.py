@@ -224,7 +224,23 @@ class SimpleCreditAuth:
             if key in st.session_state:
                 del st.session_state[key]
     
-    
+    # Update your authentication functions to use PostgreSQL
+    def authenticate_user_postgres(identifier, password):
+        """Authenticate using PostgreSQL"""
+        if not credit_system:
+            return False, "Database not available", {}
+        
+        success, message, user_data = credit_system.login_user(identifier, password)
+        
+        if success:
+            # Set session state
+            st.session_state.username = user_data['username']
+            st.session_state.user_authenticated = True
+            st.session_state.user_data = user_data
+            st.session_state.user_plan = user_data['plan']
+            st.session_state.user_credits = user_data['credits']
+        
+        return success, message, user_data
     
     def get_current_user(self) -> str:
         """Get current username"""
@@ -260,23 +276,9 @@ class SimpleCreditAuth:
         user_data = st.session_state.get('user_data', {})
         return user_data.get('plan', 'starter')
     
-    # Update your authentication functions to use PostgreSQL
-    def authenticate_user_postgres(identifier, password):
-        """Authenticate using PostgreSQL"""
-        if not credit_system:
-            return False, "Database not available", {}
-        
-        success, message, user_data = credit_system.login_user(identifier, password)
-        
-        if success:
-            # Set session state
-            st.session_state.username = user_data['username']
-            st.session_state.user_authenticated = True
-            st.session_state.user_data = user_data
-            st.session_state.user_plan = user_data['plan']
-            st.session_state.user_credits = user_data['credits']
-        
-        return success, message, user_data
+    def is_authenticated(self) -> bool:
+        """Check if user is currently authenticated"""
+        return st.session_state.get('authenticated', False)
     
     def delete_user_account(self) -> bool:
         """FIXED: Remove all user data and handle the cleanup properly"""
