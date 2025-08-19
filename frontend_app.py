@@ -3472,38 +3472,51 @@ show_auth_section_if_needed()
 with st.sidebar:
     st.header("📊 Empire Stats")
     
-    # Debug user authentication persistence
-    def debug_user_persistence():
-        """Debug what user data persists vs what doesn't"""
-        st.subheader("🔍 User Persistence Debug")
+    def diagnose_environment_differences():
+        """Diagnose what's different between local and Railway"""
+        import os
+        import time
+        from pathlib import Path
         
-        st.write("**Session State Contents:**")
-        for key, value in st.session_state.items():
-            if not key.startswith('_'):  # Skip private keys
-                st.write(f"- {key}: {type(value).__name__} = {str(value)[:100]}")
+        st.subheader("🔍 Environment Diagnosis")
         
-        st.write("**Credit System Users:**")
-        try:
-            from simple_credit_system import credit_system
-            if credit_system:
-                users = list(credit_system.users.keys())
-                st.write(f"Users in credit system: {users}")
-                
-                # Check current user specifically
-                current_user = st.session_state.get('username')
-                if current_user and current_user in credit_system.users:
-                    user_data = credit_system.users[current_user]
-                    st.write(f"Current user data keys: {list(user_data.keys())}")
-                else:
-                    st.write(f"Current user '{current_user}' not found in credit system")
+        # Check environment
+        st.write("**Environment Detection:**")
+        st.write(f"- PORT env var: {os.getenv('PORT', 'Not set')}")
+        st.write(f"- RAILWAY env var: {os.getenv('RAILWAY_ENVIRONMENT', 'Not set')}")
+        st.write(f"- PWD: {os.getenv('PWD', 'Not set')}")
+        
+        # Check file timestamps to see if files persist
+        st.write("**File Persistence Check:**")
+        json_files = ['users_credits.json', 'transactions.json']
+        for filename in json_files:
+            if os.path.exists(filename):
+                mtime = os.path.getmtime(filename)
+                age = time.time() - mtime
+                st.write(f"- {filename}: {age/60:.1f} minutes old")
             else:
-                st.write("Credit system not available")
-        except Exception as e:
-            st.write(f"Credit system error: {e}")
+                st.write(f"- {filename}: Missing")
+        
+        # Check session state keys that DO persist vs those that DON'T
+        st.write("**Session State Analysis:**")
+        persistent_keys = []
+        missing_keys = []
+        
+        for key in st.session_state.keys():
+            if 'search' in key.lower() or 'exclusion' in key.lower():
+                persistent_keys.append(key)
+            elif 'user' in key.lower() or 'auth' in key.lower():
+                if st.session_state[key]:
+                    persistent_keys.append(key)
+                else:
+                    missing_keys.append(key)
+        
+        st.write(f"- Keys that persist: {persistent_keys}")
+        st.write(f"- Auth keys missing/empty: {missing_keys}")
 
-    # Add debug button
-    if st.sidebar.button("🔍 Debug User Persistence"):
-        debug_user_persistence()
+    # Add to sidebar
+    if st.sidebar.button("🔍 Diagnose Environment"):
+        diagnose_environment_differences()
 
     # In sidebar
     show_user_selector()  # Lets you switch users
