@@ -1108,7 +1108,7 @@ except ImportError:
 # Page config
 st.set_page_config(
     page_title="Lead Generator Empire", 
-    page_icon="🚀",
+    page_icon="assets/favicon.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
