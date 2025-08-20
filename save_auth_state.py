@@ -6,7 +6,7 @@ def save_login_persistent_context():
         user_data_dir = "twitter_profile"
         browser = p.chromium.launch_persistent_context(
             user_data_dir=user_data_dir,
-            headless=True,
+            headless=False,
             slow_mo=100,
         )
         page = browser.new_page()

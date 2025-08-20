@@ -5,7 +5,7 @@ AUTH_FILE = "facebook_auth.json"
 
 def save_auth_state():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False)
         context = browser.new_context()
         page = context.new_page()
 

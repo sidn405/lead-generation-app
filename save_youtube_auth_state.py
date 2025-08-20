@@ -29,7 +29,7 @@ def save_auth_state_with_existing_profile():
             try:
                 context = p.chromium.launch_persistent_context(
                     chrome_path,
-                    headless=True,
+                    headless=False,
                     args=[
                         '--disable-blink-features=AutomationControlled',
                         '--disable-web-security',

@@ -6,7 +6,7 @@ AUTH_FILE = "medium_auth.json"
 def save_auth_state():
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=True,
+            headless=False,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-features=VizDisplayCompositor',
