@@ -568,10 +568,12 @@ import streamlit as st
 from PIL import Image
 import base64
 
-# 1) Use a PIL image for Streamlit's built-in tab icon (works even if static serving is funky)
-icon_img = Image.open("assets/favicon-32x32.png")  # or favicon.png
-st.set_page_config(page_title="Lead Generator Empire", page_icon=icon_img, layout="wide",
-    initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="Lead Generator Empire", 
+    page_icon=".assets/favicon-32x32.png",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # 2) Also inject standard <link> tags with RELATIVE paths (./assets/…)
 st.markdown("""
@@ -3398,7 +3400,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("""
         <div style="display:flex; align-items:center; gap:10px;">
-            <img src=".assets/logo.png" alt="Lead Generator Empire" width="36">
+            <img src=".assets/favicon-180x180.png" alt="Lead Generator Empire" width="36">
             <h1 class="main-header" style="margin:0;">Lead Generator Empire</h1>
         </div>
     """, unsafe_allow_html=True)
