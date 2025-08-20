@@ -58,7 +58,7 @@ def restore_payment_authentication() -> bool:
 def _restore_from_credit_system(username: str) -> bool:
     """Try to restore from credit system"""
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         user_info = credit_system.get_user_info(username)
         
         if user_info:
@@ -139,7 +139,7 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                 print(f"📋 Processing plan upgrade to: {plan}")
                 # Update plan in system
                 try:
-                    from simple_credit_system import credit_system
+                    from postgres_credit_system import credit_system
                     credit_system.update_user_plan(username, plan)
                     
                     # Update session state
@@ -398,7 +398,7 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                 if plan:
                     print(f"📋 Processing plan upgrade to: {plan}")
                     try:
-                        from simple_credit_system import credit_system
+                        from postgres_credit_system import credit_system
                         credit_system.update_user_plan(username, plan)
                         
                         # Update session state
@@ -419,7 +419,7 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                 print(f"📦 Processing package purchase: {package} for ${amount}")
                 
                 try:
-                    from simple_credit_system import credit_system
+                    from postgres_credit_system import credit_system
                     
                     # Log the package purchase
                     package_transaction = {

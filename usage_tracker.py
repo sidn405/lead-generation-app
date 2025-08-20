@@ -56,7 +56,7 @@ class UsageTracker:
             # Try to get user plan from credit system if not in environment
             if not user_plan:
                 try:
-                    from simple_credit_system import credit_system
+                    from postgres_credit_system import credit_system
                     user_info = credit_system.get_user_info(username)
                     if user_info:
                         user_plan = user_info.get('plan', 'demo')
@@ -72,7 +72,7 @@ class UsageTracker:
                 print(f"📱 Demo user detected - using demo system limits")
                 
                 try:
-                    from simple_credit_system import credit_system
+                    from postgres_credit_system import credit_system
                     
                     # Check demo system specifically
                     can_demo, remaining = credit_system.can_use_demo(username)
@@ -445,7 +445,7 @@ class UsageTracker:
             # Try to get user plan from credit system if not in environment
             if not user_plan:
                 try:
-                    from simple_credit_system import credit_system
+                    from postgres_credit_system import credit_system
                     user_info = credit_system.get_user_info(username)
                     if user_info:
                         user_plan = user_info.get('plan', 'demo')
@@ -461,7 +461,7 @@ class UsageTracker:
                 print(f"📱 Demo user - applying 5-lead maximum")
                 
                 try:
-                    from simple_credit_system import credit_system
+                    from postgres_credit_system import credit_system
                     
                     # Check how many demo leads are available
                     can_demo, remaining = credit_system.can_use_demo(username)
@@ -660,7 +660,7 @@ def check_user_limits(username: str, estimated_leads: int, platform: str = "unkn
     
     try:
         # Import the credit system
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         
         # Get user info
         user_info = credit_system.get_user_info(username)

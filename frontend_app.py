@@ -158,7 +158,7 @@ from user_auth import (
     integrated_show_password_reset_form
 )
 
-from simple_credit_system import credit_system
+from postgres_credit_system import credit_system
 from database_setup import setup_purchase_tables
 
 from stripe_integration import handle_payment_flow, show_purchase_buttons
@@ -355,7 +355,7 @@ def load_accurate_empire_stats(username):
 def get_demo_status_with_refresh():
     """Get demo status with auto-refresh capability"""
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         
         can_demo, remaining = credit_system.can_use_demo('daveyd')
         user_info = credit_system.get_user_info('daveyd')
@@ -384,7 +384,7 @@ def refresh_demo_status():
 def update_demo_consumption(leads_generated):
     """Update demo consumption and refresh dashboard"""
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         
         username = 'daveyd'
         leads_count = len(leads_generated) if leads_generated else 0
@@ -413,7 +413,7 @@ def update_demo_consumption(leads_generated):
 def reset_demo_for_testing():
     """Reset demo for testing purposes"""
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         
         user_info = credit_system.get_user_info('daveyd')
         if user_info:
@@ -1190,7 +1190,7 @@ def handle_stripe_payment_success():
                     st.balloons()
                     st.success(f"🎉 Payment Successful!")
                     
-                    from simple_credit_system import credit_system
+                    from postgres_credit_system import credit_system
                     success = credit_system.add_credits(username, credits, tier_name)
                     if success:
                         st.success(f"✅ {credits} credits added to your account!")
@@ -1665,7 +1665,7 @@ def check_scraper_authorization(username: str, estimated_leads: int) -> Tuple[bo
         return False, "❌ Please sign in to generate leads"
     
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         user_info = credit_system.get_user_info(username)
         
         if not user_info:
@@ -1805,7 +1805,7 @@ def finalize_scraper_results(username: str, leads: list, platform: str) -> list:
         return leads
     
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         user_info = credit_system.get_user_info(username)
         
         if not user_info:
@@ -1886,7 +1886,7 @@ def process_demo_leads(username: str, leads: list, platform: str) -> list:
     """Process leads for demo users"""
     
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         user_info = credit_system.get_user_info(username)
         
         if user_info and user_info.get('plan') == 'demo':
@@ -2686,7 +2686,7 @@ def show_simple_credit_status():
         return True
     
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         user_info = credit_system.get_user_info(username)
     except:
         user_info = None
@@ -3091,7 +3091,7 @@ def calculate_accurate_estimate(selected_platforms, max_scrolls, user_plan):
         username = st.session_state.get('username')
         if username:
             try:
-                from simple_credit_system import credit_system
+                from postgres_credit_system import credit_system
                 can_demo, remaining = credit_system.can_use_demo(username)
                 final_estimate = min(total_estimated, remaining, 5)
                 
@@ -3192,7 +3192,7 @@ def refresh_user_stats():
     """Force refresh user stats from credit system"""
     try:
         # Force reload credit system
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         credit_system.load_data()
         
         # Get fresh user info
@@ -3398,7 +3398,7 @@ if "success" in query_params and "plan" in query_params:
     if username_from_url and username_from_url != "unknown":
         try:
             # Update plan in credit system
-            from simple_credit_system import credit_system
+            from postgres_credit_system import credit_system
             
             success = credit_system.update_user_plan(username_from_url, plan)
             
@@ -3526,7 +3526,7 @@ with col2:
             
             # Get correct credits/demo status
             try:
-                from simple_credit_system import credit_system
+                from postgres_credit_system import credit_system
                 user_info = credit_system.get_user_info(current_user)
                 
                 if user_plan == 'demo' and user_info:
@@ -3597,7 +3597,7 @@ if user_authenticated and st.session_state.get('credits', 0) == 25:
     username = simple_auth.get_current_user()
     if username == "bob":
         try:
-            from simple_credit_system import credit_system
+            from postgres_credit_system import credit_system
             fresh_info = credit_system.get_user_info(username)
             if fresh_info and fresh_info.get('credits', 0) == 2000:
                 st.session_state.credits = 2000
@@ -3892,7 +3892,7 @@ with tab1:
                     
                     with demo_col2:
                         try:
-                            from simple_credit_system import credit_system
+                            from postgres_credit_system import credit_system
                             can_demo, remaining = credit_system.can_use_demo(username)
                             st.info(f"""
                             **🔬 Real Demo Leads**
@@ -4836,7 +4836,7 @@ with tab1:
                                             if total_leads > 0:
                                                 # Force refresh credits after successful scraping
                                                 try:
-                                                    from simple_credit_system import credit_system
+                                                    from postgres_credit_system import credit_system
                                                     credit_system.load_data()
                                                     
                                                     auth = SimpleCreditAuth()

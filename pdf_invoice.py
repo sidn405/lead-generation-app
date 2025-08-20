@@ -7,7 +7,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from datetime import datetime
 import os
-from simple_credit_system import credit_system
+from postgres_credit_system import credit_system
 
 def generate_invoice_pdf(username: str, transaction_id: str, output_dir: str = "invoices") -> str:
     """Generate PDF invoice for credit purchase"""

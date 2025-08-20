@@ -273,10 +273,11 @@ class CreditSystem:
         password_hash = self.hash_password(password)
         
         if self.use_postgres:
-            # Try username or email
+            # Try username or email (case-insensitive)
             user = self._execute_query("""
                 SELECT * FROM users 
-                WHERE (username = %s OR email = %s) AND password_hash = %s
+                WHERE (LOWER(username) = LOWER(%s) OR LOWER(email) = LOWER(%s)) 
+                AND password_hash = %s
             """, (identifier, identifier, password_hash), fetch=True)
             
             if user:

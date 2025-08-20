@@ -40,7 +40,7 @@ def debug_credit_consumption():
     print("=" * 50)
     
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         
         # Check current user status
         username = os.environ.get('SCRAPER_USERNAME', 'unknown')
@@ -87,7 +87,7 @@ def ensure_credit_consumption_after_parallel(username, all_results):
     print("=" * 40)
     
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         
         total_consumed = 0
         
@@ -257,7 +257,7 @@ def finalize_scraping_session(username, user_plan, all_results, search_term):
             print(f"💎 Processing {total_leads} leads for credit consumption...")
             
             try:
-                from simple_credit_system import credit_system
+                from postgres_credit_system import credit_system
                 
                 # Consume credits for each platform
                 total_consumed = 0
@@ -459,7 +459,7 @@ def check_user_authorization(username, user_plan, estimated_leads, platform):
     
     try:
         # Import credit system
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         
         print(f"🔍 check_user_limits for {username}:")
         print(f"   Force auth: {os.environ.get('FORCE_AUTHORIZATION', 'True')}")
@@ -555,7 +555,7 @@ def get_safe_estimate_for_user(platform, max_scrolls, username, user_plan):
     # Apply plan-specific limits
     if user_plan == 'demo':
         try:
-            from simple_credit_system import credit_system
+            from postgres_credit_system import credit_system
             user_info = credit_system.get_user_info(username)
             
             if user_info:
@@ -583,7 +583,7 @@ def consume_user_resources(username, leads_generated, platform):
         return True  # Skip consumption for anonymous or empty results
     
     try:
-        from simple_credit_system import credit_system
+        from postgres_credit_system import credit_system
         user_info = credit_system.get_user_info(username)
         
         if not user_info:
@@ -1033,7 +1033,7 @@ def finalize_scraping_session(username, user_plan, all_results, search_term):
         
         if total_leads > 0 and user_plan != 'demo':
             try:
-                from simple_credit_system import credit_system
+                from postgres_credit_system import credit_system
                 
                 # Get current credits
                 user_info = credit_system.get_user_info(username)

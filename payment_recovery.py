@@ -56,7 +56,7 @@ def automatic_payment_recovery(user_db):
         print(f"🔄 Processing plan upgrade: {plan} for {username}")
         
         try:
-            from simple_credit_system import credit_system
+            from postgres_credit_system import credit_system
             
             user_info = credit_system.get_user_info(username)
             if user_info:
@@ -160,7 +160,7 @@ def automatic_payment_recovery(user_db):
         print(f"🔄 Processing credit purchase: {credits} credits for {username}")
         
         try:
-            from simple_credit_system import credit_system
+            from postgres_credit_system import credit_system
             
             # Add credits to user account
             credits_int = int(credits)
@@ -197,7 +197,7 @@ def automatic_payment_recovery(user_db):
         print(f"🔄 Processing package purchase: {package} for {username}")
         
         try:
-            from simple_credit_system import credit_system
+            from postgres_credit_system import credit_system
             user_info = credit_system.get_user_info(username)
             
             if user_info:

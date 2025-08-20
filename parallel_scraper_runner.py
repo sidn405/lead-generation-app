@@ -212,7 +212,7 @@ class ParallelScraperRunner:
         
         if total_leads > 0 and self.user_plan != 'demo':
             try:
-                from simple_credit_system import credit_system
+                from postgres_credit_system import credit_system
                 
                 # Get current credits
                 user_info = credit_system.get_user_info(self.username)

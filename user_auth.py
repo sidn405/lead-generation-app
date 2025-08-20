@@ -250,7 +250,7 @@ class SimpleCreditAuth:
         username = self.get_current_user()
         if username:
             try:
-                from simple_credit_system import credit_system
+                from postgres_credit_system import credit_system
                 user_info = credit_system.get_user_info(username)
                 
                 if user_info:
@@ -301,7 +301,7 @@ class SimpleCreditAuth:
         # Step 2: Try to reload/sync the credit system
         try:
             # Import here to avoid circular imports
-            from simple_credit_system import credit_system
+            from postgres_credit_system import credit_system
             
             # Force reload the credit system
             if hasattr(credit_system, 'reload_user_data'):

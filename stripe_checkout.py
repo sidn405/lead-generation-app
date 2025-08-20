@@ -4,7 +4,8 @@ import os
 import stripe
 import streamlit as st
 from typing import Tuple, List, Dict
-from simple_credit_system import credit_system
+#from simple_credit_system import credit_system
+from postgres_credit_system import credit_system
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
@@ -421,7 +422,7 @@ def handle_payment_success(username: str, tier_name: str, credits: int = None, m
     st.success(f"🎉 Payment Successful!")
     
     # Import here to avoid circular imports
-    from simple_credit_system import credit_system
+    from postgres_credit_system import credit_system
     
     # Determine if this is a subscription or credit purchase
     is_subscription = payment_type == "subscription" or monthly_credits is not None
