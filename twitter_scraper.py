@@ -143,32 +143,26 @@ def create_stealth_browser(p):
         #'--disable-component-update'
     ]
     
-    browser = p.chromium.launch(
-        headless=True,
-        args=browser_args
-    )
-    
-    # Create context with stealth settings
-    context = browser.new_context(
-        user_agent=user_agent,
-        viewport=viewport,
-        #locale='en-US',
-        #timezone_id='America/New_York',
-        #permissions=['geolocation'],
-        #storage_state="twitter_auth.json" if os.path.exists("twitter_auth.json") else None
-    )
-    
-    # Add comprehensive stealth scripts
     try:
+        # Your existing browser creation code...
+        browser = p.chromium.launch(headless=True, args=browser_args)
+        context = browser.new_context(...)
+        
+        # Test that everything works
         page = context.new_page()
         print("Page created successfully")
         page.goto("https://twitter.com")
         print("Navigation successful")
-        # ... rest of scraping
+        page.close()  # Close test page
+        
+        print("Returning browser and context")
+        return browser, context
+        
     except Exception as e:
-        print(f"Detailed error: {e}")
+        print(f"Error in create_stealth_browser: {e}")
         import traceback
         traceback.print_exc()
+        return None  # This is likely what's happening
 
 def stealth_delay(min_sec=None, max_sec=None, reason=""):
     """Stealth delays with variation"""
