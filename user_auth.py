@@ -14,7 +14,8 @@ import secrets
 import time
 import re
 import json
-from simple_credit_system import credit_system
+#from simple_credit_system import credit_system
+from postgres_credit_system import credit_system
 from cryptography.fernet import Fernet
 from email.message import EmailMessage
 from emailer import EMAIL_ADDRESS, EMAIL_PASSWORD
@@ -184,8 +185,6 @@ def delete_user_data(username):
     
     st.write(f"📊 Deletion summary: {'Success' if deletion_success else 'No data found'}")
     return deletion_success
-
-
 
 class SimpleCreditAuth:
     """Simple credit-based authentication"""
