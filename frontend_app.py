@@ -609,6 +609,27 @@ if ('serviceWorker' in navigator) {
 </script>
 """, unsafe_allow_html=True)
 
+# CSS to keep it tidy
+st.markdown("""
+<style>
+  .sidebar-logo { display:flex; justify-content:center; margin: 6px 0 2px; }
+  .sidebar-logo img { border-radius: 10px; }
+  .sidebar-caption { text-align:center; color:#A0A0A0; font-size: 12px; }
+</style>
+""", unsafe_allow_html=True)
+
+# Sidebar logo (no Streamlit scaling, uses browser DPR selection)
+st.sidebar.markdown("""
+  <div class="sidebar-logo">
+    <img
+      src="assets/logo-96.png"
+      srcset="assets/logo-96.png 1x, assets/logo-192.png 2x, assets/logo-288.png 3x"
+      width="96" height="96" alt="Lead Generator Empire">
+  </div>
+  <div class="sidebar-caption">Lead Generator Empire</div>
+""", unsafe_allow_html=True)
+
+
 # 4) Dark theme with your brand gold (#C29D41)
 st.markdown("""
 <style>
@@ -3620,20 +3641,6 @@ show_auth_section_if_needed()
 # Sidebar
 with st.sidebar:
     st.header("📊 Empire Stats")
-    
-    # Debug info
-    st.write("🔍 **System Debug Info:**")
-    st.write(f"DATABASE_URL exists: {bool(os.getenv('DATABASE_URL'))}")
-    st.write(f"DATABASE_URL: {os.getenv('DATABASE_URL', 'NOT SET')[:50]}...")
-
-    # Test credit system
-    from postgres_credit_system import credit_system
-    st.write(f"Using PostgreSQL: {credit_system.use_postgres}")
-    st.write(f"Total users: {len(credit_system.get_all_users_dict())}")
-
-    # List some users
-    users = credit_system.get_all_users_dict()
-    st.write("Users found:", list(users.keys())[:5])
 
     # In sidebar
     show_user_selector()  # Lets you switch users
@@ -5524,14 +5531,14 @@ with tab2: # Lead Results
                     return {}
                 
                 return {
-                    "🐦 Twitter": f"twitter_*{username}_*.csv",
-                    "💼 LinkedIn": f"linkedin_*{username}_*.csv", 
-                    "📘 Facebook": f"facebook_*{username}_*.csv",
-                    "🎵 TikTok": f"tiktok_*{username}_*.csv",
-                    "📸 Instagram": f"instagram_*{username}_*.csv",
-                    "🎥 YouTube": f"youtube_*{username}_*.csv",
-                    "📝 Medium": f"medium_*{username}_*.csv",
-                    "🗨️ Reddit": f"reddit_*{username}_*.csv"
+                    "🐦 Twitter": f"twitter_lesds_*{username}_*.csv",
+                    "💼 LinkedIn": f"linkedin_lesds_*{username}_*.csv", 
+                    "📘 Facebook": f"facebook_lesds_*{username}_*.csv",
+                    "🎵 TikTok": f"tiktok_lesds_lesds_*{username}_*.csv",
+                    "📸 Instagram": f"instagram_lesds_*{username}_*.csv",
+                    "🎥 YouTube": f"youtube_lesds_*{username}_*.csv",
+                    "📝 Medium": f"medium_lesds_*{username}_*.csv",
+                    "🗨️ Reddit": f"reddit_lesds_*{username}_*.csv"
                 }
 
             # ✅ USE USER-SPECIFIC PATTERNS
@@ -6804,13 +6811,13 @@ if MULTILINGUAL_AVAILABLE:
                     import glob
                     
                     platform_patterns = {
-                        "🐦 Twitter": ["twitter_leads_*.csv", "twitter_unified_*.csv"],
+                        "🐦 Twitter": ["twitter_leads_*.csv", "twitter_leads_stealth_*.csv"],
                         "💼 LinkedIn": ["linkedin_leads_*.csv", "linkedin_unified_*.csv"],
                         "📘 Facebook": ["facebook_leads_*.csv", "facebook_unified_*.csv"],
                         "🎵 TikTok": ["tiktok_leads_*.csv", "tiktok_unified_*.csv"],
                         "📸 Instagram": ["instagram_leads_*.csv", "instagram_unified_*.csv"],
                         "🎥 YouTube": ["youtube_leads_*.csv", "youtube_unified_*.csv"],
-                        "📝 Medium": ["medium_leads_*.csv", "medium_unified_*.csv"],
+                        "📝 Medium": ["medium_leads_*.csv", "medium_leads_unified_*.csv"],
                         "🗨️ Reddit": ["reddit_leads_*.csv", "reddit_unified_*.csv"]
                     }
                     
