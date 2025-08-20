@@ -145,8 +145,15 @@ def create_stealth_browser(p):
     
     try:
         # Your existing browser creation code...
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(...)
+        browser = p.chromium.launch(headless=True, args=browser_args)
+        context = browser.new_context(
+        user_agent=user_agent,
+        viewport=viewport,
+        locale='en-US',
+        timezone_id='America/New_York',
+        permissions=['geolocation'],
+        storage_state="twitter_auth.json" if os.path.exists("twitter_auth.json") else None
+)
         
         # Test that everything works
         page = context.new_page()
