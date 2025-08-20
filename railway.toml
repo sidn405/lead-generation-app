@@ -1,8 +1,9 @@
 [build]
 builder = "NIXPACKS"
+buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "streamlit run frontend_app.py --server.port $PORT --server.address 0.0.0.0"
+startCommand = "playwright install chromium && streamlit run frontend_app.py --server.port $PORT"
 
 # Persistent storage
 [volumes]
