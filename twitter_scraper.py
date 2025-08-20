@@ -115,32 +115,32 @@ def create_stealth_browser(p):
     
     # Maximum stealth browser args
     browser_args = [
-        #'--disable-blink-features=AutomationControlled',
+        '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
         '--no-sandbox',
         '--disable-web-security',
-        #'--disable-features=VizDisplayCompositor',
-        #'--disable-background-networking',
-        #'--disable-background-timer-throttling',
-        #'--disable-backgrounding-occluded-windows',
-        #'--disable-breakpad',
-        #'--disable-client-side-phishing-detection',
-        #'--disable-component-extensions-with-background-pages',
-        #'--disable-default-apps',
-        #'--disable-extensions',
-        #'--disable-features=TranslateUI',
-        #'--disable-hang-monitor',
-        #'--disable-ipc-flooding-protection',
-        #'--disable-popup-blocking',
-        #'--disable-prompt-on-repost',
-        #'--disable-renderer-backgrounding',
-        #'--disable-sync',
-        #'--force-color-profile=srgb',
-        #'--metrics-recording-only',
-        #'--no-first-run',
-        #'--password-store=basic',
-        #'--use-mock-keychain',
-        #'--disable-component-update'
+        '--disable-features=VizDisplayCompositor',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-breakpad',
+        '--disable-client-side-phishing-detection',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-default-apps',
+        '--disable-extensions',
+        '--disable-features=TranslateUI',
+        '--disable-hang-monitor',
+        '--disable-ipc-flooding-protection',
+        '--disable-popup-blocking',
+        '--disable-prompt-on-repost',
+        '--disable-renderer-backgrounding',
+        '--disable-sync',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only',
+        '--no-first-run',
+        '--password-store=basic',
+        '--use-mock-keychain',
+        '--disable-component-update'
     ]
     
     try:
@@ -153,8 +153,9 @@ def create_stealth_browser(p):
         timezone_id='America/New_York',
         permissions=['geolocation'],
         storage_state="twitter_auth.json" if os.path.exists("twitter_auth.json") else None
-)
+    )
         
+       
         # Test that everything works
         page = context.new_page()
         print("Page created successfully")
@@ -500,6 +501,109 @@ def infer_location(bio):
             return location
     return "Unknown"
 
+import sys
+import traceback
+import os
+
+def debug_scraper():
+    print(f"Python version: {sys.version}")
+    print(f"Current directory: {os.getcwd()}")
+    print(f"Environment variables: DATABASE_URL={bool(os.getenv('DATABASE_URL'))}")
+    
+    # Define your browser args here
+    browser_args = [
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+        '--no-sandbox',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-breakpad',
+        '--disable-client-side-phishing-detection',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-default-apps',
+        '--disable-extensions',
+        '--disable-features=TranslateUI',
+        '--disable-hang-monitor',
+        '--disable-ipc-flooding-protection',
+        '--disable-popup-blocking',
+        '--disable-prompt-on-repost',
+        '--disable-renderer-backgrounding',
+        '--disable-sync',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only',
+        '--no-first-run',
+        '--password-store=basic',
+        '--use-mock-keychain',
+        '--disable-component-update'
+    ]
+
+    def is_railway_environment():
+        return bool(os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('RAILWAY_PROJECT_ID'))
+
+    def get_browser_config():
+        if is_railway_environment():
+            return {
+                'headless': True,
+                'args': [
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu'
+                ]
+            }
+        else:
+            return {
+                'headless': False,
+                'args': browser_args
+            }
+    
+    try:
+        from playwright.sync_api import sync_playwright
+        print("Playwright import successful")
+        
+        with sync_playwright() as p:
+            print("Playwright context created")
+            
+            config = get_browser_config()
+            print(f"Browser config: headless={config['headless']}, args count={len(config['args'])}")
+            
+            browser = p.chromium.launch(
+                headless=config['headless'],
+                args=config['args']
+            )
+            print("Browser launched successfully")
+            
+            # Test context creation
+            context = browser.new_context()
+            print("Context created successfully")
+            
+            # Test page creation
+            page = context.new_page()
+            print("Page created successfully")
+            
+            # Test navigation
+            page.goto("https://httpbin.org/get", timeout=30000)
+            print("Navigation successful")
+            
+            # Test Twitter specifically
+            page.goto("https://twitter.com", timeout=30000)
+            print("Twitter navigation successful")
+            
+            browser.close()
+            print("Browser closed successfully")
+            
+    except Exception as e:
+        print(f"Error during browser test: {e}")
+        print(f"Error type: {type(e).__name__}")
+        traceback.print_exc()
+
+# Add this at the start of your main scraper function
+if __name__ == "__main__":
+    debug_scraper()
+    # ... rest of your scraper code
+
 def login_and_scrape():
     """Main stealth scraper with smart user-aware deduplication"""
     estimated_leads = MAX_SCROLLS * 5
@@ -749,3 +853,4 @@ if __name__ == "__main__":
         print("❌ Stealth scraper blocked or failed")
         print("💡 Twitter's detection is very aggressive")
         print("🔧 Try running during different hours or with different search terms")
+        
