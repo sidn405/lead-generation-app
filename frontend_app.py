@@ -570,24 +570,135 @@ import base64
 
 st.set_page_config(
     page_title="Lead Generator Empire", 
-    page_icon="assets/favicon-32x32.png",
+    page_icon="assets/favicon.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2) Also inject standard <link> tags with RELATIVE paths (./assets/…)
+# 2) HEAD injection: favicon bundle, fullscreen PWA manifest, theme colors, iOS fullscreen
 st.markdown("""
-    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png">
-    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
-    <link rel="manifest" href="./assets/manifest-fullscreen.json">
+    <!-- FAVICONS -->
+    <link rel="icon" href="assets/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+    <!-- PWA MANIFEST (fullscreen mode) -->
+    <link rel="manifest" href="assets/manifest-fullscreen.json">
+
+    <!-- THEME COLORS -->
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+
+    <!-- iOS fullscreen support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 """, unsafe_allow_html=True)
 
-# 3) Belt-and-suspenders: embed a base64 favicon (bypasses any static-file serving issues)
-with open("assets/favicon-32x32.png", "rb") as f:
-    b64 = base64.b64encode(f.read()).decode()
-st.markdown(f"""
-    <link rel="icon" type="image/png" href="data:image/png;base64,{b64}">
+# 3) Register service worker (runs in the browser; 'navigator' is a browser object)
+st.markdown("""
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // If the file is at the project root (recommended):
+    navigator.serviceWorker.register('/assets/service-worker.js')
+      .then(reg => console.log('✅ Service Worker registered with scope:', reg.scope))
+      .catch(err => console.log('❌ Service Worker registration failed:', err));
+  });
+}
+</script>
+""", unsafe_allow_html=True)
+
+# 4) Dark theme with your brand gold (#C29D41)
+st.markdown("""
+<style>
+  :root {
+    --bg: #121212;
+    --card: #1E1E1E;
+    --text: #E0E0E0;
+    --muted: #A0A0A0;
+    --accent: #00C896;      /* teal accent for links/success */
+    --brand-gold: #C29D41;  /* your logo gold */
+    --border: #2A2A2A;
+    --error: #FF5252;
+  }
+
+  .stApp { background-color: var(--bg); color: var(--text); }
+
+  /* Headings with a subtle gold underline bar */
+  h1, h2, h3, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    color: var(--text);
+    letter-spacing: 0.2px;
+  }
+  h1::after {
+    content: "";
+    display: block;
+    width: 56px;
+    height: 3px;
+    margin-top: 6px;
+    background: linear-gradient(90deg, var(--brand-gold), transparent);
+    border-radius: 2px;
+  }
+
+  /* Links: teal by default; gold on hover */
+  a, .stMarkdown a { color: var(--accent); text-decoration: none; }
+  a:hover, .stMarkdown a:hover { color: var(--brand-gold); text-decoration: underline; }
+
+  /* Cards & widgets */
+  .st-cq, .stCodeBlock, .stTextInput, .stSelectbox, .stNumberInput, .stCheckbox,
+  .stRadio, .stTextArea, .stFileUploader, .stDateInput, .stMultiSelect,
+  .stSlider, .stDataFrame,
+  .stButton>button, .stDownloadButton>button {
+      background: var(--card) !important;
+      color: var(--text) !important;
+      border-radius: 12px !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: none !important;
+  }
+
+  /* CTAs with gold borders and hover glow */
+  .stButton>button, .stDownloadButton>button {
+      font-weight: 600;
+      transition: transform 0.06s ease, box-shadow 0.12s ease, border 0.12s ease;
+      border-color: var(--brand-gold) !important;
+  }
+  .stButton>button:hover, .stDownloadButton>button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(194, 157, 65, 0.25);
+  }
+
+  /* Alerts */
+  .stAlert[data-baseweb="notification"][kind="success"] {
+      border-left: 4px solid var(--accent) !important;
+      background: #142923 !important;
+  }
+  .stAlert[data-baseweb="notification"][kind="error"] {
+      border-left: 4px solid var(--error) !important;
+      background: #2A1719 !important;
+  }
+
+  /* Inputs focus ring in gold */
+  input:focus, textarea:focus, select:focus {
+      outline: none !important;
+      border-color: var(--brand-gold) !important;
+      box-shadow: 0 0 0 2px rgba(194, 157, 65, 0.35) !important;
+  }
+
+  /* Tables */
+  .stDataFrame table { border-collapse: collapse !important; }
+  .stDataFrame table th, .stDataFrame table td { border-bottom: 1px solid var(--border) !important; }
+
+  /* Small gold badge utility */
+  .lge-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--brand-gold);
+    color: var(--brand-gold);
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+  }
+</style>
 """, unsafe_allow_html=True)
 
 def restore_auth_after_payment():
@@ -3396,7 +3507,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("""
         <div style="display:flex; align-items:center; gap:10px;">
-            <img src="assets/favicon-16x16.png" alt="Lead Generator Empire" width="36">
+            <img src="assets/favicon-16x16.png" alt="" width="36">
             <h1 class="main-header" style="margin:0;">Lead Generator Empire</h1>
         </div>
     """, unsafe_allow_html=True)
