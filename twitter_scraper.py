@@ -145,7 +145,7 @@ def create_stealth_browser(p):
     
     try:
         # Your existing browser creation code...
-        browser = p.chromium.launch(headless=True, args=browser_args)
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context(...)
         
         # Test that everything works

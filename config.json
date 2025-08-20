@@ -4,7 +4,10 @@
         "currency": "usd",
         "success_url": "https://leadgeneratorempire.com/success",
         "cancel_url": "https://leadgeneratorempire.com/cancel",
-        "test_mode": true
+        "test_mode": true,
+        "stripe_secret_key": "",
+        "publishable_key": "",
+        "webhook_secret": "whsec_your_webhook_secret_here"
     },
     "lead_packages": {
         "enabled": true,
