@@ -324,7 +324,7 @@ def main():
     with sync_playwright() as p:
         print("🔐 Launching TikTok scraper with smart bot detection...")
         browser = p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-dev-shm-usage',

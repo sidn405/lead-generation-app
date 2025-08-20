@@ -886,7 +886,7 @@ def main():
         print(f"🎯 Launching Medium {NICHE.upper()} END CUSTOMER scraper...")
         
         browser = p.chromium.launch(
-            headless=False,
+            headless=True,
             args=['--disable-blink-features=AutomationControlled']
         )
         

@@ -6,7 +6,7 @@ AUTH_FILE = "reddit_auth.json"
 def save_auth_state():
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-features=VizDisplayCompositor',

@@ -16,7 +16,7 @@ def save_authentication():
     with sync_playwright() as p:
         print("🚀 Launching browser for Instagram authentication...")
         browser = p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-dev-shm-usage',
@@ -122,7 +122,7 @@ def test_authentication():
         print("🧪 Testing saved authentication...")
         
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=False)
+            browser = p.chromium.launch(headless=True)
             context = browser.new_context(
                 storage_state=storage_state,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"

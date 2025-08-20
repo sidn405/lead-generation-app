@@ -396,7 +396,7 @@ def handle_linkedin_simple():
         print("🔐 Launching LinkedIn scraper with simple welcome handling...")
         
         browser = p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-dev-shm-usage',

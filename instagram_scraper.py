@@ -562,7 +562,7 @@ def save_and_validate_csv(leads, output_file):
 def improved_browser_setup(p):
     """Enhanced browser setup to avoid detection"""
     return p.chromium.launch(
-        headless=False,
+        headless=True,
         args=[
             '--disable-blink-features=AutomationControlled',
             '--disable-dev-shm-usage',
@@ -682,7 +682,7 @@ def main():
     with sync_playwright() as p:
         print("🎯 Launching Instagram scraper with ULTRA-PERMISSIVE detection...")
         browser = p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-web-security',

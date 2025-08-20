@@ -7,7 +7,7 @@ LOGIN_URL = "https://www.linkedin.com/login"
 def save_auth_state():
     with sync_playwright() as p:
         print("🚀 Launching browser...")
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context()
 
         page = context.new_page()

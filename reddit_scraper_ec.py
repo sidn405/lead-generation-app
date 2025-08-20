@@ -1440,7 +1440,7 @@ def main():
     with sync_playwright() as p:
         print(f"🎯 Launching Reddit {NICHE.upper()} END CUSTOMER scraper...")
         browser = p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-dev-shm-usage',
