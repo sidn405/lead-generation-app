@@ -455,6 +455,8 @@ class ParallelScraperRunner:
         print(f"✅ Test: username = {self.username}")
         print(f"✅ Test: search_term = {self.search_term}")
         return True
+    
+from run_daily_scraper_complete import get_user_from_environment
 
 # Integration with your existing frontend
 def run_parallel_scrapers(platforms, search_term, max_scrolls, username, user_plan):
@@ -462,6 +464,14 @@ def run_parallel_scrapers(platforms, search_term, max_scrolls, username, user_pl
     Drop-in replacement for your sequential scraper
     Call this instead of run_all_platform_scrapers()
     """
+    # Use environment-based user info instead of session state
+    env_username, env_plan, env_credits = get_user_from_environment()
+    
+    # Use environment values if available, fallback to parameters
+    active_username = env_username or username
+    active_plan = env_plan or user_plan
+    
+    print(f"Scraping as user: {active_username} ({active_plan} plan)")
     
     runner = ParallelScraperRunner(username, user_plan, search_term, max_scrolls)
     results = runner.run_parallel(platforms)

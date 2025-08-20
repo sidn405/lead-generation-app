@@ -4817,6 +4817,20 @@ with tab1:
                                     # Import and run parallel scrapers
                                     from parallel_scraper_runner import run_parallel_scrapers
                                     
+                                    # Store user context before long-running operation
+                                    user_context = {
+                                        'username': st.session_state.get('username'),
+                                        'user_data': st.session_state.get('user_data'),
+                                        'authenticated': st.session_state.get('authenticated'),
+                                        'credits': st.session_state.get('credits'),
+                                        'plan': user_plan
+                                    }
+
+                                    # Set environment variables for scrapers to use
+                                    os.environ['SCRAPER_USERNAME'] = user_context['username'] or ''
+                                    os.environ['SCRAPER_USER_PLAN'] = user_context['plan'] or ''
+                                    os.environ['SCRAPER_CREDITS'] = str(user_context['credits'] or 0)
+                                    
                                     # ✅ PARALLEL EXECUTION - Much faster than sequential!
                                     all_results = run_parallel_scrapers(
                                         platforms=instant_platforms,    # e.g., ['twitter', 'facebook', 'youtube']

@@ -19,6 +19,14 @@ from datetime import datetime
 # ✅ FIXED: Import centralized config properly
 from config_loader import get_platform_config, config_loader
 
+def get_user_from_environment():
+    """Get user info from environment instead of session state"""
+    username = os.getenv('SCRAPER_USERNAME')
+    if not username:
+        print("Warning: No username in environment")
+        return None
+    return username
+
 # ✅ CRITICAL FIX: Set UTF-8 encoding for all Python operations on Windows
 if sys.platform == "win32":
     # Set environment variables for UTF-8 encoding
@@ -626,8 +634,8 @@ def run_platform_scraper(platform):
         print(f"\n[ROCKET] Running {platform.title()} scraper...")
 
         # Get user info
-        username = get_username_from_env()
-        user_plan = get_user_plan_from_env()
+        username = get_user_from_environment()
+        user_plan = get_user_from_environment()
         
         # ✅ FIXED: Get config properly
         search_term = None
@@ -788,9 +796,17 @@ def run_all_platform_scrapers(platforms):
     
     return all_results
 
-def get_user_plan_from_env():
-    """Get user plan from environment variables"""
-    return os.environ.get('USER_PLAN', 'demo')
+def get_user_from_environment():
+    """Get user info from environment instead of session state"""
+    username = os.getenv('SCRAPER_USERNAME')
+    user_plan = os.getenv('SCRAPER_USER_PLAN') 
+    credits = os.getenv('SCRAPER_CREDITS')
+    
+    if not username:
+        print("Warning: No username in environment variables")
+        return None, None, 0
+    
+    return username, user_plan, int(credits) if credits else 0
 
 def get_username_from_env():
     """Get username from environment variables"""
@@ -1108,8 +1124,8 @@ def main():
         print("=" * 60)
         
         # Get user info and search term
-        user_plan = get_user_plan_from_env()
-        username = get_username_from_env()
+        user_plan = get_user_from_environment()
+        username = get_user_from_environment()
         search_term = os.environ.get('FRONTEND_SEARCH_TERM', 'business coach')  # Generic default
         
         print(f"[USER] User: {username}")
@@ -1251,7 +1267,7 @@ def test_variable_resolution():
     
     print("🧪 Testing variable resolution...")
     
-    username = get_username_from_env()
+    username = get_user_from_environment()
     print(f"Username: {username}")
     
     # Test client config

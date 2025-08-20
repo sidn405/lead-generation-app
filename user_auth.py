@@ -270,6 +270,15 @@ class SimpleCreditAuth:
             return st.session_state.get('credits', 0)
         return 0
     
+    # In your credit tracking function
+    def track_credit_usage(username, credits_used, platform):
+        """Track credits independently of session state"""
+        if not username:
+            print("Warning: No username for credit tracking")
+            return False
+        
+        return credit_system.consume_credits(username, credits_used, 1, platform)
+    
     def get_user_plan(self) -> str:
         """Get user's plan"""
         user_data = st.session_state.get('user_data', {})
