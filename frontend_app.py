@@ -564,22 +564,55 @@ def try_save_user_to_database(username, user_data):
 # CRITICAL: Handle payment authentication recovery FIRST
 is_payment_return = restore_payment_authentication()
 
+import streamlit as st
+from pathlib import Path
 from PIL import Image
 import base64
 
-# 1) Use a PIL image for Streamlit's built-in tab icon (works even if static serving is funky)
-st.set_page_config(page_title="Lead Generator Empire", page_icon="assets/logo.png", layout="wide",
-    initial_sidebar_state="expanded")
+# ---------- Resolve assets folder robustly ----------
+HERE = Path(__file__).resolve().parent
+CANDIDATE_LOGO_PATHS = [
+    HERE / "assets" / "logo.png",
+    HERE / "assets" / "favicon-256x256.png",
+    Path.cwd() / "assets" / "logo.png",                 # fallback if cwd differs
+    Path.cwd() / "assets" / "favicon-256x256.png",
+]
 
-# Custom header with logo instead of 🚀
-st.markdown("""
+def first_existing(paths):
+    for p in paths:
+        if p.exists():
+            return p
+    return None
+
+logo_path = first_existing(CANDIDATE_LOGO_PATHS)
+if not logo_path:
+    st.error("Logo not found. Make sure `assets/logo.png` (or `favicon-256x256.png`) is committed and deployed.")
+    st.stop()
+
+# Load images via PIL so Streamlit doesn’t need to open the path itself
+logo_img = Image.open(logo_path)
+
+# Use a small favicon for the tab icon if present
+fav32 = first_existing([HERE / "assets" / "favicon-32x32.png", Path.cwd() / "assets" / "favicon-32x32.png"])
+page_icon_img = Image.open(fav32) if fav32 else logo_img
+
+# ---------- Page config ----------
+st.set_page_config(
+    page_title="Lead Generator Empire",
+    page_icon=page_icon_img,
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ---------- Header (replace 🚀 with your logo) ----------
+st.markdown(f"""
     <div style="display:flex; align-items:center; gap:10px;">
-        <img src="assets/logo.png" alt="Lead Generator Empire" width="36">
+        <img src="assets/{logo_path.name}" alt="Lead Generator Empire" width="36">
         <h1 style="margin:0;">Lead Generator Empire</h1>
     </div>
 """, unsafe_allow_html=True)
 
-# 2) Also inject standard <link> tags with RELATIVE paths (./assets/…)
+# ---------- Favicon links (relative paths) ----------
 st.markdown("""
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png">
@@ -587,16 +620,17 @@ st.markdown("""
     <link rel="manifest" href="./assets/manifest-fullscreen.json">
 """, unsafe_allow_html=True)
 
-# 3) Belt-and-suspenders: embed a base64 favicon (bypasses any static-file serving issues)
-with open("assets/favicon-32x32.png", "rb") as f:
-    b64 = base64.b64encode(f.read()).decode()
-st.markdown(f"""
-    <link rel="icon" type="image/png" href="data:image/png;base64,{b64}">
-""", unsafe_allow_html=True)
+# ---------- Base64 inline favicon as a fallback ----------
+try:
+    with open(fav32 or logo_path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+    st.markdown(f'<link rel="icon" type="image/png" href="data:image/png;base64,{b64}">', unsafe_allow_html=True)
+except Exception:
+    pass
 
-# 4) Show your logo explicitly in the UI (header + sidebar) to confirm paths
-st.sidebar.image("assets/logo.png", width=120, caption="Lead Generator Empire", use_container_width=True)
-#st.image("assets/favicon-256x256.png", width=96)  # or your full logo file if different
+# ---------- Sidebar logo (pass PIL image, fixed width) ----------
+st.sidebar.image(logo_img, width=120, caption="Lead Generator Empire")
+
 
 def restore_auth_after_payment():
     """Improved automatic authentication restoration after Stripe payment"""
