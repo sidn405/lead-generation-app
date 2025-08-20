@@ -2688,7 +2688,14 @@ def show_simple_credit_status():
     try:
         from postgres_credit_system import credit_system
         user_info = credit_system.get_user_info(username)
-    except:
+        print(f"🔍 Debug: Retrieved user info for {username}: {bool(user_info)}")
+        if user_info:
+            print(f"🔍 User plan: {user_info.get('plan')}, credits: {user_info.get('credits')}")
+    except Exception as e:
+        print(f"❌ Error loading user info for {username}: {e}")
+        print(f"🔍 Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         user_info = None
         
     if not user_info:
