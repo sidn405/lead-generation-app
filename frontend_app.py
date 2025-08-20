@@ -603,15 +603,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# ---------- Header (replace 🚀 with your logo) ----------
-st.markdown(f"""
-    <div style="display:flex; align-items:center; gap:10px;">
-        <img src="assets/{logo_path.name}" alt="Lead Generator Empire" width="36">
-        <h1 style="margin:0;">Lead Generator Empire</h1>
-    </div>
-""", unsafe_allow_html=True)
-
 # ---------- Favicon links (relative paths) ----------
 st.markdown("""
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
@@ -3436,7 +3427,12 @@ st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 # Header (simplified - no unnecessary dashboard button)
 col1, col2 = st.columns([2, 1])
 with col1:
-    st.markdown('<h1 class="main-header">🚀 Lead Generator Empire</h1>', unsafe_allow_html=True)
+    st.markdown("""
+        <div style="display:flex; align-items:center; gap:10px;">
+            <img src="assets/logo.png" alt="Lead Generator Empire" width="36">
+            <h1 class="main-header" style="margin:0;">Lead Generator Empire</h1>
+        </div>
+    """, unsafe_allow_html=True)
     if MULTILINGUAL_AVAILABLE:
         st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Generate Quality Leads • 8 Platforms • 12+ Languages</p>', unsafe_allow_html=True)
     else:
