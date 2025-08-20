@@ -570,7 +570,7 @@ import base64
 
 st.set_page_config(
     page_title="Lead Generator Empire", 
-    page_icon="assets/favicon.png",
+    page_icon="assets/favicon-16x16.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -3507,7 +3507,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("""
         <div style="display:flex; align-items:center; gap:10px;">
-            <img src="assets/favicon-16x16.png" alt="" width="36">
+            <img src="assets/favicon-32x32.png" alt="" width="36">
             <h1 class="main-header" style="margin:0;">Lead Generator Empire</h1>
         </div>
     """, unsafe_allow_html=True)
