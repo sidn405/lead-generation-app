@@ -21,6 +21,21 @@ try:
 except ImportError:
     print("⚠️ Smart deduplication not available - using basic dedup")
     SMART_DEDUP_AVAILABLE = False
+    
+import subprocess
+import os
+
+try:
+    chrome_version = subprocess.check_output(['google-chrome', '--version'], text=True)
+    print(f"Chrome version: {chrome_version.strip()}")
+except Exception as e:
+    print(f"Chrome version check failed: {e}")
+
+try:
+    chromedriver_version = subprocess.check_output(['chromedriver', '--version'], text=True)
+    print(f"ChromeDriver version: {chromedriver_version.strip()}")
+except Exception as e:
+    print(f"ChromeDriver version check failed: {e}")
 
 PLATFORM_NAME = "twitter"
 
