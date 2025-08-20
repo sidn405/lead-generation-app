@@ -568,9 +568,16 @@ from PIL import Image
 import base64
 
 # 1) Use a PIL image for Streamlit's built-in tab icon (works even if static serving is funky)
-icon_img = Image.open("assets/favicon-32x32.png")  # or favicon.png
-st.set_page_config(page_title="Lead Generator Empire", page_icon=icon_img, layout="wide",
+st.set_page_config(page_title="Lead Generator Empire", page_icon="assets/logo.png", layout="wide",
     initial_sidebar_state="expanded")
+
+# Custom header with logo instead of 🚀
+st.markdown("""
+    <div style="display:flex; align-items:center; gap:10px;">
+        <img src="assets/logo.png" alt="Lead Generator Empire" width="36">
+        <h1 style="margin:0;">Lead Generator Empire</h1>
+    </div>
+""", unsafe_allow_html=True)
 
 # 2) Also inject standard <link> tags with RELATIVE paths (./assets/…)
 st.markdown("""
@@ -588,8 +595,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # 4) Show your logo explicitly in the UI (header + sidebar) to confirm paths
-st.sidebar.image("assets/favicon-256x256.png", caption="Lead Generator Empire", use_column_width=True)
-st.image("assets/favicon-256x256.png", width=96)  # or your full logo file if different
+st.sidebar.image("assets/logo.png", width=120, caption="Lead Generator Empire", use_container_width=True)
+#st.image("assets/favicon-256x256.png", width=96)  # or your full logo file if different
 
 def restore_auth_after_payment():
     """Improved automatic authentication restoration after Stripe payment"""
