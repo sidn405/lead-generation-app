@@ -115,32 +115,32 @@ def create_stealth_browser(p):
     
     # Maximum stealth browser args
     browser_args = [
-        '--disable-blink-features=AutomationControlled',
+        #'--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
         '--no-sandbox',
         '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--disable-background-networking',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-breakpad',
-        '--disable-client-side-phishing-detection',
-        '--disable-component-extensions-with-background-pages',
-        '--disable-default-apps',
-        '--disable-extensions',
-        '--disable-features=TranslateUI',
-        '--disable-hang-monitor',
-        '--disable-ipc-flooding-protection',
-        '--disable-popup-blocking',
-        '--disable-prompt-on-repost',
-        '--disable-renderer-backgrounding',
-        '--disable-sync',
-        '--force-color-profile=srgb',
-        '--metrics-recording-only',
-        '--no-first-run',
-        '--password-store=basic',
-        '--use-mock-keychain',
-        '--disable-component-update'
+        #'--disable-features=VizDisplayCompositor',
+        #'--disable-background-networking',
+        #'--disable-background-timer-throttling',
+        #'--disable-backgrounding-occluded-windows',
+        #'--disable-breakpad',
+        #'--disable-client-side-phishing-detection',
+        #'--disable-component-extensions-with-background-pages',
+        #'--disable-default-apps',
+        #'--disable-extensions',
+        #'--disable-features=TranslateUI',
+        #'--disable-hang-monitor',
+        #'--disable-ipc-flooding-protection',
+        #'--disable-popup-blocking',
+        #'--disable-prompt-on-repost',
+        #'--disable-renderer-backgrounding',
+        #'--disable-sync',
+        #'--force-color-profile=srgb',
+        #'--metrics-recording-only',
+        #'--no-first-run',
+        #'--password-store=basic',
+        #'--use-mock-keychain',
+        #'--disable-component-update'
     ]
     
     browser = p.chromium.launch(
@@ -152,52 +152,23 @@ def create_stealth_browser(p):
     context = browser.new_context(
         user_agent=user_agent,
         viewport=viewport,
-        locale='en-US',
-        timezone_id='America/New_York',
-        permissions=['geolocation'],
-        storage_state="twitter_auth.json" if os.path.exists("twitter_auth.json") else None
+        #locale='en-US',
+        #timezone_id='America/New_York',
+        #permissions=['geolocation'],
+        #storage_state="twitter_auth.json" if os.path.exists("twitter_auth.json") else None
     )
     
     # Add comprehensive stealth scripts
-    context.add_init_script("""
-        // Remove webdriver property
-        Object.defineProperty(navigator, 'webdriver', {
-            get: () => undefined,
-        });
-        
-        // Mock plugins
-        Object.defineProperty(navigator, 'plugins', {
-            get: () => [1, 2, 3, 4, 5],
-        });
-        
-        // Mock languages
-        Object.defineProperty(navigator, 'languages', {
-            get: () => ['en-US', 'en'],
-        });
-        
-        // Mock permissions
-        const originalQuery = window.navigator.permissions.query;
-        window.navigator.permissions.query = (parameters) => (
-            parameters.name === 'notifications' ?
-                Promise.resolve({ state: Notification.permission }) :
-                originalQuery(parameters)
-        );
-        
-        // Mock chrome object
-        window.chrome = {
-            runtime: {},
-            loadTimes: function() {},
-            csi: function() {},
-            app: {}
-        };
-        
-        // Remove automation indicators
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-    """)
-    
-    return browser, context
+    try:
+        page = context.new_page()
+        print("Page created successfully")
+        page.goto("https://twitter.com")
+        print("Navigation successful")
+        # ... rest of scraping
+    except Exception as e:
+        print(f"Detailed error: {e}")
+        import traceback
+        traceback.print_exc()
 
 def stealth_delay(min_sec=None, max_sec=None, reason=""):
     """Stealth delays with variation"""
