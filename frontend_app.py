@@ -3535,7 +3535,7 @@ st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 st.markdown("""
 <style>
 /* tighten the main container top padding */
-main .block-container { padding-top: 0.8rem; }  /* adjust to taste */
+main .block-container { padding-top: 0.4rem; }  /* adjust to taste */
 
 /* remove any extra margin above your title */
 h1.main-header { margin-top: 0 !important; }
