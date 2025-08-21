@@ -3640,12 +3640,13 @@ logo_b64 = base64.b64encode(logo_path.read_bytes()).decode() if logo_path.exists
 
 col1, col2 = st.columns([2, 1])
 with col1:
-    st.markdown("""
+    st.markdown(f"""
         <div class="lge-head">
             <img src="data:image/png;base64,{logo_b64}" width="36" height="36" alt="" style="border-radius:8px"/>
             <h1 class="main-header">Lead Generator Empire</h1>
         </div>
     """, unsafe_allow_html=True)
+
     if MULTILINGUAL_AVAILABLE:
         st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Generate Quality Leads • 8 Platforms • 12+ Languages</p>', unsafe_allow_html=True)
     else:
