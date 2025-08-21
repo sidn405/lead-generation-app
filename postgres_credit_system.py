@@ -512,10 +512,16 @@ class CreditSystem:
             # Get transaction stats from database
             stats = self._execute_query("""
                 SELECT 
-                    SUM(CASE WHEN type IN ('credit_purchase', 'plan_upgrade', 'subscription_activation') THEN credits_added ELSE 0 END) as total_purchased,
-                    SUM(CASE WHEN type = 'lead_download' THEN credits_used ELSE 0 END) as total_used
-                FROM transactions WHERE username = %s
-            """, (username,), fetch=True)
+                    COALESCE(SUM(
+                        CASE 
+                        WHEN type IN ('credit_purchase','plan_upgrade') THEN credits_added
+                        WHEN type = 'subscription_activation'            THEN credits_set
+                        ELSE 0
+                        END
+                    ),0) AS total_purchased,
+                    COALESCE(SUM(CASE WHEN type='lead_download' THEN credits_used ELSE 0 END),0) AS total_used
+                    FROM transactions
+                    WHERE username = %s
             
             if stats:
                 total_purchased = stats[0]['total_purchased'] or 0

@@ -13,6 +13,61 @@ APP_BASE_URL = (
     or "http://localhost:8501"
 )
 
+# ---- Handle ?payment_success=1 redirects deterministically ----
+def handle_payment_success_url():
+    """Finalize purchase from query params, update Postgres, refresh session/UI."""
+    if not st.query_params.get("payment_success"):
+        return False
+
+    # pull params
+    qp = st.query_params
+    payment_type = qp.get("type", "subscription")  # 'subscription' | 'credits'
+    tier_name = (qp.get("tier") or "").replace("_", " ").strip().lower()
+    monthly_credits = int(qp.get("monthly_credits", "0") or 0)
+    credits = int(qp.get("credits", "0") or 0)
+    username = qp.get("username") or st.session_state.get("username")
+    payment_intent = qp.get("session_id") or qp.get("payment_intent") or "unknown"
+
+    if not username:
+        st.error("You're not signed in. Please log in and try again.")
+        return True
+
+    # import here to avoid circulars
+    from postgres_credit_system import credit_system
+
+    # Decide subscription vs one-time credits
+    is_subscription = (payment_type == "subscription") or (monthly_credits > 0)
+    credit_amount = monthly_credits if is_subscription else credits
+
+    ok = False
+    if is_subscription:
+        ok = credit_system.activate_subscription(
+            username=username,
+            plan=tier_name or "pro",
+            monthly_credits=credit_amount or 2000,
+            stripe_session_id=payment_intent,
+        )
+    else:
+        ok = credit_system.add_credits(
+            username=username,
+            credits=credit_amount,
+            plan="credit_purchase",
+            stripe_session_id=payment_intent,
+        )
+
+    # refresh live session state from DB so UI updates immediately
+    if ok:
+        fresh = credit_system.get_user_info(username)
+        if fresh:
+            st.session_state.user_data = fresh
+            st.session_state.credits = fresh.get("credits", 0)
+
+    # clear query string and re-render once so tabs aren’t blank
+    st.query_params.clear()
+    st.rerun()
+    return True
+
+
 def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str:
     """Create Stripe checkout with proper username handling"""
     
@@ -69,12 +124,28 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
         # For subscription plans, create success URL with subscription flag
         is_subscription = credits > 0 and tier.get('credits') is None  # No explicit credits = subscription
         
+        # Build URLs from APP_BASE_URL (declared at top of file)
+        base = APP_BASE_URL.rstrip("/")
         if is_subscription:
-            success_url = f"https://leadgeneratorempire.com/?payment_success=true&tier={plan_name.lower().replace(' ', '_')}&monthly_credits={credits}&username={username}&amount={price}&type=subscription"
+            success_url = (
+                f"{base}/?payment_success=1"
+                f"&type=subscription"
+                f"&tier={plan_name.lower().replace(' ', '_')}"
+                f"&monthly_credits={credits}"
+                f"&username={username}"
+                f"&amount={price}"
+            )
         else:
-            success_url = f"https://leadgeneratorempire.com/?payment_success=true&tier={plan_name.lower().replace(' ', '_')}&credits={credits}&username={username}&amount={price}&type=credits"
-        
+            success_url = (
+                f"{base}/?payment_success=1"
+                f"&type=credits"
+                f"&tier={plan_name.lower().replace(' ', '_')}"
+                f"&credits={credits}"
+                f"&username={username}"
+                f"&amount={price}"
+            )
         print(f"🔗 Success URL: {success_url}")
+
         
         if is_subscription:
             # Create subscription checkout
@@ -98,7 +169,7 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
                 
                 # SUCCESS URL with username validation
                 success_url=success_url,
-                cancel_url=f"http://localhost:8501?username={username}&payment_cancelled=true",
+                cancel_url=f"{base}/?payment_cancelled=1&username={username}",
                 
                 # Customer info
                 customer_email=user_email,
@@ -131,7 +202,8 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
                 
                 # SUCCESS URL with username validation
                 success_url=success_url,
-                cancel_url=f"http://localhost:8501?username={username}&payment_cancelled=true",
+                cancel_url=f"{base}/?payment_cancelled=1&username={username}",
+
                 
                 # Customer info
                 customer_email=user_email,

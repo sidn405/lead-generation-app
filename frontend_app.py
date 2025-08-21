@@ -7636,7 +7636,7 @@ if MULTILINGUAL_AVAILABLE:
 with tab4: # Pricing Plans
     
     if "payment_success" in st.query_params:
-        
+        from stripe_checkout import handle_payment_success_url
         if handle_payment_success_url():
             # Payment success page is showing, exit early
             st.stop()
@@ -7644,8 +7644,9 @@ with tab4: # Pricing Plans
     st.header("💳 Empire Pricing Plans")
     # — Who am I and what plan do they have? —
     if user_authenticated:
-        current_plan = simple_auth.get_user_plan().lower()
-        current_credits = simple_auth.get_user_credits()
+        info = credit_system.get_user_info(simple_auth.get_current_user())
+        current_plan = (info or {}).get("plan","demo").lower()
+        current_credits = (info or {}).get("credits",0)
         st.info(f"💎 Current: {current_credits} credits • {current_plan.title()} plan")
     else:
         current_plan = "demo"
