@@ -3571,10 +3571,10 @@ import streamlit as st
 
 # ---- config ----
 LOGO_SRC = Path("assets/logo-192.png")   # or logo-288.png
-HEADER_LOGO_PX = 40                      # size next to the H1
+HEADER_LOGO_PX = 36                      # size next to the H1
 APP_TITLE = "Lead Generator Empire"
 
-def header_logo_left(path: Path, width: int = 40, title: str = "App"):
+def header_logo_left(path: Path, width: int = 40, title: str = ""):
     if not path.exists():
         st.markdown(f"<small style='color:#888'>Logo not found: {path}</small>", unsafe_allow_html=True)
         return
@@ -3602,14 +3602,6 @@ def header_logo_left(path: Path, width: int = 40, title: str = "App"):
         .lge-header h1 {{ font-size:1.75rem; }}
       }}
     </style>
-
-    <div class="lge-header">
-      <img src="data:image/png;base64,{b64}" width="{width}" height="{width}" alt="" style="border-radius:8px"/>
-      <div>
-        <h1>{title}</h1>
-        <div class="lge-underline"></div>
-      </div>
-    </div>
     """, unsafe_allow_html=True)
     
 header_logo_left(LOGO_SRC, DISPLAY_PX)
@@ -3617,7 +3609,7 @@ header_logo_left(LOGO_SRC, DISPLAY_PX)
 # Tighten top padding + zero out H1 margins
 st.markdown("""
 <style>
-main .block-container { padding-top: 0.2rem !important; }
+main .block-container { padding-top: 0.1rem !important; }
 h1.main-header { margin: 0 !important; line-height: 1.1; }
 .lge-head { display:flex; align-items:center; gap:10px; margin:0; padding:0; }
 </style>
@@ -3631,7 +3623,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("""
         <div class="lge-head">
-            <img src="data:image/png;base64,{logo_b64}" width="40" height="40" alt="" style="border-radius:8px"/>
+            <img src="data:image/png;base64,{logo_b64}" width="36" height="36" alt="" style="border-radius:8px"/>
             <h1 class="main-header">Lead Generator Empire</h1>
         </div>
     """, unsafe_allow_html=True)
