@@ -3625,15 +3625,25 @@ def header_logo_left(path: Path, width: int = 36, title: str = "App"):
     </div>
     """, unsafe_allow_html=True)
 
-# render it
-header_logo_left(LOGO_SRC, HEADER_LOGO_PX, APP_TITLE)
+# Tighten top padding + zero out H1 margins
+st.markdown("""
+<style>
+main .block-container { padding-top: 0.2rem !important; }
+h1.main-header { margin: 0 !important; line-height: 1.1; }
+.lge-head { display:flex; align-items:center; gap:10px; margin:0; padding:0; }
+</style>
+""", unsafe_allow_html=True)
+
+# Base64 the logo so path issues can’t break it
+logo_path = Path("assets/logo-192.png")   # or logo-288.png
+logo_b64 = base64.b64encode(logo_path.read_bytes()).decode() if logo_path.exists() else ""
 
 col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("""
-        <div style="display:flex; align-items:center; gap:10px;">
-            <img src="assets/favicon-32x32.png" alt="" width="36">
-            <h1 class="main-header" style="margin:0;">Lead Generator Empire</h1>
+        <div class="lge-head">
+            <img src="data:image/png;base64,{logo_b64}" width="36" height="36" alt="" style="border-radius:8px"/>
+            <h1 class="main-header">Lead Generator Empire</h1>
         </div>
     """, unsafe_allow_html=True)
     if MULTILINGUAL_AVAILABLE:
