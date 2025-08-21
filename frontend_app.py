@@ -5773,6 +5773,60 @@ with tab2: # Lead Results
             else:
                 st.warning(f"📡 No leads found for {username} yet")
             
+            # Load and combine all empire data
+            all_empire_data = []
+            empire_totals = {}
+            language_stats = {}
+            
+            for platform_name, pattern in empire_platforms.items():
+                latest_file = get_latest_csv(pattern)
+                if latest_file and os.path.exists(latest_file):
+                    try:
+                        df = pd.read_csv(latest_file)
+                        if not df.empty:
+                            # USER FILTERING: Only show data for current user
+                            if user_authenticated and USER_CSV_FILTER_AVAILABLE:
+                                username = simple_auth.get_current_user()
+                                if username:
+                                    df = filter_empire_data_by_user(df, username)
+                            
+                            # Continue with existing logic only if we still have data
+                            if not df.empty:
+                                # Ensure platform column exists
+                                if 'platform' not in df.columns:
+                                    platform_key = platform_name.split()[1].lower()
+                                    df['platform'] = platform_key
+                                
+                                all_empire_data.append(df)
+                                empire_totals[platform_name] = len(df)
+                            else:
+                                empire_totals[platform_name] = 0
+                            
+                            # 🌍 NEW: Collect language statistics
+                            if MULTILINGUAL_AVAILABLE and 'detected_language' in df.columns:
+                                platform_languages = df['detected_language'].value_counts().to_dict()
+                                for lang, count in platform_languages.items():
+                                    language_stats[lang] = language_stats.get(lang, 0) + count
+                        else:
+                            empire_totals[platform_name] = 0
+                    except Exception as e:
+                        empire_totals[platform_name] = 0
+                else:
+                    empire_totals[platform_name] = 0
+            
+            # Combine empire data
+            if all_empire_data:
+                empire_df = pd.concat(all_empire_data, ignore_index=True)
+                empire_df = empire_df.drop_duplicates(subset=['name', 'handle'], keep='first')
+                
+                platforms_with_data = {
+                    **{name: pattern for name, pattern in empire_platforms.items()},
+                    "👑 Empire Combined": empire_df
+                }
+            else:
+                empire_df = pd.DataFrame()
+                platforms_with_data = empire_platforms
+            
             # Empire command center
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
