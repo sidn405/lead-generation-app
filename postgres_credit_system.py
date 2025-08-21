@@ -522,6 +522,7 @@ class CreditSystem:
                     COALESCE(SUM(CASE WHEN type='lead_download' THEN credits_used ELSE 0 END),0) AS total_used
                     FROM transactions
                     WHERE username = %s
+            """, (username,), fetch=True)
             
             if stats:
                 total_purchased = stats[0]['total_purchased'] or 0
