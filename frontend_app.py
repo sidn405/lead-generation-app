@@ -624,7 +624,7 @@ st.sidebar.markdown("""
     <img
       src="assets/logo-96.png"
       srcset="assets/logo-96.png 1x, assets/logo-192.png 2x, assets/logo-288.png 3x"
-      width="96" height="96" alt="Lead Generator Empire">
+      width="96" height="96" alt="">
   </div>
   <div class="sidebar-caption">Lead Generator Empire</div>
 """, unsafe_allow_html=True)
@@ -6811,14 +6811,14 @@ if MULTILINGUAL_AVAILABLE:
                     import glob
                     
                     platform_patterns = {
-                        "🐦 Twitter": ["twitter_leads_*.csv", "twitter_leads_stealth_*.csv"],
-                        "💼 LinkedIn": ["linkedin_leads_*.csv", "linkedin_unified_*.csv"],
-                        "📘 Facebook": ["facebook_leads_*.csv", "facebook_unified_*.csv"],
-                        "🎵 TikTok": ["tiktok_leads_*.csv", "tiktok_unified_*.csv"],
-                        "📸 Instagram": ["instagram_leads_*.csv", "instagram_unified_*.csv"],
-                        "🎥 YouTube": ["youtube_leads_*.csv", "youtube_unified_*.csv"],
-                        "📝 Medium": ["medium_leads_*.csv", "medium_leads_unified_*.csv"],
-                        "🗨️ Reddit": ["reddit_leads_*.csv", "reddit_unified_*.csv"]
+                        "🐦 Twitter": ["twitter_leads_stealth_*.csv"],
+                        "💼 LinkedIn": ["linkedin_leads_*.csv"],
+                        "📘 Facebook": ["facebook_leads_*.csv"],
+                        "🎵 TikTok": ["tiktok_leads_*.csv"],
+                        "📸 Instagram": ["instagram_leads_*.csv"],
+                        "🎥 YouTube": ["youtube_leads_*.csv"],
+                        "📝 Medium": ["medium_leads_*.csv"],
+                        "🗨️ Reddit": ["reddit_leads_*.csv"]
                     }
                     
                     for platform_name, patterns in platform_patterns.items():

@@ -31,14 +31,14 @@ class UserLeadManager:
     def __init__(self):
         """Initialize with platform definitions"""
         self.platform_patterns = {
-            "🐦 Twitter": ["twitter_leads_*.csv", "*twitter*.csv", "*tweet*.csv"],
-            "💼 LinkedIn": ["linkedin_leads_*.csv", "*linkedin*.csv", "*li_*.csv"],
-            "📘 Facebook": ["facebook_leads_*.csv", "*facebook*.csv", "*fb_*.csv"],
-            "🎵 TikTok": ["tiktok_leads_*.csv", "*tiktok*.csv", "*tt_*.csv"],
-            "📸 Instagram": ["instagram_leads_*.csv", "*instagram*.csv", "*ig_*.csv", "*insta*.csv"],
-            "🎥 YouTube": ["youtube_leads_*.csv", "*youtube*.csv", "*yt_*.csv"],
-            "📝 Medium": ["medium_leads_*.csv", "*medium*.csv"],
-            "🗨️ Reddit": ["reddit_leads_*.csv", "*reddit*.csv"]
+            "🐦 Twitter": ["twitter_leads_stealth_*.csv"],
+            "💼 LinkedIn": ["linkedin_leads_*.csv"],
+            "📘 Facebook": ["facebook_leads_*.csv"],
+            "🎵 TikTok": ["tiktok_leads_*.csv"],
+            "📸 Instagram": ["instagram_leads_*.csv"],
+            "🎥 YouTube": ["youtube_leads_*.csv"],
+            "📝 Medium": ["medium_leads_*.csv"],
+            "🗨️ Reddit": ["reddit_leads_*.csv"]
         }
         
         self.user_session_file = "current_user_sessions.json"

@@ -17,14 +17,14 @@ class CSVUserDebugger:
         """Initialize the debugger with base platform patterns"""
         # ✅ FIXED: Use base patterns without username, add username dynamically
         self.base_platform_patterns = {
-            "🐦 Twitter": "twitter_unified_leads_*_*.csv",
+            "🐦 Twitter": "twitter_leads_stealth_*_*.csv",
             "💼 LinkedIn": "linkedin_leads_*_*.csv",
-            "📘 Facebook": "facebook_unified_leads_*_*.csv",
-            "🎵 TikTok": "tiktok_unified_leads_*_*.csv",
-            "📸 Instagram": "instagram_unified_leads_*_*.csv",
-            "🎥 YouTube": "youtube_unified_leads_*_*.csv",
-            "📝 Medium": "medium_unified_leads_*_*.csv",
-            "🗨️ Reddit": "reddit_unified_leads_*_*.csv",
+            "📘 Facebook": "facebook_leads_*_*.csv",
+            "🎵 TikTok": "tiktok_leads_*_*.csv",
+            "📸 Instagram": "instagram_leads_*_*.csv",
+            "🎥 YouTube": "youtube_leads_*_*.csv",
+            "📝 Medium": "medium_leads_*_*.csv",
+            "🗨️ Reddit": "reddit_leads_*_*.csv",
         }
         
         self.user_columns = ['username', 'generated_by', 'user_id', 'scraper_user', 'created_by']
