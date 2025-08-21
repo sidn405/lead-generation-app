@@ -17,7 +17,7 @@ class CSVUserDebugger:
         """Initialize the debugger with base platform patterns"""
         # ✅ FIXED: Use base patterns without username, add username dynamically
         self.base_platform_patterns = {
-            "🐦 Twitter": "twitter_leads_stealth_*_*.csv",
+            "🐦 Twitter": "twitter_leads_*_*.csv",
             "💼 LinkedIn": "linkedin_leads_*_*.csv",
             "📘 Facebook": "facebook_leads_*_*.csv",
             "🎵 TikTok": "tiktok_leads_*_*.csv",

@@ -617,7 +617,7 @@ def login_and_scrape():
     print(f"👤 Running as: {username}")
     
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    csv_filename = f"twitter_leads_stealth_{username}_{date_str}.csv"
+    csv_filename = f"twitter_leads_{username}_{date_str}.csv"
     
     with sync_playwright() as p:
         browser, context = create_stealth_browser(p)

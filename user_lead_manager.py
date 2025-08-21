@@ -31,7 +31,7 @@ class UserLeadManager:
     def __init__(self):
         """Initialize with platform definitions"""
         self.platform_patterns = {
-            "🐦 Twitter": ["twitter_leads_stealth_*.csv"],
+            "🐦 Twitter": ["twitter_leads_*.csv"],
             "💼 LinkedIn": ["linkedin_leads_*.csv"],
             "📘 Facebook": ["facebook_leads_*.csv"],
             "🎵 TikTok": ["tiktok_leads_*.csv"],

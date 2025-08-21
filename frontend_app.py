@@ -5448,7 +5448,7 @@ with tab2: # Lead Results
                 if session_found:
                     # Use the SAME file patterns as paid users
                     demo_patterns = {
-                        "🐦 Twitter": f"twitter_*{username}_*.csv"
+                        "🐦 Twitter": f"twitter_leads_*{username}_*.csv"
                     }
                     
                     # Look for recent files (last 2 hours) - same as paid users
@@ -5639,14 +5639,14 @@ with tab2: # Lead Results
                     return {}
                 
                 return {
-                    "🐦 Twitter": f"twitter_lesds_*{username}_*.csv",
-                    "💼 LinkedIn": f"linkedin_lesds_*{username}_*.csv", 
-                    "📘 Facebook": f"facebook_lesds_*{username}_*.csv",
-                    "🎵 TikTok": f"tiktok_lesds_lesds_*{username}_*.csv",
-                    "📸 Instagram": f"instagram_lesds_*{username}_*.csv",
-                    "🎥 YouTube": f"youtube_lesds_*{username}_*.csv",
-                    "📝 Medium": f"medium_lesds_*{username}_*.csv",
-                    "🗨️ Reddit": f"reddit_lesds_*{username}_*.csv"
+                    "🐦 Twitter": f"twitter_leads_*{username}_*.csv",
+                    "💼 LinkedIn": f"linkedin_leads_*{username}_*.csv", 
+                    "📘 Facebook": f"facebook_leads_*{username}_*.csv",
+                    "🎵 TikTok": f"tiktok_leads_*{username}_*.csv",
+                    "📸 Instagram": f"instagram_leads_*{username}_*.csv",
+                    "🎥 YouTube": f"youtube_leads_*{username}_*.csv",
+                    "📝 Medium": f"medium_leads_*{username}_*.csv",
+                    "🗨️ Reddit": f"reddit_leads_*{username}_*.csv"
                 }
 
             # ✅ USE USER-SPECIFIC PATTERNS
@@ -5670,8 +5670,17 @@ with tab2: # Lead Results
                         latest_user_file = get_user_csv_file(user_pattern, username)
                     else:
                         # ✅ METHOD 2: Fallback - manual user-specific file finding
-                        import glob
-                        user_files = sorted(glob.glob(user_pattern), key=os.path.getmtime, reverse=True)
+                        import glob, re
+
+                        # Case-insensitive match + support running from subfolders
+                        candidates = glob.glob(user_pattern) + glob.glob(f"./**/{user_pattern}", recursive=True)
+
+                        # keep files that contain the username case-insensitively
+                        rx = re.compile(re.escape(username), re.IGNORECASE)
+                        user_files = [p for p in candidates if rx.search(p)]
+
+                        # newest first
+                        user_files.sort(key=os.path.getmtime, reverse=True)
                         latest_user_file = user_files[0] if user_files else None
                     
                     if latest_user_file and os.path.exists(latest_user_file):
@@ -5763,60 +5772,6 @@ with tab2: # Lead Results
                 st.success(f"✅ Found {total_leads} leads belonging to you")
             else:
                 st.warning(f"📡 No leads found for {username} yet")
-            
-            # Load and combine all empire data
-            all_empire_data = []
-            empire_totals = {}
-            language_stats = {}
-            
-            for platform_name, pattern in empire_platforms.items():
-                latest_file = get_latest_csv(pattern)
-                if latest_file and os.path.exists(latest_file):
-                    try:
-                        df = pd.read_csv(latest_file)
-                        if not df.empty:
-                            # USER FILTERING: Only show data for current user
-                            if user_authenticated and USER_CSV_FILTER_AVAILABLE:
-                                username = simple_auth.get_current_user()
-                                if username:
-                                    df = filter_empire_data_by_user(df, username)
-                            
-                            # Continue with existing logic only if we still have data
-                            if not df.empty:
-                                # Ensure platform column exists
-                                if 'platform' not in df.columns:
-                                    platform_key = platform_name.split()[1].lower()
-                                    df['platform'] = platform_key
-                                
-                                all_empire_data.append(df)
-                                empire_totals[platform_name] = len(df)
-                            else:
-                                empire_totals[platform_name] = 0
-                            
-                            # 🌍 NEW: Collect language statistics
-                            if MULTILINGUAL_AVAILABLE and 'detected_language' in df.columns:
-                                platform_languages = df['detected_language'].value_counts().to_dict()
-                                for lang, count in platform_languages.items():
-                                    language_stats[lang] = language_stats.get(lang, 0) + count
-                        else:
-                            empire_totals[platform_name] = 0
-                    except Exception as e:
-                        empire_totals[platform_name] = 0
-                else:
-                    empire_totals[platform_name] = 0
-            
-            # Combine empire data
-            if all_empire_data:
-                empire_df = pd.concat(all_empire_data, ignore_index=True)
-                empire_df = empire_df.drop_duplicates(subset=['name', 'handle'], keep='first')
-                
-                platforms_with_data = {
-                    **{name: pattern for name, pattern in empire_platforms.items()},
-                    "👑 Empire Combined": empire_df
-                }
-            else:
-                empire_df = pd.DataFrame()
-                platforms_with_data = empire_platforms
             
             # Empire command center
             col1, col2, col3 = st.columns([1, 1, 1])
@@ -6267,94 +6222,6 @@ with tab2: # Lead Results
                         csv_files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
                         
                         return csv_files
-
-                    def extract_platform_from_filename(filename):
-                        """Extract platform name from filename"""
-                        filename_lower = filename.lower()
-                        
-                        platforms = ['twitter', 'facebook', 'linkedin', 'instagram', 'tiktok', 'youtube', 'medium', 'reddit']
-                        
-                        for platform in platforms:
-                            if platform in filename_lower:
-                                return platform
-                        
-                        return 'unknown'
-
-                    def extract_search_term_from_filename(filename):
-                        """Extract search term from filename if possible"""
-                        try:
-                            # Look for patterns like "crypto_trader" or "stock_broker"
-                            import re
-                            
-                            # Remove common parts
-                            clean_name = filename.replace('_leads', '').replace('_unified', '').replace('.csv', '')
-                            
-                            # Split by underscores and look for search terms
-                            parts = clean_name.split('_')
-                            
-                            # Filter out common words
-                            exclude_words = ['leads', 'unified', 'twitter', 'facebook', 'linkedin', 'instagram', 
-                                            'tiktok', 'youtube', 'medium', 'reddit', 'scraper', 'results']
-                            
-                            search_parts = [part for part in parts if part.lower() not in exclude_words and len(part) > 2]
-                            
-                            if search_parts:
-                                return ' '.join(search_parts[:3])  # Take first 3 meaningful parts
-                            
-                            return 'Unknown'
-                            
-                        except:
-                            return 'Unknown'
-
-                    def get_platform_emoji(platform):
-                        """Get emoji for platform"""
-                        emoji_map = {
-                            'twitter': '🐦',
-                            'facebook': '📘', 
-                            'linkedin': '💼',
-                            'instagram': '📷',
-                            'tiktok': '🎵',
-                            'youtube': '📺',
-                            'medium': '📝',
-                            'reddit': '🔗',
-                            'unknown': '📄'
-                        }
-                        return emoji_map.get(platform, '📄')
-
-                    def create_bulk_download(csv_files, username):
-                        """Create zip file with all CSV files"""
-                        import zipfile
-                        import io
-                        from datetime import datetime
-                        
-                        try:
-                            # Create zip file in memory
-                            zip_buffer = io.BytesIO()
-                            
-                            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                                for file_info in csv_files:
-                                    try:
-                                        zip_file.write(file_info['path'], file_info['name'])
-                                    except Exception as e:
-                                        print(f"Error adding {file_info['name']} to zip: {e}")
-                            
-                            zip_buffer.seek(0)
-                            
-                            # Create download button with unique key
-                            zip_filename = f"{username}_leads_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-                            
-                            st.download_button(
-                                label="📦 Download ZIP File",
-                                data=zip_buffer.getvalue(),
-                                file_name=zip_filename,
-                                mime='application/zip',
-                                key=f"bulk_download_zip_{username}_{datetime.now().strftime('%H%M%S')}"
-                            )
-                            
-                            st.success(f"✅ Created {zip_filename} with {len(csv_files)} files")
-                            
-                        except Exception as e:
-                            st.error(f"❌ Error creating bulk download: {e}")
 
                     def clean_old_csv_files(username):
                         """Clean CSV files older than 30 days"""
@@ -6919,7 +6786,7 @@ if MULTILINGUAL_AVAILABLE:
                     import glob
                     
                     platform_patterns = {
-                        "🐦 Twitter": ["twitter_leads_stealth_*.csv"],
+                        "🐦 Twitter": ["twitter_leads_*.csv"],
                         "💼 LinkedIn": ["linkedin_leads_*.csv"],
                         "📘 Facebook": ["facebook_leads_*.csv"],
                         "🎵 TikTok": ["tiktok_leads_*.csv"],
