@@ -3330,12 +3330,16 @@ def delete_campaign_from_library(username, campaign_id):
 st.markdown("""
 <style>
     .main-header {
-        margin-top: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
         text-align: center;
         color: #1E88E5;
-        margin-bottom: 2rem;
         font-size: 3rem;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    .header-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
     }
     .stats-box {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -3535,7 +3539,7 @@ st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 st.markdown("""
 <style>
 /* tighten the main container top padding */
-main .block-container { padding-top: 0.4rem; }  /* adjust to taste */
+main .block-container { padding-top: 0.2rem; }  /* adjust to taste */
 
 /* remove any extra margin above your title */
 h1.main-header { margin-top: 0 !important; }
