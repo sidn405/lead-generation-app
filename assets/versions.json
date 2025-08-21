@@ -1,0 +1,13 @@
+{
+  "map": {
+    "favicon-16x16.png": "assets/dist/favicon-16x16.459c85.png",
+    "favicon-32x32.png": "assets/dist/favicon-32x32.1d7282.png",
+    "favicon-180x180.png": "assets/dist/favicon-180x180.9dc8f8.png",
+    "favicon-256x256.png": "assets/dist/favicon-256x256.d2376a.png",
+    "favicon-512x512.png": "assets/dist/favicon-512x512.5a3294.png",
+    "logo-96.png": "assets/dist/logo-96.b39aec.png",
+    "logo-192.png": "assets/dist/logo-192.c1fb3d.png",
+    "logo-288.png": "assets/dist/logo-288.50c1f2.png"
+  },
+  "cache_version": "6d12bc9b"
+}
