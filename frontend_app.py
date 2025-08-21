@@ -1076,7 +1076,7 @@ def show_auth_required_dashboard():
     st.warning("🔐 Sign in to access your dashboard")
     
     # Value proposition
-    st.markdown("### 🚀 Lead Generator Empire")
+    st.markdown("###  Lead Generator Empire")
     st.markdown("**Generate high-quality leads from 8 platforms in minutes**")
     
     # Feature highlights
@@ -3054,7 +3054,7 @@ def show_auth_required_dashboard():
     st.warning("🔐 Sign in to access your credit dashboard")
     
     # Value proposition
-    st.markdown("### 🚀 Lead Generator Empire")
+    st.markdown("###  Lead Generator Empire")
     st.markdown("**Generate high-quality leads from 8 platforms in minutes**")
     
     # Feature highlights
@@ -3795,7 +3795,7 @@ with st.sidebar:
                     st.rerun()
                   
     st.markdown("---")
-    st.caption("🚀 Lead Generator Empire")
+    st.caption(" Lead Generator Empire")
     st.caption(f"Powered by 8 platforms")
 
 
@@ -3821,7 +3821,7 @@ with tab1:
         # Show simple credit status
         if not user_authenticated:
             st.warning("🔐 Join the Lead Generator Empire to start generating leads")
-            st.markdown("### 🚀 Lead Generator Empire")
+            st.markdown("###  Lead Generator Empire")
             st.markdown("**Generate high-quality leads from 8 platforms in minutes**")
             show_simple_credit_status()
         else:
