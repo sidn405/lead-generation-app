@@ -565,8 +565,37 @@ is_payment_return = restore_payment_authentication()
 
 import streamlit as st
 from PIL import Image
-import base64
+import json, base64
 from pathlib import Path
+
+# Load hashed filenames + cache version
+ver_path = Path("assets/versions.json")
+if ver_path.exists():
+    VERS = json.loads(ver_path.read_text())
+    MAP = VERS.get("map", {})
+    CACHE_VERSION = VERS.get("cache_version", "dev")
+else:
+    MAP, CACHE_VERSION = {}, "dev"
+
+def v(path: str) -> str:
+    # returns hashed path if available, else original
+    return MAP.get(Path(path).name, path)
+
+# — Favicons / manifest (hashed) —
+st.markdown(f"""
+<link rel="icon" type="image/png" sizes="32x32" href="./{v('favicon-32x32.png')}?v={CACHE_VERSION}">
+<link rel="icon" type="image/png" sizes="16x16" href="./{v('favicon-16x16.png')}?v={CACHE_VERSION}">
+<link rel="apple-touch-icon" href="./{v('apple-touch-icon.png')}?v={CACHE_VERSION}">
+<link rel="manifest" href="./{v('manifest-fullscreen.json')}?v={CACHE_VERSION}">
+""", unsafe_allow_html=True)
+
+# — Optional inline base64 fallback —
+fav32 = Path(v('favicon-32x32.png'))
+if not fav32.exists():   # hashed lives in assets/dist/; try that path
+    fav32 = Path("./assets/dist") / Path(v('favicon-32x32.png')).name
+if fav32.exists():
+    b64 = base64.b64encode(Path(fav32).read_bytes()).decode()
+    st.markdown(f'<link rel="icon" type="image/png" href="data:image/png;base64,{b64}">', unsafe_allow_html=True)
 
 st.set_page_config(
     page_title="Lead Generator Empire", 
@@ -595,17 +624,17 @@ st.markdown("""
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 """, unsafe_allow_html=True)
 
-# 3) Register service worker (runs in the browser; 'navigator' is a browser object)
-st.markdown("""
+# 3) inject CACHE_VERSION for SW registration
+st.markdown(f"""
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // If the file is at the project root (recommended):
-    navigator.serviceWorker.register('/assets/service-worker.js')
-      .then(reg => console.log('✅ Service Worker registered with scope:', reg.scope))
-      .catch(err => console.log('❌ Service Worker registration failed:', err));
-  });
-}
+  window.LGE_CACHE_VERSION = "{CACHE_VERSION}";
+  if ('serviceWorker' in navigator) {{
+    window.addEventListener('load', () => {{
+      navigator.serviceWorker.register('/service-worker.js?v={CACHE_VERSION}')
+        .then(reg => console.log('SW scope:', reg.scope))
+        .catch(err => console.log('SW registration failed:', err));
+    }});
+  }}
 </script>
 """, unsafe_allow_html=True)
 
@@ -3556,6 +3585,7 @@ import streamlit as st
 # ---- config ----
 LOGO_SRC = Path("assets/logo-192.png")   # or logo-288.png
 HEADER_LOGO_PX = 36                      # size next to the H1
+APP_TITLE = "Lead Generator Empire"
 
 def header_logo_left(path: Path, width: int = 36, title: str = "App"):
     if not path.exists():
@@ -3563,14 +3593,46 @@ def header_logo_left(path: Path, width: int = 36, title: str = "App"):
         return
     b64 = base64.b64encode(path.read_bytes()).decode()
 
+    st.markdown(f"""
+    <style>
+      /* tighten Streamlit default top padding */
+      main .block-container {{ padding-top: 0.2rem !important; }}
+
+      /* header row */
+      .lge-header {{ 
+        display:flex; align-items:center; gap:10px; 
+        margin:0 !important; padding:0 !important;
+      }}
+      .lge-header h1 {{
+        margin:0 !important; padding:0 !important;
+        line-height:1.1; font-size:2.25rem;  /* tweak to taste */
+      }}
+      .lge-underline {{
+        width:56px;height:3px;margin-top:6px;
+        background:linear-gradient(90deg,#C29D41,transparent);border-radius:2px;
+      }}
+      @media (max-width:640px){{
+        .lge-header h1 {{ font-size:1.75rem; }}
+      }}
+    </style>
+
+    <div class="lge-header">
+      <img src="data:image/png;base64,{b64}" width="{width}" height="{width}" alt="" style="border-radius:8px"/>
+      <div>
+        <h1>{title}</h1>
+        <div class="lge-underline"></div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 # render it
-header_logo_left(LOGO_SRC, HEADER_LOGO_PX)
+header_logo_left(LOGO_SRC, HEADER_LOGO_PX, APP_TITLE)
 
 col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("""
         <div style="display:flex; align-items:center; gap:10px;">
-            <img src="data:image/png;base64,{b64}" width="{width}" height="{width}" alt="" style="border-radius:8px"/>
+            <img src="assets/favicon-32x32.png" alt="" width="36">
             <h1 class="main-header" style="margin:0;">Lead Generator Empire</h1>
         </div>
     """, unsafe_allow_html=True)
