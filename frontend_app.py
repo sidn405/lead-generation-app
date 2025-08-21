@@ -3574,7 +3574,7 @@ LOGO_SRC = Path("assets/logo-192.png")   # or logo-288.png
 HEADER_LOGO_PX = 40                      # size next to the H1
 APP_TITLE = "Lead Generator Empire"
 
-def header_logo_left(path: Path, width: int = 36, title: str = "App"):
+def header_logo_left(path: Path, width: int = 40, title: str = "App"):
     if not path.exists():
         st.markdown(f"<small style='color:#888'>Logo not found: {path}</small>", unsafe_allow_html=True)
         return
@@ -3583,7 +3583,7 @@ def header_logo_left(path: Path, width: int = 36, title: str = "App"):
     st.markdown(f"""
     <style>
       /* tighten Streamlit default top padding */
-      main .block-container {{ padding-top: 0.2rem !important; }}
+      main .block-container {{ padding-top: 0.1rem !important; }}
 
       /* header row */
       .lge-header {{ 
@@ -3611,6 +3611,8 @@ def header_logo_left(path: Path, width: int = 36, title: str = "App"):
       </div>
     </div>
     """, unsafe_allow_html=True)
+    
+header_logo_left(LOGO_SRC, DISPLAY_PX)
 
 # Tighten top padding + zero out H1 margins
 st.markdown("""
