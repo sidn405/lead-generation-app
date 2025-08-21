@@ -3593,44 +3593,44 @@ def header_logo_left(path: Path, width: int = 36, title: str = "App"):
         return
     b64 = base64.b64encode(path.read_bytes()).decode()
 
-    st.markdown(f"""
-    <style>
-      /* tighten Streamlit default top padding */
-      main .block-container {{ padding-top: 0.2rem !important; }}
-
-      /* header row */
-      .lge-header {{ 
-        display:flex; align-items:center; gap:10px; 
-        margin:0 !important; padding:0 !important;
-      }}
-      .lge-header h1 {{
-        margin:0 !important; padding:0 !important;
-        line-height:1.1; font-size:2.25rem;  /* tweak to taste */
-      }}
-      .lge-underline {{
-        width:56px;height:3px;margin-top:6px;
-        background:linear-gradient(90deg,#C29D41,transparent);border-radius:2px;
-      }}
-      @media (max-width:640px){{
-        .lge-header h1 {{ font-size:1.75rem; }}
-      }}
-    </style>
-
-    <div class="lge-header">
-      <img src="data:image/png;base64,{b64}" width="{width}" height="{width}" alt="" style="border-radius:8px"/>
-      <div>
-        <h1>{title}</h1>
-        <div class="lge-underline"></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Tighten top padding + zero out H1 margins
-st.markdown("""
+    st.markdown("""
 <style>
-main .block-container { padding-top: 0.1rem !important; }
-h1.main-header { margin: 0 !important; line-height: 1.1; }
-.lge-head { display:flex; align-items:center; gap:10px; margin:0; padding:0; }
+  /* tighten top spacing */
+  main .block-container { padding-top: 0.1rem !important; }
+
+  /* header row next to sidebar */
+  .lge-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding-left: 12px;            /* matches sidebar gutter */
+  }
+
+  .lge-head img {
+    width: 40px; height: 40px;     /* desktop default */
+    border-radius: 8px;
+  }
+
+  h1.main-header {
+    margin: 0 !important;
+    line-height: 1.15;
+    /* responsive font: min 1.4rem, fluid, max 2.4rem */
+    font-size: clamp(1.4rem, 2.5vw, 2.4rem);
+  }
+
+  /* Tablet */
+  @media (max-width: 1024px) {
+    .lge-head { padding-left: 10px; gap: 10px; }
+    .lge-head img { width: 36px; height: 36px; }
+  }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .lge-head { padding-left: 8px; gap: 8px; }
+    .lge-head img { width: 28px; height: 28px; }
+    h1.main-header { font-size: clamp(1.2rem, 5vw, 1.6rem); }
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -3641,10 +3641,10 @@ logo_b64 = base64.b64encode(logo_path.read_bytes()).decode() if logo_path.exists
 col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown(f"""
-        <div class="lge-head">
-            <img src="data:image/png;base64,{logo_b64}" width="36" height="36" alt="" style="border-radius:8px"/>
-            <h1 class="main-header">Lead Generator Empire</h1>
-        </div>
+      <div class="lge-head">
+        <img src="data:image/png;base64,{logo_b64}" alt="">
+        <h1 class="main-header">Lead Generator Empire</h1>
+      </div>
     """, unsafe_allow_html=True)
 
     if MULTILINGUAL_AVAILABLE:
