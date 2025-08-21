@@ -3532,6 +3532,19 @@ elif "cancelled" in query_params:
     st.stop()
 st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 # Header (simplified - no unnecessary dashboard button)
+st.markdown("""
+<style>
+/* tighten the main container top padding */
+main .block-container { padding-top: 0.8rem; }  /* adjust to taste */
+
+/* remove any extra margin above your title */
+h1.main-header { margin-top: 0 !important; }
+
+/* optional: shrink space just under the header row */
+.lge-header-spacer { height: 4px; }
+</style>
+""", unsafe_allow_html=True)
+
 col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("""
