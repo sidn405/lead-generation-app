@@ -3565,26 +3565,13 @@ elif "cancelled" in query_params:
     st.stop()
 st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 # Header (simplified - no unnecessary dashboard button)
-st.markdown("""
-<style>
-/* tighten the main container top padding */
-main .block-container { padding-top: 0.2rem; }  /* adjust to taste */
-
-/* remove any extra margin above your title */
-h1.main-header { margin-top: 0 !important; }
-
-/* optional: shrink space just under the header row */
-.lge-header-spacer { height: 4px; }
-</style>
-""", unsafe_allow_html=True)
-
 import base64
 from pathlib import Path
 import streamlit as st
 
 # ---- config ----
 LOGO_SRC = Path("assets/logo-192.png")   # or logo-288.png
-HEADER_LOGO_PX = 36                      # size next to the H1
+HEADER_LOGO_PX = 40                      # size next to the H1
 APP_TITLE = "Lead Generator Empire"
 
 def header_logo_left(path: Path, width: int = 36, title: str = "App"):
@@ -3642,7 +3629,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("""
         <div class="lge-head">
-            <img src="data:image/png;base64,{logo_b64}" width="36" height="36" alt="" style="border-radius:8px"/>
+            <img src="data:image/png;base64,{logo_b64}" width="40" height="40" alt="" style="border-radius:8px"/>
             <h1 class="main-header">Lead Generator Empire</h1>
         </div>
     """, unsafe_allow_html=True)
