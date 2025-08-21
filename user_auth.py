@@ -243,7 +243,8 @@ class SimpleCreditAuth:
     
     def get_current_user(self) -> str:
         """Get current username"""
-        return st.session_state.get('username')
+        username = st.session_state.get('username')
+        return username.lower() if username else username
     
     def get_user_credits(self) -> int:
         """Get user's current credits or demo leads remaining"""

@@ -180,8 +180,7 @@ def init_database():
 # Initialize database early in your app
 if 'db_initialized' not in st.session_state:
     st.session_state.db_initialized = init_database()
-    if st.session_state.db_initialized:
-        st.success("🎯 Database ready!")
+    
 
 # Add this as the FIRST thing in your main app
 payment_handled = automatic_payment_capture()
@@ -567,6 +566,7 @@ is_payment_return = restore_payment_authentication()
 import streamlit as st
 from PIL import Image
 import base64
+from pathlib import Path
 
 st.set_page_config(
     page_title="Lead Generator Empire", 
@@ -610,24 +610,24 @@ if ('serviceWorker' in navigator) {
 """, unsafe_allow_html=True)
 
 # CSS to keep it tidy
-st.markdown("""
-<style>
-  .sidebar-logo { display:flex; justify-content:center; margin: 6px 0 2px; }
-  .sidebar-logo img { border-radius: 10px; }
-  .sidebar-caption { text-align:center; color:#A0A0A0; font-size: 12px; }
-</style>
-""", unsafe_allow_html=True)
+# pick the sharp source (192px) and display at 96px
+LOGO_SRC = Path("assets/logo-192.png")  # or logo-288.png
+DISPLAY_PX = 96
 
-# Sidebar logo (no Streamlit scaling, uses browser DPR selection)
-st.sidebar.markdown("""
-  <div class="sidebar-logo">
-    <img
-      src="assets/logo-96.png"
-      srcset="assets/logo-96.png 1x, assets/logo-192.png 2x, assets/logo-288.png 3x"
-      width="96" height="96" alt="">
-  </div>
-  <div class="sidebar-caption">Lead Generator Empire</div>
-""", unsafe_allow_html=True)
+def sidebar_logo(path: Path, width: int = 96):
+    if not path.exists():
+        st.sidebar.caption(f"Logo not found at: {path}")  # quick debug hint
+        return
+    b64 = base64.b64encode(path.read_bytes()).decode()
+    st.sidebar.markdown(f"""
+    <div style="text-align:center;margin:6px 0 2px;">
+      <img src="data:image/png;base64,{b64}" width="{width}" height="{width}"
+           alt="" style="border-radius:10px"/>
+      <div style="font-size:12px;color:#A0A0A0;margin-top:4px;">Lead Generator Empire</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+sidebar_logo(LOGO_SRC, DISPLAY_PX)
 
 
 # 4) Dark theme with your brand gold (#C29D41)
@@ -3330,6 +3330,7 @@ def delete_campaign_from_library(username, campaign_id):
 st.markdown("""
 <style>
     .main-header {
+        margin-top: 0 !important;
         text-align: center;
         color: #1E88E5;
         margin-bottom: 2rem;
@@ -5979,14 +5980,14 @@ with tab2: # Lead Results
                 
                 # Define platform patterns to look for
                 platform_patterns = {
-                    'twitter': ['*twitter*leads*.csv', '*twitter_unified*.csv'],
-                    'facebook': ['*facebook*leads*.csv', '*facebook_unified*.csv'], 
-                    'linkedin': ['*linkedin*leads*.csv', '*linkedin_unified*.csv'],
-                    'instagram': ['*instagram*leads*.csv', '*instagram_unified*.csv'],
-                    'tiktok': ['*tiktok*leads*.csv', '*tiktok_unified*.csv'],
-                    'youtube': ['*youtube*leads*.csv', '*youtube_unified*.csv'],
-                    'medium': ['*medium*leads*.csv', '*medium_unified*.csv'],
-                    'reddit': ['*reddit*leads*.csv', '*reddit_unified*.csv']
+                    'twitter': ['*twitter*leads*stealth*.csv'],
+                    'facebook': ['*facebook*leads*.csv'], 
+                    'linkedin': ['*linkedin*leads*.csv'],
+                    'instagram': ['*instagram*leads*.csv'],
+                    'tiktok': ['*tiktok*leads*.csv'],
+                    'youtube': ['*youtube*leads*.csv'],
+                    'medium': ['*medium*leads*.csv'],
+                    'reddit': ['*reddit*leads*.csv']
                 }
                 
                 # Look for recent files (last 30 days)
