@@ -5670,17 +5670,8 @@ with tab2: # Lead Results
                         latest_user_file = get_user_csv_file(user_pattern, username)
                     else:
                         # ✅ METHOD 2: Fallback - manual user-specific file finding
-                        import glob, re
-
-                        # Case-insensitive match + support running from subfolders
-                        candidates = glob.glob(user_pattern) + glob.glob(f"./**/{user_pattern}", recursive=True)
-
-                        # keep files that contain the username case-insensitively
-                        rx = re.compile(re.escape(username), re.IGNORECASE)
-                        user_files = [p for p in candidates if rx.search(p)]
-
-                        # newest first
-                        user_files.sort(key=os.path.getmtime, reverse=True)
+                        import glob
+                        user_files = sorted(glob.glob(user_pattern), key=os.path.getmtime, reverse=True)
                         latest_user_file = user_files[0] if user_files else None
                     
                     if latest_user_file and os.path.exists(latest_user_file):
@@ -6096,7 +6087,7 @@ with tab2: # Lead Results
                 
                 # Define platform patterns to look for
                 platform_patterns = {
-                    'twitter': ['*twitter*leads*stealth*.csv'],
+                    'twitter': ['*twitter*leads*.csv'],
                     'facebook': ['*facebook*leads*.csv'], 
                     'linkedin': ['*linkedin*leads*.csv'],
                     'instagram': ['*instagram*leads*.csv'],
