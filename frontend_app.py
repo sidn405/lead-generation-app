@@ -8425,247 +8425,258 @@ with tab6:  # Settings tab
                         else:
                             st.metric("Status", "Active")
 
-                    # ✅ NEW: PLATFORM PERFORMANCE SECTION
+                    # ============================================================
+                    # ✅ PLATFORM PERFORMANCE + RECENT ACTIVITY + QUICK STATS
+                    # (Drop-in replacement; safe if user_info['transactions'] is missing)
+                    # ============================================================
+
                     st.markdown("---")
                     st.subheader("🎯 Platform Performance")
-                    
-                    # Calculate platform statistics from transactions
-                    platform_stats = {}
-                    platform_leads = {}
-                    platform_campaigns = {}
-                    
-                    transactions = user_info.get('transactions', [])
-                    
+
+                    # 1) Normalize transactions (prefer DB, otherwise derive from CSVs)
+                    # ----------------------------------------------------------------
+                    username = simple_auth.get_current_user()
+
+                    # Try to use what the server returned first
+                    transactions = (user_info or {}).get("transactions") or []
+
+                    # Optional: try DB if list is empty and you have a helper for it
+                    # (wrap in try/except so it doesn't crash if the helper doesn't exist)
+                    if not transactions:
+                        try:
+                            # Implement credit_system.get_user_transactions if not present:
+                            # returns list of dicts with keys like: type, timestamp, platform, leads_downloaded, credits_used
+                            transactions = credit_system.get_user_transactions(username, since_days=90)
+                        except Exception as _:
+                            transactions = []
+
+                    # If still empty, we can derive minimal “transactions” from user CSV files so charts aren’t blank
+                    if not transactions:
+                        try:
+                            derived = []
+                            for f in get_user_csv_files(username):
+                                derived.append({
+                                    "type": "lead_download",
+                                    "timestamp": datetime.now().isoformat(),  # best-effort
+                                    "platform": f["platform"],
+                                    "leads_downloaded": int(f.get("leads", 0)),
+                                    "credits_used": int(f.get("leads", 0)),
+                                })
+                            transactions = derived
+                        except Exception:
+                            pass
+
+                    # 2) Compute per-platform aggregates defensively
+                    # ----------------------------------------------------------------
+                    platform_emojis = {
+                        'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
+                        'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
+                        'medium': '📝', 'reddit': '🗨️', 'parallel_session': '⚡'
+                    }
+
+                    platform_leads: dict[str, int] = {}
+                    platform_campaigns: dict[str, int] = {}
+
+                    def norm_platform(p: str) -> str:
+                        if not p:
+                            return "unknown"
+                        p = str(p).strip().lower()
+                        # tolerate a few synonyms
+                        aliases = {"x": "twitter", "yt": "youtube", "ig": "instagram"}
+                        return aliases.get(p, p)
+
+                    # normalize & roll up
                     for tx in transactions:
-                        if tx.get('type') == 'lead_download':
-                            platform = tx.get('platform', 'unknown')
-                            leads_count = tx.get('leads_downloaded', 0)
-                            
-                            # Track total leads per platform
-                            if platform not in platform_leads:
-                                platform_leads[platform] = 0
-                                platform_campaigns[platform] = 0
-                            
-                            platform_leads[platform] += leads_count
-                            platform_campaigns[platform] += 1
-                    
-                    # Display platform performance
+                        if (tx or {}).get("type") == "lead_download":
+                            p = norm_platform(tx.get("platform") or tx.get("source") or "unknown")
+                            n = tx.get("leads_downloaded")
+                            if n is None:
+                                # some code logs credits_used instead of leads_downloaded
+                                n = tx.get("credits_used", 0)
+                            try:
+                                n = int(n)
+                            except Exception:
+                                n = 0
+
+                            platform_leads[p] = platform_leads.get(p, 0) + n
+                            platform_campaigns[p] = platform_campaigns.get(p, 0) + 1
+
+                    # 3) Totals used by multiple sections (guaranteed)
+                    # ----------------------------------------------------------------
+                    total_leads = sum(platform_leads.values())
+                    total_campaigns = sum(platform_campaigns.values())
+
+                    # If server already computed totals, prefer those (keeps “210” you show up top)
+                    total_leads = user_info.get("total_leads", total_leads) if user_info else total_leads
+
+                    # days_active from first/last activity (fallback 1)
+                    def _parse_ts(ts):
+                        try:
+                            return datetime.fromisoformat(ts)
+                        except Exception:
+                            return None
+
+                    times = [_parse_ts(tx.get("timestamp", "")) for tx in transactions if tx.get("timestamp")]
+                    times = [t for t in times if t is not None]
+                    if times:
+                        days_active = max(1, (max(times) - min(times)).days + 1)
+                    else:
+                        days_active = 1
+
+                    # 4) Render Platform Performance UI
+                    # ----------------------------------------------------------------
                     if platform_leads:
-                        # Sort platforms by total leads (descending)
                         sorted_platforms = sorted(platform_leads.items(), key=lambda x: x[1], reverse=True)
-                        
-                        # Create performance metrics
+
                         perf_col1, perf_col2, perf_col3 = st.columns(3)
-                        
+
                         with perf_col1:
                             st.markdown("**📊 Leads by Platform:**")
-                            for platform, leads in sorted_platforms[:5]:  # Top 5 platforms
-                                percentage = (leads / total_leads * 100) if total_leads > 0 else 0
-                                
-                                # Platform emojis
-                                platform_emojis = {
-                                    'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
-                                    'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
-                                    'medium': '📝', 'reddit': '🗨️', 'parallel_session': '⚡'
-                                }
-                                
-                                emoji = platform_emojis.get(platform, '📱')
-                                st.metric(f"{emoji} {platform.title()}", leads, delta=f"{percentage:.1f}%")
-                        
+                            for platform, leads in sorted_platforms[:5]:
+                                pct = (leads / total_leads * 100) if total_leads > 0 else 0
+                                st.metric(f"{platform_emojis.get(platform,'📱')} {platform.title()}",
+                                        leads, delta=f"{pct:.1f}%")
+
                         with perf_col2:
                             st.markdown("**🎯 Performance Metrics:**")
-                            
-                            # Best performing platform
                             best_platform = sorted_platforms[0] if sorted_platforms else ('none', 0)
-                            st.metric("🏆 Top Platform", f"{best_platform[0].title()}", delta=f"{best_platform[1]} leads")
-                            
-                            # Average leads per campaign
-                            avg_leads = total_leads / total_campaigns if total_campaigns > 0 else 0
+                            st.metric("🏆 Top Platform", best_platform[0].title(), delta=f"{best_platform[1]} leads")
+                            avg_leads = (total_leads / total_campaigns) if total_campaigns > 0 else 0
                             st.metric("📈 Avg Leads/Campaign", f"{avg_leads:.1f}")
-                            
-                            # Platform diversity
                             active_platforms = len([p for p, l in platform_leads.items() if l > 0])
                             st.metric("🌍 Active Platforms", active_platforms)
-                        
+
                         with perf_col3:
                             st.markdown("**⚡ Efficiency Stats:**")
-                            
-                            # Most recent activity
-                            if transactions:
-                                latest_tx = max(transactions, key=lambda x: x.get('timestamp', ''))
-                                latest_platform = latest_tx.get('platform', 'unknown')
-                                latest_leads = latest_tx.get('leads_downloaded', 0)
-                                
-                                st.metric("🕒 Latest Campaign", latest_platform.title(), delta=f"{latest_leads} leads")
-                            
-                            # Total campaigns
+                            if times:
+                                latest_tx = max(times)
+                                # find latest platform/leads for that timestamp if we can
+                                latest = max(
+                                    (t for t in transactions if _parse_ts(t.get("timestamp","")) == latest_tx),
+                                    key=lambda t: t.get("leads_downloaded", t.get("credits_used", 0)),
+                                    default={}
+                                )
+                                lp = norm_platform(latest.get("platform","unknown"))
+                                ln = int(latest.get("leads_downloaded", latest.get("credits_used", 0) or 0))
+                                st.metric("🕒 Latest Campaign", lp.title(), delta=f"{ln} leads")
                             st.metric("🚀 Total Campaigns", total_campaigns)
-                            
-                            # Success rate (campaigns with >0 leads)
-                            successful_campaigns = len([tx for tx in transactions 
-                                                    if tx.get('type') == 'lead_download' and tx.get('leads_downloaded', 0) > 0])
-                            success_rate = (successful_campaigns / total_campaigns * 100) if total_campaigns > 0 else 0
+                            successful = len([tx for tx in transactions
+                                            if tx.get("type") == "lead_download" and (tx.get("leads_downloaded") or tx.get("credits_used", 0)) > 0])
+                            success_rate = (successful / total_campaigns * 100) if total_campaigns > 0 else 0
                             st.metric("✅ Success Rate", f"{success_rate:.1f}%")
-                        
-                        # ✅ PLATFORM PERFORMANCE CHART
+
+                        # Bar view
                         if len(sorted_platforms) > 1:
                             st.markdown("**📊 Platform Distribution:**")
-                            
-                            # Create simple bar chart using metrics
                             chart_cols = st.columns(len(sorted_platforms))
                             max_leads = max(leads for _, leads in sorted_platforms)
-                            
                             for i, (platform, leads) in enumerate(sorted_platforms):
                                 with chart_cols[i]:
-                                    # Calculate bar height (normalized to 100)
-                                    bar_height = int((leads / max_leads * 100)) if max_leads > 0 else 0
-                                    
-                                    # Platform emoji
-                                    emoji = platform_emojis.get(platform, '📱')
-                                    
-                                    # Simple visual bar using progress
-                                    st.markdown(f"**{emoji} {platform.title()}**")
+                                    st.markdown(f"**{platform_emojis.get(platform,'📱')} {platform.title()}**")
                                     st.progress(leads / max_leads if max_leads > 0 else 0)
-                                    st.caption(f"{leads} leads ({(leads/total_leads*100):.1f}%)")
-                    
+                                    pct = (leads / total_leads * 100) if total_leads > 0 else 0
+                                    st.caption(f"{leads} leads ({pct:.1f}%)")
+
                     else:
                         st.info("📊 No platform performance data yet. Generate some leads to see your stats!")
 
-                    # ✅ CONDENSED RECENT ACTIVITY (DROPDOWN)
+                    # 5) Recent Activity (always shows something if we had any transactions)
+                    # ----------------------------------------------------------------
                     st.markdown("---")
-                    
+
                     if transactions:
-                        # Summary stats for recent activity
-                        recent_transactions = sorted(transactions, key=lambda x: x.get('timestamp', ''), reverse=True)
+                        recent_transactions = sorted(
+                            [t for t in transactions if t],
+                            key=lambda x: x.get('timestamp', ''),
+                            reverse=True,
+                        )
                         recent_count = len(recent_transactions)
-                        
-                        # Show summary
+
                         activity_summary_col1, activity_summary_col2, activity_summary_col3 = st.columns(3)
-                        
                         with activity_summary_col1:
                             st.metric("📋 Total Activities", recent_count)
-                        
                         with activity_summary_col2:
-                            # Most recent activity
-                            if recent_transactions:
-                                latest = recent_transactions[0]
-                                latest_type = latest.get('type', 'unknown')
-                                if latest_type == 'lead_download':
-                                    summary = f"Generated {latest.get('leads_downloaded', 0)} leads"
-                                elif latest_type == 'credit_purchase':
-                                    summary = f"Purchased {latest.get('credits_added', 0)} credits"
-                                else:
-                                    summary = latest_type.replace('_', ' ').title()
-                                
-                                st.metric("🕒 Latest Activity", summary)
-                        
+                            latest = recent_transactions[0]
+                            latest_type = latest.get('type', 'unknown')
+                            if latest_type == 'lead_download':
+                                summary = f"Generated {int(latest.get('leads_downloaded', latest.get('credits_used', 0) or 0))} leads"
+                            elif latest_type == 'credit_purchase':
+                                summary = f"Purchased {int(latest.get('credits_added', 0))} credits"
+                            else:
+                                summary = latest_type.replace('_', ' ').title()
+                            st.metric("🕒 Latest Activity", summary)
                         with activity_summary_col3:
-                            # Recent activity timeframe
-                            if len(recent_transactions) >= 2:
-                                try:
-                                    latest_time = datetime.fromisoformat(recent_transactions[0].get('timestamp', ''))
-                                    oldest_time = datetime.fromisoformat(recent_transactions[-1].get('timestamp', ''))
-                                    timespan = (latest_time - oldest_time).days
-                                    st.metric("📅 Activity Span", f"{timespan} days")
-                                except:
-                                    st.metric("📅 Status", "Active")
-                        
-                        # ✅ COLLAPSIBLE DETAILED ACTIVITY LIST
+                            if len(recent_transactions) >= 2 and times:
+                                st.metric("📅 Activity Span", f"{(max(times)-min(times)).days} days")
+                            else:
+                                st.metric("📅 Status", "Active")
+
                         with st.expander(f"📋 View Detailed Activity History ({recent_count} entries)", expanded=False):
                             st.markdown("**Recent Activity Timeline:**")
-                            
-                            # Show last 15 transactions in a more compact format
-                            for i, tx in enumerate(recent_transactions[:15]):
+                            for tx in recent_transactions[:15]:
                                 tx_type = tx.get('type', 'unknown')
-                                timestamp = tx.get('timestamp', '')
-                                
-                                if timestamp:
-                                    try:
-                                        tx_date = datetime.fromisoformat(timestamp).strftime("%m/%d %H:%M")
-                                    except:
-                                        tx_date = timestamp
-                                else:
-                                    tx_date = "Unknown"
-                                
-                                # Create compact display
+                                ts = tx.get('timestamp', '')
+                                try:
+                                    tx_date = datetime.fromisoformat(ts).strftime("%m/%d %H:%M") if ts else "Unknown"
+                                except Exception:
+                                    tx_date = ts or "Unknown"
+
                                 if tx_type == 'lead_download':
-                                    leads_count = tx.get('leads_downloaded', 0)
-                                    platform = tx.get('platform', 'unknown')
-                                    
-                                    # Platform emoji
-                                    platform_emojis = {
-                                        'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
-                                        'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
-                                        'medium': '📝', 'reddit': '🗨️', 'parallel_session': '⚡'
-                                    }
-                                    emoji = platform_emojis.get(platform, '📱')
-                                    
-                                    st.success(f"{emoji} **{tx_date}**: Generated **{leads_count}** leads from {platform}")
-                                    
+                                    n = int(tx.get('leads_downloaded', tx.get('credits_used', 0) or 0))
+                                    p = norm_platform(tx.get('platform', 'unknown'))
+                                    st.success(f"{platform_emojis.get(p,'📱')} **{tx_date}**: Generated **{n}** leads from {p}")
                                 elif tx_type == 'credit_purchase':
-                                    credits_added = tx.get('credits_added', 0)
-                                    st.info(f"💳 **{tx_date}**: Purchased **{credits_added}** credits")
-                                    
-                                elif tx_type == 'demo_usage':
-                                    st.info(f"🎯 **{tx_date}**: Used demo lead")
-                                    
+                                    n = int(tx.get('credits_added', 0) or 0)
+                                    st.info(f"💳 **{tx_date}**: Purchased **{n}** credits")
                                 else:
-                                    st.caption(f"📋 **{tx_date}**: {tx_type.replace('_', ' ').title()}")
-                            
-                            # Show "load more" if there are more transactions
+                                    st.caption(f"📋 **{tx_date}**: {tx_type.replace('_',' ').title()}")
+
                             if len(recent_transactions) > 15:
                                 st.caption(f"... and {len(recent_transactions) - 15} more activities")
-                                
                                 if st.button("📄 Export Full Activity History"):
-                                    # Create CSV export of all transactions
                                     import pandas as pd
-                                    
-                                    export_data = []
-                                    for tx in transactions:
-                                        export_data.append({
-                                            'Date': tx.get('timestamp', ''),
-                                            'Type': tx.get('type', ''),
-                                            'Platform': tx.get('platform', ''),
-                                            'Leads': tx.get('leads_downloaded', 0),
-                                            'Credits': tx.get('credits_added', 0)
-                                        })
-                                    
-                                    df = pd.DataFrame(export_data)
-                                    csv = df.to_csv(index=False)
-                                    
+                                    export_data = [{
+                                        'Date': tx.get('timestamp', ''),
+                                        'Type': tx.get('type', ''),
+                                        'Platform': tx.get('platform', ''),
+                                        'Leads': int(tx.get('leads_downloaded', tx.get('credits_used', 0) or 0)),
+                                        'Credits': int(tx.get('credits_added', 0) or 0),
+                                    } for tx in transactions]
                                     st.download_button(
                                         label="📥 Download Activity History",
-                                        data=csv,
+                                        data=pd.DataFrame(export_data).to_csv(index=False),
                                         file_name=f"activity_history_{username}_{datetime.now().strftime('%Y%m%d')}.csv",
                                         mime="text/csv"
                                     )
                     else:
                         st.info("📋 No activity yet - start generating leads to see your history!")
 
-                    # ✅ QUICK STATS SUMMARY
+                    # 6) Quick Stats (now safe because totals exist)
+                    # ----------------------------------------------------------------
                     st.markdown("---")
                     st.subheader("⚡ Quick Stats Summary")
-                    
+
                     summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
-                    
                     with summary_col1:
-                        leads_per_day = total_leads / max(days_active, 1) if 'days_active' in locals() else 0
+                        leads_per_day = total_leads / max(days_active, 1)
                         st.metric("📈 Leads/Day", f"{leads_per_day:.1f}")
-                    
+
                     with summary_col2:
                         if platform_leads:
                             best_platform_name = max(platform_leads, key=platform_leads.get)
                             st.metric("🏆 Best Platform", best_platform_name.title())
                         else:
                             st.metric("🏆 Best Platform", "None yet")
-                    
+
                     with summary_col3:
-                        avg_campaign_size = total_leads / total_campaigns if total_campaigns > 0 else 0
+                        avg_campaign_size = (total_leads / total_campaigns) if total_campaigns > 0 else 0
                         st.metric("🎯 Avg Campaign", f"{avg_campaign_size:.1f} leads")
-                    
+
                     with summary_col4:
-                        efficiency = (total_leads / max(days_active, 1)) if 'days_active' in locals() and days_active > 0 else 0
+                        efficiency = total_leads / max(days_active, 1)
                         st.metric("⚡ Efficiency", f"{efficiency:.1f}/day")
+                    # ============================================================
+
 
                 else:
                     st.warning("⚠️ Could not load usage data")
