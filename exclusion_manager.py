@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Exclusion Management & Testing Script
 Use this to test and manage excluded accounts across all platforms

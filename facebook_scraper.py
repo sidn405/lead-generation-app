@@ -10,6 +10,9 @@ from dm_sequences import generate_dm_with_fallback
 import os
 from pathlib import Path
 
+from persistence import save_leads_to_files
+
+
 # Use your app volume mount. If you set CSV_DIR in Railway env, it will override.
 CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
 CSV_DIR.mkdir(parents=True, exist_ok=True)
@@ -57,7 +60,19 @@ def save_leads_to_files(leads, raw_leads, username: str, timestamp: str, save_ra
     - Infers platform name from global PLATFORM_NAME if available.
     - Uses global SAVE_RAW_LEADS if save_raw not provided.
     """
-    files_saved = []
+    
+    print(f"[DEBUG] CSV_DIR={CSV_DIR}")
+    print(f"[DEBUG] PLATFORM_NAME={PLATFORM_NAME}")
+    
+    files_saved = save_leads_to_files(
+        leads=leads,
+        raw_leads=raw_leads,
+        username=username,
+        timestamp=timestamp,
+        platform_name=PLATFORM_NAME,
+        csv_dir=CSV_DIR,          # uses your existing location
+        save_raw=SAVE_RAW_LEADS,  # if you have this flag
+    )
 
     # Resolve flags/defaults
     if save_raw is None:
@@ -77,14 +92,14 @@ def save_leads_to_files(leads, raw_leads, username: str, timestamp: str, save_ra
 
     # 1) Save processed leads
     if leads:
-        out_name = f"{platform_key}_leads_{username}_{timestamp}.csv"
-        out_path = CSV_DIR / out_name
-        with out_path.open('w', newline='', encoding='utf-8') as f:
+        processed_file = f"{platform_key}_leads_{username}_{timestamp}.csv"
+        
+        with open('w', newline='', encoding='utf-8') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(leads)
-        files_saved.append(str(out_path))
-        print(f"✅ Processed leads saved to {out_path}")
+        files_saved.append(processed_file)
+        print(f"✅ Processed leads saved: {processed_file}")
 
         # Optional: record to Postgres transactions so dashboard shows immediately after deploy
         try:
@@ -193,7 +208,7 @@ def is_relevant_to_search_term(name, title, location):
                 relevance_score += 2
     
     # Lower threshold for higher volume
-    return relevance_score >= 1, relevance_score
+    return relevance_score >= .05, relevance_score
 
 def extract_facebook_profiles(page):
     """Extract profiles from Facebook search results - PRESERVES ALL RAW LEADS"""
@@ -412,7 +427,7 @@ def save_leads_to_files(leads, raw_leads, username, timestamp):
     files_saved = []
     
     try:
-        fieldnames = ['name', 'handle', 'bio', 'url', 'platform', 'dm', 'title', 'location', 'followers', 'profile_url', 'search_term', 'extraction_method', 'relevance_score', 'is_verified', 'has_email', 'has_phone', 'extracted_at']
+        fieldnames = ['name', 'handle', 'bio', 'url', 'platform', 'dm', 'title', 'location', 'followers', 'profile_url', 'search_term', 'extraction_method', 'relevance_score', 'is_verified', 'has_email', 'has_phone', 'extracted_at', 'raw_text_sample']
         
         # Save processed leads
         processed_file = f"facebook_leads_processed_{timestamp}.csv"

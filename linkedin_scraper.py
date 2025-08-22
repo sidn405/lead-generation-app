@@ -1,3 +1,4 @@
+
 import json
 import time
 import pandas as pd
@@ -9,6 +10,7 @@ import re
 import sys
 import random
 from dm_sequences import generate_dm_with_fallback
+from persistence import save_leads_to_files
 
 # Directory where your CSV files are saved
 CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
@@ -823,11 +825,18 @@ def handle_linkedin_simple():
             output_file = f"linkedin_leads_{username}_{date_str}.csv"
             fieldnames = ['name', 'handle', 'bio', 'url', 'platform', 'dm', 'headline', 'location', 'extraction_method', 'search_term', 'relevance_score', 'is_verified', 'has_email', 'has_phone']
             
-            files_saved = []
+            files_saved = save_leads_to_files(
+                leads=results,
+                raw_leads=all_raw_results,
+                username=username,
+                timestamp=date_str,
+                platform_name=PLATFORM_NAME,
+                csv_dir=CSV_DIR,          # uses your existing location
+                save_raw=SAVE_RAW_LEADS,  # if you have this flag
+)
             
             # Save processed results to main CSV
             if all_results:
-                out_path = CSV_DIR / output_file
                 with open(output_file, 'w', newline='', encoding='utf-8') as f:
                     writer = csv.DictWriter(f, fieldnames=fieldnames)
                     writer.writeheader()

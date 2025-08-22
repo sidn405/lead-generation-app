@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Practical examples of multilingual DM generation
 """

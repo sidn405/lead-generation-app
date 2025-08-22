@@ -9,6 +9,7 @@ import sys
 import json
 import random
 from dm_sequences import generate_dm_with_fallback
+from persistence import save_leads_to_files
 
 # Directory where your CSV files are saved
 CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
@@ -750,11 +751,18 @@ def login_and_scrape():
                 output_file = f"twitter_leads_{username}_{date_str}.csv"
                 fieldnames = ["name", "handle", "bio", "url", "platform", "dm", "username", "location", "is_verified", "has_email", "has_phone", "extraction_method"]
                 
-                files_saved = []
+                files_saved = save_leads_to_files(
+                    leads=results,
+                    raw_leads=raw_results,
+                    username=username,
+                    timestamp=date_str,
+                    platform_name=PLATFORM_NAME,
+                    csv_dir=CSV_DIR,          # uses your existing location
+                    save_raw=SAVE_RAW_LEADS,  # if you have this flag
+                )
                 
                 # Save processed results to main CSV
                 if results:
-                    out_path = CSV_DIR / output_file
                     with open(csv_filename, "w", newline="", encoding="utf-8") as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()

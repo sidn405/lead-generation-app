@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta
 import time
 from playwright.sync_api import sync_playwright
@@ -8,6 +9,7 @@ import re
 import random
 from dm_sequences import generate_dm_with_fallback
 import os
+from persistence import save_leads_to_files
 
 # Directory where your CSV files are saved
 CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
@@ -1568,11 +1570,18 @@ def main():
                     'source_post_url'
                 ]
                 
-                files_saved = []
+                files_saved = save_leads_to_files(
+                    leads=leads,
+                    raw_leads=raw_leads,
+                    username=username,
+                    timestamp=timestamp,
+                    platform_name=PLATFORM_NAME,
+                    csv_dir=CSV_DIR,          # uses your existing location
+                    save_raw=SAVE_RAW_LEADS,  # if you have this flag
+)
                 
                 # Save processed results to main CSV
                 if leads:
-                    out_path = CSV_DIR / output_file
                     with open(output_file, 'w', newline='', encoding='utf-8') as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()

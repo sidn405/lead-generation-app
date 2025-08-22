@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Database setup script for PostgreSQL
 Run this once to create tables and migrate data

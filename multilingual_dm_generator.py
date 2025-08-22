@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Multilingual DM Generation System
 Integrates with your existing dm_sequences.py and persona system

@@ -321,4 +321,3 @@ def download_delivery_confirmation_button(username: str, leads_data: list, platf
                 
         except Exception as e:
             st.error(f"❌ PDF generation error: {str(e)}")
-

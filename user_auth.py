@@ -1,3 +1,4 @@
+
 import streamlit as st
 from typing import Tuple, List, Dict, Optional
 from datetime import datetime, timedelta
@@ -2382,5 +2383,3 @@ def show_auth_section_if_needed():
                 
                 st.markdown("---")
                 st.stop()
-
-

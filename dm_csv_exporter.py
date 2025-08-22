@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 CSV Export Functions for DM Generation System
 Works with your existing dm_sequences.py

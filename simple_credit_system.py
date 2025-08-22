@@ -1,3 +1,4 @@
+
 # simple_credit_system.py - Clean monetization system
 import json
 import os
@@ -760,4 +761,3 @@ def consume_user_credits(username: str, leads_downloaded: int, platform: str) ->
 def apply_lead_masking(leads: List[Dict], username: str) -> List[Dict]:
     """Apply lead masking for trial users"""
     return credit_system.mask_leads_for_trial(leads, username)
-

@@ -1,3 +1,5 @@
+
+
 # stripe_checkout.py - Updated for better tab organization
 import time
 import os
@@ -606,5 +608,4 @@ def enforce_credit_limits_on_scraper(username: str, estimated_leads: int) -> Tup
         return False, f"❌ Insufficient credits: {message}. [Purchase more credits](#) to continue."
     
     return True, f"✅ Ready to generate {estimated_leads} leads (you have {current_credits} credits)"
-
 

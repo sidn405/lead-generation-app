@@ -9,6 +9,8 @@ import random
 from dm_sequences import generate_dm_with_fallback
 import os
 
+from persistence import save_leads_to_files
+
 # Directory where your CSV files are saved
 CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
 os.makedirs(CSV_DIR, exist_ok=True)
@@ -821,16 +823,23 @@ def main():
                     'extraction_method','relevance_score'
                 ]
 
-                files_saved = []
+                files_saved = save_leads_to_files(
+                    leads=leads,
+                    raw_leads=raw_leads,
+                    username=username,
+                    timestamp=timestamp,
+                    platform_name=PLATFORM_NAME,
+                    csv_dir=CSV_DIR,           # ← use YOUR existing per-scraper CSV_DIR
+                    save_raw=SAVE_RAW_LEADS,   # ← if you have this flag
+                )
 
                 if leads:
-                    out_path = CSV_DIR / output_file
-                    with open(out_path, 'w', newline='', encoding='utf-8') as f:
+                    with open(output_file, 'w', newline='', encoding='utf-8') as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()
                         writer.writerows(leads)
-                    files_saved.append(str(out_path))
-                    print(f"✅ Processed leads saved to {out_path}")
+                    files_saved.append(str(output_file))
+                    
 
                 if raw_leads and SAVE_RAW_LEADS and len(raw_leads) != len(leads):
                     raw_filename = f"instagram_leads_raw_{username}_{timestamp}.csv"

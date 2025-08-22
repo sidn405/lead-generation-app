@@ -59,8 +59,8 @@
         "auto_deliver_leads": true
     },
     "global": {
-        "search_term": "pastry chef",
-        "max_scrolls": 50,
+        "search_term": "personal trainer",
+        "max_scrolls": 10,
         "enable_multilingual": true,
         "default_dm": "Hi there! I love your content and would be excited to connect. Let's chat!",
         "fallback_dm": "Hey! Just came across your profile and really impressed by your work. Would love to connect!",
@@ -86,7 +86,7 @@
             "lead_output_file": "facebook_leads.csv",
             "backup_output_file": "facebook_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 50,
+            "max_scrolls": 10,
             "excluded_accounts": [
                 "Sidney Muhammad"
             ]
@@ -128,10 +128,10 @@
             ]
         },
         "instagram": {
-            "lead_output_file": "instagram_unified_leads.csv",
+            "lead_output_file": "instagram_leads.csv",
             "backup_output_file": "instagram_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 40,
+            "max_scrolls": 50,
             "excluded_accounts": [
                 "4smart_itech"
             ]

@@ -3813,10 +3813,12 @@ st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 st.markdown("""
 <style>
 /* tighten the main container top padding */
-main .block-container { padding-top: 0.1rem; }  /* adjust to taste */
+main .block-container { padding-top: 0rem; }  /* adjust to taste */
 
 /* remove any extra margin above your title */
-h1.main-header { margin-top: 0 !important; }
+h1.main-header { padding-top: 0rem !important; 
+    margin-top: 0rem !important;
+}
 
 /* optional: shrink space just under the header row */
 .lge-header-spacer { height: 4px; }
@@ -3841,7 +3843,7 @@ def header_logo_left(path: Path, width: int = 36, title: str = "App"):
     st.markdown(f"""
     <style>
       /* tighten Streamlit default top padding */
-      main .block-container {{ padding-top: 0.2rem !important; }}
+      main .block-container {{ padding-top: *0.5rem !important; }}
 
       /* header row */
       .lge-header {{ 
@@ -3873,7 +3875,7 @@ def header_logo_left(path: Path, width: int = 36, title: str = "App"):
 # Tighten top padding + zero out H1 margins
 st.markdown("""
 <style>
-main .block-container { padding-top: 0.1rem !important; }
+main .block-container { padding-top: 0rem !important; }
 h1.main-header { margin: 0 !important; line-height: 1.1; }
 .lge-head { display:flex; align-items:center; gap:10px; margin:0; padding:0; }
 </style>

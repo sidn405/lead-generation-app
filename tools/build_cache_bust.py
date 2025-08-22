@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 import hashlib, json, re
 from pathlib import Path
 from shutil import copy2

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Platform Data Migration Script
 Fixes "parallel_session" entries across entire Lead Generator Empire system

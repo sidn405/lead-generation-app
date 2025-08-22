@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Unified Config Loader for Lead Generator Empire
 Manages all platform configurations from a single config.json file
