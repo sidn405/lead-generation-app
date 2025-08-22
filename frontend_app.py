@@ -5909,7 +5909,7 @@ with tab2: # Lead Results
                 
                 # Define platform patterns to look for
                 platform_patterns = {
-                    'twitter': ['*twitter*leads*stealth*.csv'],
+                    'twitter': ['*twitter*leads*.csv'],
                     'facebook': ['*facebook*leads*.csv'], 
                     'linkedin': ['*linkedin*leads*.csv'],
                     'instagram': ['*instagram*leads*.csv'],
@@ -8434,37 +8434,41 @@ with tab6:  # Settings tab
                     st.subheader("🎯 Platform Performance")
 
                     # 1) Normalize transactions (prefer DB, otherwise derive from CSVs)
-                    # ----------------------------------------------------------------
+                    # ======== DROP-IN REPLACEMENT: always show stats after deploy ========
+                    from datetime import datetime
+
                     username = simple_auth.get_current_user()
 
-                    # Try to use what the server returned first
-                    transactions = (user_info or {}).get("transactions") or []
+                    # 1) Try Postgres (persists across deploys)
+                    summary = credit_system.get_usage_summary(username, since_days=180)
 
-                    # Optional: try DB if list is empty and you have a helper for it
-                    # (wrap in try/except so it doesn't crash if the helper doesn't exist)
-                    if not transactions:
-                        try:
-                            # Implement credit_system.get_user_transactions if not present:
-                            # returns list of dicts with keys like: type, timestamp, platform, leads_downloaded, credits_used
-                            transactions = credit_system.get_user_transactions(username, since_days=90)
-                        except Exception as _:
-                            transactions = []
+                    total_leads = int(summary["total_leads"] or 0)
+                    total_campaigns = int(summary["total_campaigns"] or 0)
+                    platform_leads = summary["per_platform"] or {}
 
-                    # If still empty, we can derive minimal “transactions” from user CSV files so charts aren’t blank
-                    if not transactions:
+                    # Derive days_active from DB timestamps
+                    if summary["first_ts"] and summary["last_ts"]:
+                        delta_days = (summary["last_ts"] - summary["first_ts"]).days + 1
+                        days_active = max(1, delta_days)
+                    else:
+                        days_active = 1
+
+                    # 2) If DB has absolutely nothing yet (brand-new user), fall back to CSVs
+                    if total_leads == 0 and total_campaigns == 0:
                         try:
-                            derived = []
-                            for f in get_user_csv_files(username):
-                                derived.append({
-                                    "type": "lead_download",
-                                    "timestamp": datetime.now().isoformat(),  # best-effort
-                                    "platform": f["platform"],
-                                    "leads_downloaded": int(f.get("leads", 0)),
-                                    "credits_used": int(f.get("leads", 0)),
-                                })
-                            transactions = derived
+                            files = get_user_csv_files(username)   # your helper
+                            # synthesize totals
+                            for f in files:
+                                p = f["platform"]
+                                n = int(f.get("leads", 0))
+                                platform_leads[p] = platform_leads.get(p, 0) + n
+                            total_leads = sum(platform_leads.values())
+                            total_campaigns = len(files)
+                            days_active = 1
                         except Exception:
                             pass
+                    # ======== END DROP-IN REPLACEMENT ========
+
 
                     # 2) Compute per-platform aggregates defensively
                     # ----------------------------------------------------------------

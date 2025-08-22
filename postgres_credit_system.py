@@ -126,6 +126,69 @@ class CreditSystem:
                 self.user_count = 0
         else:
             self.user_count = len(getattr(self, '_users', {}))
+            
+    def record_lead_download(self, username: str, platform: str, leads_count: int):
+        """
+        Persist a lead download event so dashboards can rebuild history after deploy.
+        Uses the transactions table you already have.
+        """
+        q = """
+        INSERT INTO transactions
+        (username, type, platform, leads_downloaded, credits_used, timestamp)
+        VALUES
+        (%s, 'lead_download', %s, %s, %s, NOW())
+        """
+        with self.conn.cursor() as cur:
+            cur.execute(q, (username, platform, leads_count, leads_count))
+            self.conn.commit()
+            
+    def get_usage_summary(self, username: str, since_days: int = 180):
+        """
+        Returns totals + per-platform stats from transactions, not from CSVs.
+        """
+        q = """
+        WITH recent_tx AS (
+        SELECT *
+        FROM transactions
+        WHERE username = %s
+            AND timestamp >= NOW() - INTERVAL '%s days'
+        )
+        SELECT
+        COALESCE(SUM(CASE WHEN type='lead_download'
+                            THEN COALESCE(leads_downloaded, credits_used, 0) END), 0) AS total_leads,
+        COALESCE(COUNT(CASE WHEN type='lead_download' THEN 1 END), 0) AS total_campaigns,
+        MIN(timestamp) AS first_ts,
+        MAX(timestamp) AS last_ts
+        FROM recent_tx
+        """
+        q_plat = """
+        SELECT LOWER(COALESCE(platform, 'unknown')) AS platform,
+            COALESCE(SUM(COALESCE(leads_downloaded, credits_used, 0)), 0) AS leads
+        FROM transactions
+        WHERE username=%s
+        AND timestamp >= NOW() - INTERVAL '%s days'
+        AND type='lead_download'
+        GROUP BY LOWER(COALESCE(platform, 'unknown'))
+        ORDER BY leads DESC
+        """
+        with self.conn.cursor() as cur:
+            cur.execute(q, (username, since_days))
+            row = cur.fetchone()
+            total_leads = int(row[0] or 0)
+            total_campaigns = int(row[1] or 0)
+            first_ts, last_ts = row[2], row[3]
+
+            cur.execute(q_plat, (username, since_days))
+            platform_rows = cur.fetchall()
+            per_platform = {r[0]: int(r[1]) for r in platform_rows}
+
+        return {
+            "total_leads": total_leads,
+            "total_campaigns": total_campaigns,
+            "first_ts": first_ts,
+            "last_ts": last_ts,
+            "per_platform": per_platform
+        }
 
     # === JSON FALLBACK METHODS ===
     def load_data(self):
