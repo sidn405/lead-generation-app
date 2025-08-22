@@ -6277,6 +6277,94 @@ with tab2: # Lead Results
                         
                         return csv_files
 
+                    def extract_platform_from_filename(filename):
+                        """Extract platform name from filename"""
+                        filename_lower = filename.lower()
+                        
+                        platforms = ['twitter', 'facebook', 'linkedin', 'instagram', 'tiktok', 'youtube', 'medium', 'reddit']
+                        
+                        for platform in platforms:
+                            if platform in filename_lower:
+                                return platform
+                        
+                        return 'unknown'
+
+                    def extract_search_term_from_filename(filename):
+                        """Extract search term from filename if possible"""
+                        try:
+                            # Look for patterns like "crypto_trader" or "stock_broker"
+                            import re
+                            
+                            # Remove common parts
+                            clean_name = filename.replace('_leads', '').replace('_unified', '').replace('.csv', '')
+                            
+                            # Split by underscores and look for search terms
+                            parts = clean_name.split('_')
+                            
+                            # Filter out common words
+                            exclude_words = ['leads', 'unified', 'twitter', 'facebook', 'linkedin', 'instagram', 
+                                            'tiktok', 'youtube', 'medium', 'reddit', 'scraper', 'results']
+                            
+                            search_parts = [part for part in parts if part.lower() not in exclude_words and len(part) > 2]
+                            
+                            if search_parts:
+                                return ' '.join(search_parts[:3])  # Take first 3 meaningful parts
+                            
+                            return 'Unknown'
+                            
+                        except:
+                            return 'Unknown'
+
+                    def get_platform_emoji(platform):
+                        """Get emoji for platform"""
+                        emoji_map = {
+                            'twitter': '🐦',
+                            'facebook': '📘', 
+                            'linkedin': '💼',
+                            'instagram': '📷',
+                            'tiktok': '🎵',
+                            'youtube': '📺',
+                            'medium': '📝',
+                            'reddit': '🔗',
+                            'unknown': '📄'
+                        }
+                        return emoji_map.get(platform, '📄')
+
+                    def create_bulk_download(csv_files, username):
+                        """Create zip file with all CSV files"""
+                        import zipfile
+                        import io
+                        from datetime import datetime
+                        
+                        try:
+                            # Create zip file in memory
+                            zip_buffer = io.BytesIO()
+                            
+                            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                                for file_info in csv_files:
+                                    try:
+                                        zip_file.write(file_info['path'], file_info['name'])
+                                    except Exception as e:
+                                        print(f"Error adding {file_info['name']} to zip: {e}")
+                            
+                            zip_buffer.seek(0)
+                            
+                            # Create download button with unique key
+                            zip_filename = f"{username}_leads_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                            
+                            st.download_button(
+                                label="📦 Download ZIP File",
+                                data=zip_buffer.getvalue(),
+                                file_name=zip_filename,
+                                mime='application/zip',
+                                key=f"bulk_download_zip_{username}_{datetime.now().strftime('%H%M%S')}"
+                            )
+                            
+                            st.success(f"✅ Created {zip_filename} with {len(csv_files)} files")
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error creating bulk download: {e}")
+
                     def clean_old_csv_files(username):
                         """Clean CSV files older than 30 days"""
                         import glob
