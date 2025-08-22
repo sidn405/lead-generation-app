@@ -7,6 +7,11 @@ import csv
 import re
 import random
 from dm_sequences import generate_dm_with_fallback
+import os
+
+# Directory where your CSV files are saved
+CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
+os.makedirs(CSV_DIR, exist_ok=True)
 
 # Import the centralized usage tracker
 from usage_tracker import setup_scraper_with_limits, finalize_scraper_results
@@ -807,30 +812,36 @@ def main():
                 except Exception as e:
                     print(f"⚠️ Error finalizing results: {e}")
             
-            # Save results to multiple files
+            # Save results to multiple files (into persistent volume)
             if leads or (raw_leads and SAVE_RAW_LEADS):
                 output_file = f"instagram_leads_{username}_{timestamp}.csv"
-                fieldnames = ['name', 'handle', 'bio', 'url', 'platform', 'dm', 'title', 'location', 'followers', 'profile_url', 'contact_info', 'search_term', 'extraction_method', 'relevance_score']
-                
+                fieldnames = [
+                    'name','handle','bio','url','platform','dm','title','location',
+                    'followers','profile_url','contact_info','search_term',
+                    'extraction_method','relevance_score'
+                ]
+
                 files_saved = []
-                
-                # Save processed results to main CSV
+
                 if leads:
-                    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+                    out_path = CSV_DIR / output_file
+                    with open(out_path, 'w', newline='', encoding='utf-8') as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()
                         writer.writerows(leads)
-                    files_saved.append(output_file)
-                
-                # Save raw results if enabled and different from processed
+                    files_saved.append(str(out_path))
+                    print(f"✅ Processed leads saved to {out_path}")
+
                 if raw_leads and SAVE_RAW_LEADS and len(raw_leads) != len(leads):
                     raw_filename = f"instagram_leads_raw_{username}_{timestamp}.csv"
-                    with open(raw_filename, 'w', newline='', encoding='utf-8') as f:
+                    raw_path = CSV_DIR / raw_filename
+                    with open(raw_path, 'w', newline='', encoding='utf-8') as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()
                         writer.writerows(raw_leads)
-                    files_saved.append(raw_filename)
-                    print(f"📋 Raw leads saved to {raw_filename}")
+                    files_saved.append(str(raw_path))
+                    print(f"📋 Raw leads saved to {raw_path}")
+
                 
                 print(f"\n✅ Successfully saved {len(leads)} leads")
                 print(f"🔍 Files saved: {', '.join(files_saved)}")

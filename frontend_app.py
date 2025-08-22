@@ -545,20 +545,47 @@ def try_save_user_to_database(username, user_data):
 # CRITICAL: Handle payment authentication recovery FIRST
 is_payment_return = restore_payment_authentication()
 
+# ---- Persistent CSV folder (Railway volume) ----
+import os
+from pathlib import Path
+
+def _detect_csv_dir() -> Path:
+    # 1) Respect env var if you set it in Railway (recommended)
+    env_dir = os.getenv("CSV_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    # 2) Common Railway mount paths for your setup
+    candidates = [
+        "/client_configs",          # most likely for your app volume
+        "/app/client_configs",      # some images mount under /app
+        "/data", "/app/data"        # if you ever switch to 'data'
+    ]
+    for c in candidates:
+        p = Path(c)
+        if p.exists():
+            p.mkdir(parents=True, exist_ok=True)
+            return p
+
+    # 3) Fallback to local relative folder (ephemeral but avoids crashes)
+    p = Path("./client_configs")
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+CSV_DIR = _detect_csv_dir()
+
 # ===== Empire stats helpers (define once at module level) =====
 import os, glob, json
 from datetime import datetime, timedelta
 
-def calculate_empire_from_csvs(username: str, days: int = 90, search_dirs=None) -> dict:
-    """
-    Count leads per platform by scanning recent CSVs that belong to `username`.
-    Returns dict like {'twitter': 27, 'instagram': 15, ...}
-    """
-    if search_dirs is None:
-        # look in working dir and a mounted volume if you use one
-        search_dirs = [".", "/data"]
+def calculate_empire_from_csvs(username: str):
+    import glob
+    from datetime import datetime, timedelta
 
-    platform_patterns = {
+    platform_counts = {}
+    patterns_by_platform = {
         'twitter':   ['*twitter*leads*.csv'],
         'facebook':  ['*facebook*leads*.csv'],
         'linkedin':  ['*linkedin*leads*.csv'],
@@ -569,30 +596,28 @@ def calculate_empire_from_csvs(username: str, days: int = 90, search_dirs=None) 
         'reddit':    ['*reddit*leads*.csv'],
     }
 
-    cutoff = datetime.now() - timedelta(days=days)
-    counts: dict[str, int] = {}
+    cutoff = datetime.now() - timedelta(days=90)
+    u = username.lower()
 
-    for platform, patterns in platform_patterns.items():
+    for platform, patterns in patterns_by_platform.items():
         total = 0
-        for base in search_dirs:
-            for pat in patterns:
-                for path in glob.glob(os.path.join(base, pat)):
-                    try:
-                        # only count this user's files
-                        if username.lower() not in os.path.basename(path).lower():
-                            continue
-                        # only recent files
-                        if datetime.fromtimestamp(os.path.getmtime(path)) < cutoff:
-                            continue
-                        # count lines minus header
-                        with open(path, "r", encoding="utf-8") as f:
-                            total += max(0, sum(1 for _ in f) - 1)
-                    except Exception:
+        for pat in patterns:
+            for path in glob.glob(str(CSV_DIR / pat)):
+                try:
+                    base = os.path.basename(path).lower()
+                    if u not in base:           # keep this if your filenames include username
                         continue
+                    mtime = datetime.fromtimestamp(os.path.getmtime(path))
+                    if mtime < cutoff:
+                        continue
+                    with open(path, "r", encoding="utf-8") as f:
+                        total += max(0, sum(1 for _ in f) - 1)
+                except Exception as e:
+                    print(f"⚠️ read error {path}: {e}")
         if total > 0:
-            counts[platform] = total
+            platform_counts[platform] = total
 
-    return counts
+    return platform_counts
 
 def load_accurate_empire_stats(username: str):
     """
@@ -611,6 +636,7 @@ def load_accurate_empire_stats(username: str):
             empire_stats = data.get("platforms", {}) or {}
             total_leads = int(data.get("total_empire", 0) or 0)
         else:
+            print("📊 Calculating empire stats from CSV files for", username)
             empire_stats = calculate_empire_from_csvs(username)
             total_leads = sum(empire_stats.values())
     except Exception as e:
@@ -618,6 +644,168 @@ def load_accurate_empire_stats(username: str):
         empire_stats, total_leads = {}, 0
 
     return empire_stats, total_leads
+
+def get_user_csv_files(username: str):
+    import glob, os
+    from datetime import datetime
+
+    csv_files = []
+    found_files = set()
+
+    # Patterns to find user's CSV files in the CSV_DIR
+    patterns = [
+        f"*{username}*leads*.csv",
+        f"*leads*{username}*.csv",
+        f"{username}_*.csv",
+        "*unified_leads*.csv"
+    ]
+
+    for pattern in patterns:
+        files = glob.glob(os.path.join(CSV_DIR, pattern))
+        for file in files:
+            if file not in found_files and username.lower() in file.lower():
+                found_files.add(file)
+
+    for file_path in found_files:
+        try:
+            stat = os.stat(file_path)
+            file_size = stat.st_size
+            mod_time = datetime.fromtimestamp(stat.st_mtime)
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lead_count = max(0, sum(1 for line in f) - 1)
+
+            filename = os.path.basename(file_path)
+            platform = extract_platform_from_filename(filename)
+            search_term = extract_search_term_from_filename(filename)
+
+            csv_files.append({
+                'name': filename,
+                'path': file_path,
+                'size': file_size,
+                'size_mb': file_size / 1024 / 1024,
+                'date': mod_time.strftime('%m/%d %H:%M'),
+                'leads': lead_count,
+                'platform': platform,
+                'search_term': search_term
+            })
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}")
+            continue
+
+    csv_files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
+    return csv_files
+
+def extract_platform_from_filename(filename):
+    """Extract platform name from filename"""
+    filename_lower = filename.lower()
+    platforms = ['twitter', 'facebook', 'linkedin', 'instagram', 'tiktok', 'youtube', 'medium', 'reddit']
+    for platform in platforms:
+        if platform in filename_lower:
+            return platform
+    return 'unknown'
+
+
+def extract_search_term_from_filename(filename):
+    """Extract search term from filename if possible"""
+    try:
+        import re
+        clean_name = filename.replace('_leads', '').replace('_unified', '').replace('.csv', '')
+        parts = clean_name.split('_')
+        exclude_words = ['leads', 'unified', 'twitter', 'facebook', 'linkedin', 'instagram', 
+                         'tiktok', 'youtube', 'medium', 'reddit', 'scraper', 'results']
+        search_parts = [part for part in parts if part.lower() not in exclude_words and len(part) > 2]
+        return ' '.join(search_parts[:3]) if search_parts else 'Unknown'
+    except:
+        return 'Unknown'
+
+
+def get_platform_emoji(platform):
+    """Get emoji for platform"""
+    emoji_map = {
+        'twitter': '🐦',
+        'facebook': '📘', 
+        'linkedin': '💼',
+        'instagram': '📷',
+        'tiktok': '🎵',
+        'youtube': '📺',
+        'medium': '📝',
+        'reddit': '🔗',
+        'unknown': '📄'
+    }
+    return emoji_map.get(platform, '📄')
+
+
+def download_csv_file(file_path: str, filename: str):
+    """Render a one-off download button for a file."""
+    try:
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        st.download_button(
+            label=f"💾 Download {filename}",
+            data=data,
+            file_name=filename,
+            mime='text/csv',
+            key=f"dl_{filename}_{int(time.time())}"
+        )
+    except Exception as e:
+        st.error(f"❌ Error downloading file: {e}")
+
+
+def create_bulk_download(csv_files, username):
+    """Create zip file with all CSV files"""
+    import zipfile
+    import io
+    from datetime import datetime
+
+    try:
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for file_info in csv_files:
+                try:
+                    zip_file.write(file_info['path'], file_info['name'])
+                except Exception as e:
+                    print(f"Error adding {file_info['name']} to zip: {e}")
+
+        zip_buffer.seek(0)
+        zip_filename = f"{username}_leads_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        st.download_button(
+            label="📦 Download ZIP File",
+            data=zip_buffer.getvalue(),
+            file_name=zip_filename,
+            mime='application/zip',
+            key=f"bulk_download_zip_{username}_{datetime.now().strftime('%H%M%S')}"
+        )
+        st.success(f"✅ Created {zip_filename} with {len(csv_files)} files")
+
+    except Exception as e:
+        st.error(f"❌ Error creating bulk download: {e}")
+
+
+def clean_old_csv_files(username):
+    """Clean CSV files older than 30 days"""
+    import glob
+    import os
+    from datetime import datetime, timedelta
+
+    cleaned_count = 0
+    cutoff_date = datetime.now() - timedelta(days=30)
+    patterns = [f"*{username}*leads*.csv", f"*leads*{username}*.csv"]
+
+    for pattern in patterns:
+        files = glob.glob(pattern)
+        for file in files:
+            try:
+                file_time = datetime.fromtimestamp(os.path.getmtime(file))
+                if file_time < cutoff_date:
+                    os.remove(file)
+                    cleaned_count += 1
+                    print(f"🗑️ Deleted old file: {file}")
+            except Exception as e:
+                print(f"Error deleting {file}: {e}")
+
+    return cleaned_count
+
 # ==============================================================
 
 import streamlit as st
@@ -2738,7 +2926,7 @@ def get_latest_csv(pattern):
                 return user_file
     
     # Fallback to original logic
-    files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
+    files = sorted(glob.glob(str(CSV_DIR / pattern)), key=os.path.getmtime, reverse=True)
     return files[0] if files else None
 
 def save_leads_by_user(leads, platform, username):
@@ -5853,75 +6041,6 @@ with tab2: # Lead Results
                 else:
                     st.button("📤 Export Empire Data", disabled=True, use_container_width=True)
 
-            st.markdown("---")
-
-            # ✅ FUNCTION DEFINITIONS FIRST (before they're used)
-
-            def get_user_csv_files(username):
-                """Get list of CSV files for specific user"""
-                import glob
-                import os
-                from datetime import datetime
-                
-                csv_files = []
-                
-                # Patterns to find user's CSV files
-                patterns = [
-                    f"*{username}*leads*.csv",
-                    f"*leads*{username}*.csv", 
-                    f"{username}_*.csv",
-                    "*unified_leads*.csv"  # Generic unified files
-                ]
-                
-                found_files = set()  # Use set to avoid duplicates
-                
-                for pattern in patterns:
-                    files = glob.glob(pattern)
-                    for file in files:
-                        if file not in found_files and username.lower() in file.lower():
-                            found_files.add(file)
-                
-                # Process each file
-                for file_path in found_files:
-                    try:
-                        # Get file stats
-                        stat = os.stat(file_path)
-                        file_size = stat.st_size
-                        mod_time = datetime.fromtimestamp(stat.st_mtime)
-                        
-                        # Count leads (lines minus header)
-                        lead_count = 0
-                        try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                lead_count = max(0, sum(1 for line in f) - 1)
-                        except:
-                            lead_count = 0
-                        
-                        # Extract platform and search term from filename
-                        filename = os.path.basename(file_path)
-                        platform = extract_platform_from_filename(filename)
-                        search_term = extract_search_term_from_filename(filename)
-                        
-                        csv_files.append({
-                            'name': filename,
-                            'path': file_path,
-                            'size': file_size,
-                            'size_mb': file_size / 1024 / 1024,
-                            'date': mod_time.strftime('%m/%d %H:%M'),
-                            'leads': lead_count,
-                            'platform': platform,
-                            'search_term': search_term
-                        })
-                        
-                    except Exception as e:
-                        print(f"Error processing {file_path}: {e}")
-                        continue
-                
-                # Sort by modification time (newest first)
-                csv_files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
-                
-                return csv_files
-
             # Get current user
             if 'username' not in st.session_state or not st.session_state.username:
                 st.warning("⚠️ Please log in to view your Empire stats")
@@ -5986,305 +6105,72 @@ with tab2: # Lead Results
                     )
                 
                 # ✅ SHOW EMPIRE COMBINED STATS (ACCURATE)
-                st.markdown("---")
-                st.markdown("### 📄 CSV File Manager")
+            st.markdown("---")
+                # === CSV File Manager (clean, no nested defs) ===
+            st.markdown("### 📄 CSV File Manager")
 
-                # Get current user
-                if 'username' in st.session_state and st.session_state.username:
-                    current_username = st.session_state.username
-                    
-                    # Function definitions (same as before)
-                    def get_user_csv_files(username):
-                        """Get list of CSV files for specific user"""
-                        import glob
-                        import os
-                        from datetime import datetime
-                        
-                        csv_files = []
-                        
-                        # Patterns to find user's CSV files
-                        patterns = [
-                            f"*{username}*leads*.csv",
-                            f"*leads*{username}*.csv", 
-                            f"{username}_*.csv",
-                            "*unified_leads*.csv"  # Generic unified files
-                        ]
-                        
-                        found_files = set()  # Use set to avoid duplicates
-                        
-                        for pattern in patterns:
-                            files = glob.glob(pattern)
-                            for file in files:
-                                if file not in found_files and username.lower() in file.lower():
-                                    found_files.add(file)
-                        
-                        # Process each file
-                        for file_path in found_files:
+            if 'username' in st.session_state and st.session_state.username:
+                current_username = st.session_state.username
+
+                # Use the shared, module-level helper (expects CSV_DIR to be set)
+                user_csv_files = get_user_csv_files(current_username)
+
+                if user_csv_files:
+                    # Summary metrics
+                    total_files = len(user_csv_files)
+                    total_size_mb = sum(f['size_mb'] for f in user_csv_files)
+                    newest_date = user_csv_files[0]['date']
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("📁 Total Files", total_files)
+                    with col2:
+                        st.metric("💾 Total Size", f"{total_size_mb:.1f} MB")
+                    with col3:
+                        st.metric("🕒 Newest File", newest_date)
+
+                    st.markdown("---")
+                    st.markdown("#### 📋 Available Files")
+
+                    # List files
+                    for file in user_csv_files:
+                        c1, c2, c3, c4, c5 = st.columns([3, 1, 1, 1, 1])
+
+                        with c1:
+                            # get_platform_emoji and extract_* are assumed to be defined at module-level
+                            emoji = get_platform_emoji(file.get('platform', 'unknown'))
+                            st.write(f"{emoji} **{file['name']}**")
+                            st.caption(f"🔍 Search: {file.get('search_term', 'Unknown')}")
+
+                        with c2:
+                            st.write(f"**{file['leads']}** leads")
+
+                        with c3:
+                            st.write(f"**{file['size_mb']:.1f}** MB")
+
+                        with c4:
+                            st.write(f"**{file['date']}**")
+
+                        with c5:
+                            # Direct download
                             try:
-                                # Get file stats
-                                stat = os.stat(file_path)
-                                file_size = stat.st_size
-                                mod_time = datetime.fromtimestamp(stat.st_mtime)
-                                
-                                # Count leads (lines minus header)
-                                lead_count = 0
-                                try:
-                                    with open(file_path, 'r', encoding='utf-8') as f:
-                                        lead_count = max(0, sum(1 for line in f) - 1)
-                                except:
-                                    lead_count = 0
-                                
-                                # Extract platform and search term from filename
-                                filename = os.path.basename(file_path)
-                                platform = extract_platform_from_filename(filename)
-                                search_term = extract_search_term_from_filename(filename)
-                                
-                                csv_files.append({
-                                    'name': filename,
-                                    'path': file_path,
-                                    'size': file_size,
-                                    'size_mb': file_size / 1024 / 1024,
-                                    'date': mod_time.strftime('%m/%d %H:%M'),
-                                    'leads': lead_count,
-                                    'platform': platform,
-                                    'search_term': search_term
-                                })
-                                
-                            except Exception as e:
-                                print(f"Error processing {file_path}: {e}")
-                                continue
-                        
-                        # Sort by modification time (newest first)
-                        csv_files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
-                        
-                        return csv_files
-
-                    def extract_platform_from_filename(filename):
-                        """Extract platform name from filename"""
-                        filename_lower = filename.lower()
-                        
-                        platforms = ['twitter', 'facebook', 'linkedin', 'instagram', 'tiktok', 'youtube', 'medium', 'reddit']
-                        
-                        for platform in platforms:
-                            if platform in filename_lower:
-                                return platform
-                        
-                        return 'unknown'
-
-                    def extract_search_term_from_filename(filename):
-                        """Extract search term from filename if possible"""
-                        try:
-                            # Look for patterns like "crypto_trader" or "stock_broker"
-                            import re
-                            
-                            # Remove common parts
-                            clean_name = filename.replace('_leads', '').replace('_unified', '').replace('.csv', '')
-                            
-                            # Split by underscores and look for search terms
-                            parts = clean_name.split('_')
-                            
-                            # Filter out common words
-                            exclude_words = ['leads', 'unified', 'twitter', 'facebook', 'linkedin', 'instagram', 
-                                            'tiktok', 'youtube', 'medium', 'reddit', 'scraper', 'results']
-                            
-                            search_parts = [part for part in parts if part.lower() not in exclude_words and len(part) > 2]
-                            
-                            if search_parts:
-                                return ' '.join(search_parts[:3])  # Take first 3 meaningful parts
-                            
-                            return 'Unknown'
-                            
-                        except:
-                            return 'Unknown'
-
-                    def get_platform_emoji(platform):
-                        """Get emoji for platform"""
-                        emoji_map = {
-                            'twitter': '🐦',
-                            'facebook': '📘', 
-                            'linkedin': '💼',
-                            'instagram': '📷',
-                            'tiktok': '🎵',
-                            'youtube': '📺',
-                            'medium': '📝',
-                            'reddit': '🔗',
-                            'unknown': '📄'
-                        }
-                        return emoji_map.get(platform, '📄')
-                    
-                    def download_csv_file(file_path: str, filename: str):
-                        """Render a one-off download button for a file."""
-                        try:
-                            with open(file_path, 'rb') as f:
-                                data = f.read()
-                            st.download_button(
-                                label=f"💾 Download {filename}",
-                                data=data,
-                                file_name=filename,
-                                mime='text/csv',
-                                key=f"dl_{filename}_{int(time.time())}"
-                            )
-                        except Exception as e:
-                            st.error(f"❌ Error downloading file: {e}")
-
-                    def create_bulk_download(csv_files, username):
-                        """Create zip file with all CSV files"""
-                        import zipfile
-                        import io
-                        from datetime import datetime
-                        
-                        try:
-                            # Create zip file in memory
-                            zip_buffer = io.BytesIO()
-                            
-                            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                                for file_info in csv_files:
-                                    try:
-                                        zip_file.write(file_info['path'], file_info['name'])
-                                    except Exception as e:
-                                        print(f"Error adding {file_info['name']} to zip: {e}")
-                            
-                            zip_buffer.seek(0)
-                            
-                            # Create download button with unique key
-                            zip_filename = f"{username}_leads_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-                            
-                            st.download_button(
-                                label="📦 Download ZIP File",
-                                data=zip_buffer.getvalue(),
-                                file_name=zip_filename,
-                                mime='application/zip',
-                                key=f"bulk_download_zip_{username}_{datetime.now().strftime('%H%M%S')}"
-                            )
-                            
-                            st.success(f"✅ Created {zip_filename} with {len(csv_files)} files")
-                            
-                        except Exception as e:
-                            st.error(f"❌ Error creating bulk download: {e}")
-
-                    def clean_old_csv_files(username):
-                        """Clean CSV files older than 30 days"""
-                        import glob
-                        import os
-                        from datetime import datetime, timedelta
-                        
-                        cleaned_count = 0
-                        cutoff_date = datetime.now() - timedelta(days=30)
-                        
-                        patterns = [f"*{username}*leads*.csv", f"*leads*{username}*.csv"]
-                        
-                        for pattern in patterns:
-                            files = glob.glob(pattern)
-                            for file in files:
-                                try:
-                                    file_time = datetime.fromtimestamp(os.path.getmtime(file))
-                                    if file_time < cutoff_date:
-                                        os.remove(file)
-                                        cleaned_count += 1
-                                        print(f"🗑️ Deleted old file: {file}")
-                                except Exception as e:
-                                    print(f"Error deleting {file}: {e}")
-                        
-                        return cleaned_count
-
-                    # Get user's CSV files
-                    user_csv_files = get_user_csv_files(current_username)
-                    
-                    if user_csv_files:
-                        # Show file summary
-                        total_files = len(user_csv_files)
-                        total_size = sum(file['size'] for file in user_csv_files)
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("📁 Total Files", total_files)
-                        with col2:
-                            st.metric("💾 Total Size", f"{total_size/1024/1024:.1f} MB")
-                        with col3:
-                            st.metric("📅 Newest File", user_csv_files[0]['date'] if user_csv_files else "None")
-                        
-                        st.markdown("---")
-                        
-                        # File listing with download buttons
-                        st.markdown("#### 📋 Available Files")
-                        
-                        for file_info in user_csv_files:
-                            col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
-                            
-                            with col1:
-                                # File name with platform emoji
-                                platform_emoji = get_platform_emoji(file_info['platform'])
-                                st.write(f"{platform_emoji} **{file_info['name']}**")
-                                st.caption(f"🔍 Search: {file_info.get('search_term', 'Unknown')}")
-                            
-                            with col2:
-                                st.write(f"**{file_info['leads']}** leads")
-                            
-                            with col3:
-                                st.write(f"**{file_info['size_mb']:.1f}** MB")
-                            
-                            with col4:
-                                st.write(f"**{file_info['date']}**")
-                            
-                            with col5:
-                                # Download button with unique key
-                                if st.button("⬇️", key=f"lead_results_download_{file_info['name']}", help=f"Download {file_info['name']}"):
-                                    # Trigger download using st.download_button in the next render
-                                    st.session_state[f"lead_results_download_trigger_{file_info['name']}"] = True
-                            
-                            # Show download button if triggered
-                            if st.session_state.get(f"lead_results_download_trigger_{file_info['name']}", False):
-                                try:
-                                    with open(file_info['path'], 'rb') as f:
-                                        file_data = f.read()
-                                    
+                                with open(file['path'], 'rb') as fh:
                                     st.download_button(
-                                        label=f"💾 Download {file_info['name']}",
-                                        data=file_data,
-                                        file_name=file_info['name'],
-                                        mime='text/csv',
-                                        key=f"lead_results_download_file_{file_info['name']}"
+                                        "⬇️",
+                                        data=fh.read(),
+                                        file_name=file['name'],
+                                        mime="text/csv",
+                                        key=f"lead_results_download_{file['name']}",
+                                        help=f"Download {file['name']}"
                                     )
-                                    # Clear the trigger
-                                    st.session_state[f"lead_results_download_trigger_{file_info['name']}"] = False
-                                    
-                                except Exception as e:
-                                    st.error(f"❌ Error downloading file: {e}")
-                        
-                        st.markdown("---")
-                        
-                        # Bulk actions
-                        col1, col2, col3 = st.columns(3)
-                        
-                        with col1:
-                            if st.button("📦 Download All Files", type="primary", key="lead_results_download_all"):
-                                create_bulk_download(user_csv_files, current_username)
-                        
-                        with col2:
-                            if st.button("🧹 Clean Old Files", help="Delete files older than 30 days", key="lead_results_clean_old"):
-                                cleaned_count = clean_old_csv_files(current_username)
-                                if cleaned_count > 0:
-                                    st.success(f"🗑️ Cleaned {cleaned_count} old files")
-                                    st.rerun()
-                                else:
-                                    st.info("No old files to clean")
-                        
-                        with col3:
-                            if st.button("🔄 Refresh Files", key="lead_results_refresh"):
-                                st.rerun()
-                    
-                    else:
-                        st.info("📁 No CSV files found. Run some scrapers to generate lead files!")
-                        
-                        # Show helpful tips
-                        st.markdown("#### 💡 Tips:")
-                        st.markdown("- Lead files are automatically saved after each scraping session")
-                        st.markdown("- Files are named with timestamp and search term for easy identification") 
-                        st.markdown("- Use the Download button to save files to your computer")
-                        st.markdown("- Old files (30+ days) can be cleaned up automatically")
+                            except Exception as e:
+                                st.error(f"Download failed: {e}")
 
                 else:
-                    st.warning("⚠️ Please log in to access CSV file management")
+                    st.info("📁 No CSV files found. Run scrapers to generate lead files.")
+            else:
+                st.warning("⚠️ Please log in to access CSV file management")
+            # === /CSV File Manager ===
             
             # 🌍 NEW: Language breakdown metric
             if MULTILINGUAL_AVAILABLE and language_stats:

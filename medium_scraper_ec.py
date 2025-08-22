@@ -7,7 +7,11 @@ import csv
 import re
 import random
 from dm_sequences import generate_dm_with_fallback
+import os
 
+# Directory where your CSV files are saved
+CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
+os.makedirs(CSV_DIR, exist_ok=True)
 # Import the centralized usage tracker
 from usage_tracker import setup_scraper_with_limits, finalize_scraper_results
 
@@ -1020,6 +1024,7 @@ def main():
                 
                 # Save processed results to main CSV
                 if leads:
+                    out_path = CSV_DIR / output_file
                     with open(output_file, 'w', newline='', encoding='utf-8') as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()
@@ -1029,6 +1034,7 @@ def main():
                 # Save raw results if enabled and different from processed
                 if raw_leads and SAVE_RAW_LEADS and len(raw_leads) != len(leads):
                     raw_filename = f"medium_{NICHE}_customers_raw_{username}_{timestamp}.csv"
+                    raw_path = CSV_DIR / raw_filename
                     with open(raw_filename, 'w', newline='', encoding='utf-8') as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()

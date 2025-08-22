@@ -7,6 +7,12 @@ import csv
 import re
 import random
 from dm_sequences import generate_dm_with_fallback
+import os
+from pathlib import Path
+
+# Use your app volume mount. If you set CSV_DIR in Railway env, it will override.
+CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+CSV_DIR.mkdir(parents=True, exist_ok=True)
 
 # Import the centralized usage tracker
 from usage_tracker import setup_scraper_with_limits, finalize_scraper_results
@@ -39,6 +45,68 @@ from config_loader import get_platform_config, config_loader
 # 🚀 NEW: Initialize config loader
 enhanced_config_loader = ConfigLoader()
 config = config_loader.get_platform_config('facebook')
+
+import csv
+
+def save_leads_to_files(leads, raw_leads, username: str, timestamp: str, save_raw: bool = None):
+    """
+    Save processed (and optionally raw) leads into your persistent volume.
+    Returns list of saved file paths (strings).
+
+    - Uses CSV_DIR (volume path).
+    - Infers platform name from global PLATFORM_NAME if available.
+    - Uses global SAVE_RAW_LEADS if save_raw not provided.
+    """
+    files_saved = []
+
+    # Resolve flags/defaults
+    if save_raw is None:
+        save_raw = bool(globals().get("SAVE_RAW_LEADS", False))
+
+    # Derive a platform key from your global PLATFORM_NAME (fallback 'platform')
+    platform_key = str(globals().get("PLATFORM_NAME", "platform")).strip().lower().replace(" ", "")
+    if not platform_key:
+        platform_key = "platform"
+
+    # Standard fields (feel free to align with your other scrapers)
+    fieldnames = [
+        'name', 'handle', 'bio', 'url', 'platform', 'dm', 'title', 'location',
+        'followers', 'profile_url', 'contact_info', 'search_term',
+        'extraction_method', 'relevance_score'
+    ]
+
+    # 1) Save processed leads
+    if leads:
+        out_name = f"{platform_key}_leads_{username}_{timestamp}.csv"
+        out_path = CSV_DIR / out_name
+        with out_path.open('w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(leads)
+        files_saved.append(str(out_path))
+        print(f"✅ Processed leads saved to {out_path}")
+
+        # Optional: record to Postgres transactions so dashboard shows immediately after deploy
+        try:
+            credit_system = globals().get("credit_system", None)
+            if credit_system and hasattr(credit_system, "record_lead_download"):
+                credit_system.record_lead_download(username=username, platform=platform_key, leads_count=len(leads))
+        except Exception as e:
+            print(f"ℹ️ Could not record lead_download: {e}")
+
+    # 2) Save raw leads (if enabled and different length)
+    if raw_leads and save_raw and (not leads or len(raw_leads) != len(leads)):
+        raw_name = f"{platform_key}_leads_raw_{username}_{timestamp}.csv"
+        raw_path = CSV_DIR / raw_name
+        with raw_path.open('w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(raw_leads)
+        files_saved.append(str(raw_path))
+        print(f"📋 Raw leads saved to {raw_path}")
+
+    return files_saved
+
 
 # ✅ FIXED: Extract all config values properly
 SEARCH_TERM = config["search_term"]

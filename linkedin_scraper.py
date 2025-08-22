@@ -10,6 +10,9 @@ import sys
 import random
 from dm_sequences import generate_dm_with_fallback
 
+# Directory where your CSV files are saved
+CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
+os.makedirs(CSV_DIR, exist_ok=True)
 # Import the centralized usage tracker
 from usage_tracker import setup_scraper_with_limits, finalize_scraper_results
 
@@ -824,6 +827,7 @@ def handle_linkedin_simple():
             
             # Save processed results to main CSV
             if all_results:
+                out_path = CSV_DIR / output_file
                 with open(output_file, 'w', newline='', encoding='utf-8') as f:
                     writer = csv.DictWriter(f, fieldnames=fieldnames)
                     writer.writeheader()
@@ -833,6 +837,7 @@ def handle_linkedin_simple():
             # Save raw results if enabled and different from processed
             if all_raw_results and SAVE_RAW_LEADS and len(all_raw_results) != len(all_results):
                 raw_filename = f"linkedin_leads_raw_{username}_{date_str}.csv"
+                raw_path = CSV_DIR / raw_filename
                 with open(raw_filename, 'w', newline='', encoding='utf-8') as f:
                     writer = csv.DictWriter(f, fieldnames=fieldnames)
                     writer.writeheader()

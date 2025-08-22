@@ -10,6 +10,10 @@ import json
 import random
 from dm_sequences import generate_dm_with_fallback
 
+# Directory where your CSV files are saved
+CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
+os.makedirs(CSV_DIR, exist_ok=True)
+
 # Import the centralized usage tracker
 from usage_tracker import setup_scraper_with_limits, finalize_scraper_results
 
@@ -743,17 +747,19 @@ def login_and_scrape():
             
             # Save results to multiple files
             if results or (raw_results and SAVE_RAW_LEADS):
+                output_file = f"twitter_leads_{username}_{date_str}.csv"
                 fieldnames = ["name", "handle", "bio", "url", "platform", "dm", "username", "location", "is_verified", "has_email", "has_phone", "extraction_method"]
                 
                 files_saved = []
                 
                 # Save processed results to main CSV
                 if results:
+                    out_path = CSV_DIR / output_file
                     with open(csv_filename, "w", newline="", encoding="utf-8") as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()
                         writer.writerows(results)
-                    files_saved.append(csv_filename)
+                    files_saved.append(output_file)
                     
                     # Save to backup CSV if different
                     if BACKUP_CSV != csv_filename:
@@ -767,6 +773,7 @@ def login_and_scrape():
                 # Save raw results if enabled and different from processed
                 if raw_results and SAVE_RAW_LEADS and len(raw_results) != len(results):
                     raw_filename = f"twitter_leads_raw_{username}_{date_str}.csv"
+                    raw_path = CSV_DIR / raw_filename
                     with open(raw_filename, "w", newline="", encoding="utf-8") as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()
