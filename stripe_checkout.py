@@ -11,8 +11,6 @@ from postgres_credit_system import credit_system
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
-    or os.getenv("APP_BASE_URL") 
-    or "http://localhost:8501"
 )
 
 # ---- Handle ?payment_success=1 redirects deterministically ----
