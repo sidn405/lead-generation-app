@@ -332,24 +332,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-def load_accurate_empire_stats(username):
-    """Load accurate, up-to-date empire stats for specific user"""
-    empire_stats = {}
-    total_leads  = 0
-    try:
-        empire_file = f"empire_totals_{username}.json"
-        if os.path.exists(empire_file):
-            with open(empire_file, "r") as f:
-                data = json.load(f)
-            empire_stats = data.get("platforms", {})
-            total_leads  = data.get("total_empire", 0)
-        else:
-            empire_stats = calculate_empire_from_csvs(username)
-            total_leads  = sum(empire_stats.values())
-    except Exception as e:
-        st.error(f"❌ Could not load empire stats: {e}")
-    return empire_stats, total_leads
-
 # ✅ ADD THESE FUNCTIONS RIGHT AFTER YOUR IMPORTS
 def get_demo_status_with_refresh():
     """Get demo status with auto-refresh capability"""
@@ -562,6 +544,81 @@ def try_save_user_to_database(username, user_data):
 
 # CRITICAL: Handle payment authentication recovery FIRST
 is_payment_return = restore_payment_authentication()
+
+# ===== Empire stats helpers (define once at module level) =====
+import os, glob, json
+from datetime import datetime, timedelta
+
+def calculate_empire_from_csvs(username: str, days: int = 90, search_dirs=None) -> dict:
+    """
+    Count leads per platform by scanning recent CSVs that belong to `username`.
+    Returns dict like {'twitter': 27, 'instagram': 15, ...}
+    """
+    if search_dirs is None:
+        # look in working dir and a mounted volume if you use one
+        search_dirs = [".", "/data"]
+
+    platform_patterns = {
+        'twitter':   ['*twitter*leads*.csv'],
+        'facebook':  ['*facebook*leads*.csv'],
+        'linkedin':  ['*linkedin*leads*.csv'],
+        'instagram': ['*instagram*leads*.csv'],
+        'tiktok':    ['*tiktok*leads*.csv'],
+        'youtube':   ['*youtube*leads*.csv'],
+        'medium':    ['*medium*leads*.csv'],
+        'reddit':    ['*reddit*leads*.csv'],
+    }
+
+    cutoff = datetime.now() - timedelta(days=days)
+    counts: dict[str, int] = {}
+
+    for platform, patterns in platform_patterns.items():
+        total = 0
+        for base in search_dirs:
+            for pat in patterns:
+                for path in glob.glob(os.path.join(base, pat)):
+                    try:
+                        # only count this user's files
+                        if username.lower() not in os.path.basename(path).lower():
+                            continue
+                        # only recent files
+                        if datetime.fromtimestamp(os.path.getmtime(path)) < cutoff:
+                            continue
+                        # count lines minus header
+                        with open(path, "r", encoding="utf-8") as f:
+                            total += max(0, sum(1 for _ in f) - 1)
+                    except Exception:
+                        continue
+        if total > 0:
+            counts[platform] = total
+
+    return counts
+
+def load_accurate_empire_stats(username: str):
+    """
+    Load empire stats for `username`.
+    1) Try cached JSON if present
+    2) Else compute from CSVs
+    Returns (empire_stats: dict, total_leads: int)
+    """
+    empire_stats = {}
+    total_leads = 0
+    try:
+        empire_file = f"empire_totals_{username}.json"
+        if os.path.exists(empire_file):
+            with open(empire_file, "r") as f:
+                data = json.load(f)
+            empire_stats = data.get("platforms", {}) or {}
+            total_leads = int(data.get("total_empire", 0) or 0)
+        else:
+            empire_stats = calculate_empire_from_csvs(username)
+            total_leads = sum(empire_stats.values())
+    except Exception as e:
+        print(f"❌ Error loading empire stats for {username}: {e}")
+        empire_stats, total_leads = {}, 0
+
+    return empire_stats, total_leads
+# ==============================================================
 
 import streamlit as st
 from PIL import Image
@@ -5864,94 +5921,6 @@ with tab2: # Lead Results
                 csv_files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
                 
                 return csv_files
-
-            # ✅ ACCURATE EMPIRE STATS - Load fresh user-specific data
-            def load_accurate_empire_stats(username):
-                """Load accurate, up-to-date empire stats for specific user"""
-                
-                empire_stats = {}
-                total_leads = 0
-                
-                try:
-                    # Option 1: Load from user-specific empire file
-                    empire_file = f'empire_totals_{username}.json'
-                    
-                    if os.path.exists(empire_file):
-                        with open(empire_file, 'r') as f:
-                            empire_data = json.load(f)
-                        
-                        empire_stats = empire_data.get('platforms', {})
-                        total_leads = empire_data.get('total_empire', 0)
-                        
-                        print(f"✅ Loaded empire stats for {username}: {total_leads} total leads")
-                        
-                    else:
-                        # Option 2: Calculate from recent CSV files
-                        print(f"📊 Calculating empire stats from CSV files for {username}")
-                        empire_stats = calculate_empire_from_csvs(username)
-                        total_leads = sum(empire_stats.values())
-                        
-                except Exception as e:
-                    print(f"❌ Error loading empire stats: {e}")
-                    # Fallback to empty stats
-                    empire_stats = {}
-                    total_leads = 0
-                
-                return empire_stats, total_leads
-
-            def calculate_empire_from_csvs(username):
-                """Calculate empire stats from actual CSV files"""
-                
-                import glob
-                from datetime import datetime, timedelta
-                
-                platform_counts = {}
-                
-                # Define platform patterns to look for
-                platform_patterns = {
-                    'twitter': ['*twitter*leads*.csv'],
-                    'facebook': ['*facebook*leads*.csv'], 
-                    'linkedin': ['*linkedin*leads*.csv'],
-                    'instagram': ['*instagram*leads*.csv'],
-                    'tiktok': ['*tiktok*leads*.csv'],
-                    'youtube': ['*youtube*leads*.csv'],
-                    'medium': ['*medium*leads*.csv'],
-                    'reddit': ['*reddit*leads*.csv']
-                }
-                
-                # Look for recent files (last 30 days)
-                cutoff_date = datetime.now() - timedelta(days=90)
-                
-                for platform, patterns in platform_patterns.items():
-                    platform_count = 0
-                    
-                    for pattern in patterns:
-                        files = glob.glob(pattern)
-                        
-                        for file in files:
-                            try:
-                                # Check if file is recent
-                                file_time = datetime.fromtimestamp(os.path.getmtime(file))
-                                if file_time < cutoff_date:
-                                    continue
-                                
-                                # Check if file belongs to this user (if username is in filename)
-                                if username not in file.lower():
-                                    continue
-                                
-                                # Count lines in CSV (minus header)
-                                with open(file, 'r', encoding='utf-8') as f:
-                                    line_count = sum(1 for line in f) - 1
-                                    platform_count += max(0, line_count)
-                                    
-                            except Exception as e:
-                                print(f"⚠️ Error reading {file}: {e}")
-                                continue
-                    
-                    if platform_count > 0:
-                        platform_counts[platform] = platform_count
-                
-                return platform_counts
 
             # Get current user
             if 'username' not in st.session_state or not st.session_state.username:
