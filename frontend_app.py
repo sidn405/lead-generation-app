@@ -8465,7 +8465,7 @@ with tab6:  # Settings tab
                     """)
 
             # now, conditionally render the Detailed Usage panel
-            if st.session_state.show_usage_details:
+            #if st.session_state.show_usage_details:
                 st.markdown("---")
                 st.subheader("📊 Detailed Usage Statistics")
                 
