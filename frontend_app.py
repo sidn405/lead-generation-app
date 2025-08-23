@@ -229,18 +229,7 @@ BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.join(BASE_DIR, "client_configs")
 os.makedirs(CONFIG_DIR, exist_ok=True)
 
-def check_and_restore_session():
-    """Check if user should be logged in but isn't"""
-    
-    # If we have a username in query params but not authenticated
-    username = st.query_params.get("username")
-    
-    if username and not st.session_state.get("authenticated", False):
-        print(f"Detected username {username} but not authenticated - attempting restore")
-        restore_user_session_after_payment(username)
 
-# Call this at the start of your main app
-check_and_restore_session()
 
 # 2) Callback to save the campaign
 def save_dms_callback():
