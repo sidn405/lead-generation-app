@@ -379,61 +379,6 @@ class SimpleCreditAuth:
         
         return True
     
-    def debug_user_data_locations(username: str):
-        """Debug function to find where user data still exists"""
-        import os
-        import json
-        
-        st.write(f"🔍 Searching for user data: {username}")
-        
-        # Check PostgreSQL
-        try:
-            from postgres_credit_system import credit_system
-            user_info = credit_system.get_user_info(username)
-            
-            if user_info:
-                st.error(f"❌ User still exists in PostgreSQL: {user_info}")
-            else:
-                st.success("✅ User not found in PostgreSQL")
-                
-        except Exception as e:
-            st.write(f"PostgreSQL check failed: {e}")
-        
-        # Check JSON files
-        json_files = ["users.json", "users_credits.json", "users_credit.json"]
-        
-        for filename in json_files:
-            if os.path.exists(filename):
-                try:
-                    with open(filename, "r") as f:
-                        data = json.load(f)
-                    
-                    if username in data:
-                        st.error(f"❌ User still exists in {filename}")
-                        st.json(data[username])
-                    else:
-                        st.success(f"✅ User not in {filename}")
-                        
-                except Exception as e:
-                    st.write(f"Error checking {filename}: {e}")
-            else:
-                st.info(f"File {filename} doesn't exist")
-        
-        # Check login process
-        st.write("🔍 Testing login process...")
-        try:
-            from postgres_credit_system import credit_system
-            success, message, user_data = credit_system.login_user(username, "test_password")
-            
-            if success:
-                st.error(f"❌ Login succeeded when it shouldn't: {message}")
-                st.json(user_data)
-            else:
-                st.success(f"✅ Login properly failed: {message}")
-                
-        except Exception as e:
-            st.write(f"Login test error: {e}")
-    
 # one global instance
 simple_auth = SimpleCreditAuth()
     
