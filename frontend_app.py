@@ -3839,7 +3839,7 @@ import streamlit as st
 st.markdown("""
 <style>
 main .block-container { 
-    padding-top: 0rem !important; 
+    padding-top: *.05rem !important; 
 }
 h1.main-header { 
     margin: -4px !important; 
@@ -3849,7 +3849,7 @@ h1.main-header {
     display: flex; 
     align-items: center; 
     gap: 10px; 
-    margin: -4px; 
+    margin: 0; 
     padding: 0; 
 }
 </style>
@@ -6027,7 +6027,9 @@ with tab2: # Lead Results
             current_username = st.session_state.username
 
             # Load stats that survive deploys (cache or rebuilt from CSV_DIR)
-            user_empire_stats, user_total_leads = load_accurate_empire_stats(current_username)
+            print(f"📊 Calculating empire stats from CSV files for {username} (CSV_DIR={CSV_DIR})")
+            user_empire_stats = calculate_empire_from_csvs(username)
+            user_total_leads = sum(empire_stats.values())
 
             st.markdown(f"### 👑 Empire Command Center - {current_username}")
 
@@ -6589,7 +6591,7 @@ if MULTILINGUAL_AVAILABLE:
                     import glob
                     
                     platform_patterns = {
-                        "🐦 Twitter": ["twitter_leads_stealth_*.csv"],
+                        "🐦 Twitter": ["twitter_leads_*.csv"],
                         "💼 LinkedIn": ["linkedin_leads_*.csv"],
                         "📘 Facebook": ["facebook_leads_*.csv"],
                         "🎵 TikTok": ["tiktok_leads_*.csv"],
@@ -8266,153 +8268,59 @@ with tab6:  # Settings tab
                     st.markdown("---")
                     st.subheader("🎯 Platform Performance")
 
-                    # 1) Normalize transactions (prefer DB, otherwise derive from CSVs)
-                    # ======== DROP-IN REPLACEMENT: always show stats after deploy ========
                     from datetime import datetime
+                    import time
 
-                    username = simple_auth.get_current_user()
+                    # 1) Build per-platform lead counts from CSVs (same source as the sidebar totals)
+                    platform_leads = calculate_empire_from_csvs(current_username)  # dict: platform -> leads
+                    total_leads_pp = sum(platform_leads.values())
 
-                    # 1) Try Postgres (persists across deploys)
-                    summary = credit_system.get_usage_summary(username, since_days=180)
+                    # Derive a simple campaign count: number of CSV files with >0 rows for this user
+                    user_csv_files = get_user_csv_files(current_username)
+                    total_campaigns = sum(1 for f in user_csv_files if f.get("leads", 0) > 0)
 
-                    total_leads = int(summary["total_leads"] or 0)
-                    total_campaigns = int(summary["total_campaigns"] or 0)
-                    platform_leads = summary["per_platform"] or {}
-
-                    # Derive days_active from DB timestamps
-                    if summary["first_ts"] and summary["last_ts"]:
-                        delta_days = (summary["last_ts"] - summary["first_ts"]).days + 1
-                        days_active = max(1, delta_days)
-                    else:
-                        days_active = 1
-
-                    # 2) If DB has absolutely nothing yet (brand-new user), fall back to CSVs
-                    if total_leads == 0 and total_campaigns == 0:
-                        try:
-                            files = get_user_csv_files(username)   # your helper
-                            # synthesize totals
-                            for f in files:
-                                p = f["platform"]
-                                n = int(f.get("leads", 0))
-                                platform_leads[p] = platform_leads.get(p, 0) + n
-                            total_leads = sum(platform_leads.values())
-                            total_campaigns = len(files)
-                            days_active = 1
-                        except Exception:
-                            pass
-                    # ======== END DROP-IN REPLACEMENT ========
-
-
-                    # 2) Compute per-platform aggregates defensively
-                    # ----------------------------------------------------------------
-                    platform_emojis = {
-                        'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
-                        'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
-                        'medium': '📝', 'reddit': '🗨️', 'parallel_session': '⚡'
-                    }
-
-                    platform_leads: dict[str, int] = {}
-                    platform_campaigns: dict[str, int] = {}
-
-                    def norm_platform(p: str) -> str:
-                        if not p:
-                            return "unknown"
-                        p = str(p).strip().lower()
-                        # tolerate a few synonyms
-                        aliases = {"x": "twitter", "yt": "youtube", "ig": "instagram"}
-                        return aliases.get(p, p)
-
-                    # normalize & roll up
-                    for tx in transactions:
-                        if (tx or {}).get("type") == "lead_download":
-                            p = norm_platform(tx.get("platform") or tx.get("source") or "unknown")
-                            n = tx.get("leads_downloaded")
-                            if n is None:
-                                # some code logs credits_used instead of leads_downloaded
-                                n = tx.get("credits_used", 0)
-                            try:
-                                n = int(n)
-                            except Exception:
-                                n = 0
-
-                            platform_leads[p] = platform_leads.get(p, 0) + n
-                            platform_campaigns[p] = platform_campaigns.get(p, 0) + 1
-
-                    # 3) Totals used by multiple sections (guaranteed)
-                    # ----------------------------------------------------------------
-                    total_leads = sum(platform_leads.values())
-                    total_campaigns = sum(platform_campaigns.values())
-
-                    # If server already computed totals, prefer those (keeps “210” you show up top)
-                    total_leads = user_info.get("total_leads", total_leads) if user_info else total_leads
-
-                    # days_active from first/last activity (fallback 1)
-                    def _parse_ts(ts):
-                        try:
-                            return datetime.fromisoformat(ts)
-                        except Exception:
-                            return None
-
-                    times = [_parse_ts(tx.get("timestamp", "")) for tx in transactions if tx.get("timestamp")]
-                    times = [t for t in times if t is not None]
-                    if times:
-                        days_active = max(1, (max(times) - min(times)).days + 1)
-                    else:
-                        days_active = 1
-
-                    # 4) Render Platform Performance UI
-                    # ----------------------------------------------------------------
-                    if platform_leads:
+                    if total_leads_pp > 0:
+                        # Sort platforms by total leads
                         sorted_platforms = sorted(platform_leads.items(), key=lambda x: x[1], reverse=True)
 
-                        perf_col1, perf_col2, perf_col3 = st.columns(3)
+                        platform_emojis = {
+                            'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
+                            'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
+                            'medium': '📝', 'reddit': '🗨️', 'unknown': '📱'
+                        }
 
-                        with perf_col1:
-                            st.markdown("**📊 Leads by Platform:**")
-                            for platform, leads in sorted_platforms[:5]:
-                                pct = (leads / total_leads * 100) if total_leads > 0 else 0
-                                st.metric(f"{platform_emojis.get(platform,'📱')} {platform.title()}",
-                                        leads, delta=f"{pct:.1f}%")
+                        colA, colB, colC = st.columns(3)
 
-                        with perf_col2:
-                            st.markdown("**🎯 Performance Metrics:**")
-                            best_platform = sorted_platforms[0] if sorted_platforms else ('none', 0)
-                            st.metric("🏆 Top Platform", best_platform[0].title(), delta=f"{best_platform[1]} leads")
-                            avg_leads = (total_leads / total_campaigns) if total_campaigns > 0 else 0
+                        with colA:
+                            st.markdown("**📊 Leads by Platform**")
+                            for plat, leads in sorted_platforms[:5]:
+                                pct = (leads / total_leads_pp * 100.0) if total_leads_pp else 0.0
+                                st.metric(f"{platform_emojis.get(plat,'📱')} {plat.title()}", leads, delta=f"{pct:.1f}%")
+
+                        with colB:
+                            st.markdown("**🎯 Performance Metrics**")
+                            best = sorted_platforms[0]
+                            st.metric("🏆 Top Platform", best[0].title(), delta=f"{best[1]} leads")
+                            avg_leads = (total_leads_pp / total_campaigns) if total_campaigns else 0.0
                             st.metric("📈 Avg Leads/Campaign", f"{avg_leads:.1f}")
-                            active_platforms = len([p for p, l in platform_leads.items() if l > 0])
-                            st.metric("🌍 Active Platforms", active_platforms)
+                            st.metric("🌍 Active Platforms", len([1 for _, v in platform_leads.items() if v > 0]))
 
-                        with perf_col3:
-                            st.markdown("**⚡ Efficiency Stats:**")
-                            if times:
-                                latest_tx = max(times)
-                                # find latest platform/leads for that timestamp if we can
-                                latest = max(
-                                    (t for t in transactions if _parse_ts(t.get("timestamp","")) == latest_tx),
-                                    key=lambda t: t.get("leads_downloaded", t.get("credits_used", 0)),
-                                    default={}
-                                )
-                                lp = norm_platform(latest.get("platform","unknown"))
-                                ln = int(latest.get("leads_downloaded", latest.get("credits_used", 0) or 0))
-                                st.metric("🕒 Latest Campaign", lp.title(), delta=f"{ln} leads")
+                        with colC:
+                            st.markdown("**⚡ Efficiency Stats**")
                             st.metric("🚀 Total Campaigns", total_campaigns)
-                            successful = len([tx for tx in transactions
-                                            if tx.get("type") == "lead_download" and (tx.get("leads_downloaded") or tx.get("credits_used", 0)) > 0])
-                            success_rate = (successful / total_campaigns * 100) if total_campaigns > 0 else 0
+                            # Success rate as "campaigns with >0 leads / total campaigns" -> here equal to 100% by construction
+                            success_rate = 100.0 if total_campaigns else 0.0
                             st.metric("✅ Success Rate", f"{success_rate:.1f}%")
 
-                        # Bar view
-                        if len(sorted_platforms) > 1:
-                            st.markdown("**📊 Platform Distribution:**")
-                            chart_cols = st.columns(len(sorted_platforms))
-                            max_leads = max(leads for _, leads in sorted_platforms)
-                            for i, (platform, leads) in enumerate(sorted_platforms):
-                                with chart_cols[i]:
-                                    st.markdown(f"**{platform_emojis.get(platform,'📱')} {platform.title()}**")
-                                    st.progress(leads / max_leads if max_leads > 0 else 0)
-                                    pct = (leads / total_leads * 100) if total_leads > 0 else 0
-                                    st.caption(f"{leads} leads ({pct:.1f}%)")
+                        # Simple distribution bars
+                        st.markdown("**📊 Platform Distribution**")
+                        bar_cols = st.columns(max(1, len(sorted_platforms)))
+                        max_leads = max(v for _, v in sorted_platforms)
+                        for i, (plat, leads) in enumerate(sorted_platforms):
+                            with bar_cols[i]:
+                                st.markdown(f"**{platform_emojis.get(plat,'📱')} {plat.title()}**")
+                                st.progress(leads / max_leads if max_leads else 0.0)
+                                st.caption(f"{leads} leads ({(leads/total_leads_pp*100):.1f}%)")
 
                     else:
                         st.info("📊 No platform performance data yet. Generate some leads to see your stats!")
@@ -8443,8 +8351,8 @@ with tab6:  # Settings tab
                                 summary = latest_type.replace('_', ' ').title()
                             st.metric("🕒 Latest Activity", summary)
                         with activity_summary_col3:
-                            if len(recent_transactions) >= 2 and times:
-                                st.metric("📅 Activity Span", f"{(max(times)-min(times)).days} days")
+                            if len(recent_transactions) >= 2 and time:
+                                st.metric("📅 Activity Span", f"{(max(time)-min(time)).days} days")
                             else:
                                 st.metric("📅 Status", "Active")
 
@@ -8460,7 +8368,7 @@ with tab6:  # Settings tab
 
                                 if tx_type == 'lead_download':
                                     n = int(tx.get('leads_downloaded', tx.get('credits_used', 0) or 0))
-                                    p = norm_platform(tx.get('platform', 'unknown'))
+                                    p = platform(tx.get('platform', 'unknown'))
                                     st.success(f"{platform_emojis.get(p,'📱')} **{tx_date}**: Generated **{n}** leads from {p}")
                                 elif tx_type == 'credit_purchase':
                                     n = int(tx.get('credits_added', 0) or 0)
