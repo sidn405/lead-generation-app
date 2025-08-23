@@ -229,6 +229,19 @@ BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.join(BASE_DIR, "client_configs")
 os.makedirs(CONFIG_DIR, exist_ok=True)
 
+def check_and_restore_session():
+    """Check if user should be logged in but isn't"""
+    
+    # If we have a username in query params but not authenticated
+    username = st.query_params.get("username")
+    
+    if username and not st.session_state.get("authenticated", False):
+        print(f"Detected username {username} but not authenticated - attempting restore")
+        restore_user_session_after_payment(username)
+
+# Call this at the start of your main app
+check_and_restore_session()
+
 # 2) Callback to save the campaign
 def save_dms_callback():
     # Grab everything out of session_state
@@ -1436,7 +1449,7 @@ st.set_page_config(
 from stripe_checkout import handle_payment_success
 
 def handle_stripe_payment_success():
-    """Single payment success handler - replaces both functions"""
+    """Single payment success handler with session restoration"""
     query_params = st.query_params
     
     if not query_params.get("payment_success"):
@@ -1452,38 +1465,78 @@ def handle_stripe_payment_success():
         return True
     
     try:
+        # Process payment first
+        from postgres_credit_system import credit_system
+        
         if payment_type == "subscription":
             monthly_credits = int(query_params.get("monthly_credits", "0") or 0)
-            
-            # Call with correct parameters for subscription
-            from stripe_checkout import handle_payment_success
-            handle_payment_success(
+            success = credit_system.activate_subscription(
                 username=username,
-                tier_name=tier_name,
+                plan=tier_name,
                 monthly_credits=monthly_credits,
-                payment_type="subscription"
+                stripe_session_id=query_params.get("payment_intent", "unknown")
             )
         else:
             credits = int(query_params.get("credits", "0") or 0)
-            
-            # Call with correct parameters for credit purchase
-            from stripe_checkout import handle_payment_success
-            handle_payment_success(
+            success = credit_system.add_credits(
                 username=username,
-                tier_name=tier_name,
                 credits=credits,
-                payment_type="credits"
+                plan="credit_purchase",
+                stripe_session_id=query_params.get("payment_intent", "unknown")
             )
         
-        # Clear query params to prevent reprocessing
-        st.query_params.clear()
-        st.rerun()
+        if success:
+            # Show success message
+            st.balloons()
+            st.success("Payment successful! Credits added to your account.")
+            
+            # CRITICAL: Restore session state BEFORE clearing params
+            restore_user_session_after_payment(username)
+            
+            # Small delay to ensure session state is set
+            time.sleep(0.5)
+            
+            # Clear query params and redirect
+            st.query_params.clear()
+            st.rerun()
+        else:
+            st.error("Payment processing failed. Please contact support.")
         
     except Exception as e:
         st.error(f"Payment processing error: {e}")
         print(f"Payment processing error: {e}")
     
     return True
+
+def restore_user_session_after_payment(username: str):
+    """Restore complete user session after payment"""
+    try:
+        from postgres_credit_system import credit_system
+        
+        # Get fresh user data from database
+        user_info = credit_system.get_user_info(username)
+        
+        if user_info:
+            # Restore ALL session state variables
+            st.session_state.authenticated = True
+            st.session_state.username = username
+            st.session_state.user_data = user_info
+            st.session_state.credits = user_info.get("credits", 0)
+            st.session_state.user_plan = user_info.get("plan", "demo")
+            
+            # Clear any auth modals
+            st.session_state.show_login = False
+            st.session_state.show_register = False
+            
+            print(f"Session restored for {username}: {user_info.get('credits', 0)} credits")
+            return True
+        else:
+            print(f"Could not fetch user info for {username}")
+            return False
+            
+    except Exception as e:
+        print(f"Session restoration error: {e}")
+        return False
 
 def failsafe_payment_logger():
     """Failsafe logger that catches any payment success and logs it to admin"""
