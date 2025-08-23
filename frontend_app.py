@@ -1435,96 +1435,55 @@ st.set_page_config(
 
 from stripe_checkout import handle_payment_success
 
-def handle_payment_success_url():
-    qp = st.query_params
-    if qp.get("payment_success") != "true":
-        return False
-
-    username = qp.get("username", st.session_state.get("username", "unknown"))
-    tier = qp.get("tier", "starter")
-    typ = qp.get("type", "subscription")
-
-    if typ == "subscription":
-        monthly = int(qp.get("monthly_credits", "0") or 0)
-        handle_payment_success(
-            username=username,
-            tier_name=tier,
-            monthly_credits=monthly,
-            payment_type="subscription",
-        )
-    else:
-        credits = int(qp.get("credits", "0") or 0)
-        handle_payment_success(
-            username=username,
-            tier_name=tier,
-            credits=credits,
-            payment_type="credits",
-        )
-    return True
-
-
 def handle_stripe_payment_success():
-    """Handle Stripe payment success - FIXED to pass correct parameters"""
+    """Single payment success handler - replaces both functions"""
     query_params = st.query_params
-   
-    if "payment_success" in query_params:
-        # Extract all required parameters
-        username = query_params.get("username", "unknown")
-        tier_name = query_params.get("tier", "unknown")
-        credits = query_params.get("credits", "0")
-        amount = query_params.get("amount", "0")
-        
-        # Debug logging
-        print(f"🔍 Payment success parameters:")
-        print(f"   Username: {username}")
-        print(f"   Tier: {tier_name}")
-        print(f"   Credits: {credits}")
-        print(f"   Amount: {amount}")
-        
-        try:
-            credits = int(credits)
-            amount = float(amount)
-        except (ValueError, TypeError) as e:
-            st.error(f"❌ Invalid payment parameters: {e}")
-            print(f"❌ Parameter conversion error: {e}")
-            return False
-       
-        if username != "unknown" and credits > 0:
-            try:
-                from stripe_checkout import handle_payment_success
-                
-                # FIXED: Call with 4 parameters (username, tier_name, credits, amount)
-                handle_payment_success(username, tier_name, credits, amount)
-                print(f"✅ Payment success handled with 4 parameters")
-                return True
-                
-            except Exception as e:
-                st.error(f"❌ Payment processing error: {e}")
-                print(f"❌ Payment processing error: {e}")
-                
-                # Emergency fallback: at least add the credits
-                try:
-                    st.balloons()
-                    st.success(f"🎉 Payment Successful!")
-                    
-                    from postgres_credit_system import credit_system
-                    success = credit_system.add_credits(username, credits, tier_name)
-                    if success:
-                        st.success(f"✅ {credits} credits added to your account!")
-                        st.warning("⚠️ Admin logging may have failed - contact support if purchase doesn't appear in admin")
-                    else:
-                        st.error("❌ Error adding credits - contact support immediately")
-                except Exception as credit_error:
-                    st.error(f"❌ Critical error: {credit_error}")
-                
-                return True  # Return True because payment was successful
-                
+    
+    if not query_params.get("payment_success"):
+        return False
+    
+    # Extract parameters
+    username = query_params.get("username") or st.session_state.get("username")
+    tier_name = query_params.get("tier", "unknown")
+    payment_type = query_params.get("type", "credits")
+    
+    if not username or username == "unknown":
+        st.error("No user session found. Please log in and try again.")
+        return True
+    
+    try:
+        if payment_type == "subscription":
+            monthly_credits = int(query_params.get("monthly_credits", "0") or 0)
+            
+            # Call with correct parameters for subscription
+            from stripe_checkout import handle_payment_success
+            handle_payment_success(
+                username=username,
+                tier_name=tier_name,
+                monthly_credits=monthly_credits,
+                payment_type="subscription"
+            )
         else:
-            st.error("❌ Invalid payment parameters received")
-            print(f"❌ Invalid parameters: username={username}, credits={credits}")
-   
-    return False
-
+            credits = int(query_params.get("credits", "0") or 0)
+            
+            # Call with correct parameters for credit purchase
+            from stripe_checkout import handle_payment_success
+            handle_payment_success(
+                username=username,
+                tier_name=tier_name,
+                credits=credits,
+                payment_type="credits"
+            )
+        
+        # Clear query params to prevent reprocessing
+        st.query_params.clear()
+        st.rerun()
+        
+    except Exception as e:
+        st.error(f"Payment processing error: {e}")
+        print(f"Payment processing error: {e}")
+    
+    return True
 
 def failsafe_payment_logger():
     """Failsafe logger that catches any payment success and logs it to admin"""
@@ -1940,41 +1899,6 @@ def capture_stripe_webhook_data():
     if stripe_session and st.button("🔍 Process Stripe Session"):
         st.info("🚧 Stripe session processing would go here")
         # In a real implementation, you'd use the Stripe API to get session details
-
-# CRITICAL: Add this to your main app startup
-def ensure_payment_logging():
-    """Ensure all payments get logged - add this to main app startup"""
-    
-    query_params = st.query_params
-    
-    # Check for payment success
-    if "payment_success" in query_params or "success" in query_params:
-        username = query_params.get("username")
-        tier = query_params.get("tier")
-        credits = query_params.get("credits")
-        amount = query_params.get("amount")
-        
-        if username and tier and credits and amount:
-            try:
-                credits_int = int(credits)
-                amount_float = float(amount)
-                
-                print(f"🔄 ENSURING PAYMENT GETS LOGGED:")
-                print(f"   Username: {username}")
-                print(f"   Package: {tier}")
-                print(f"   Credits: {credits_int}")
-                print(f"   Amount: ${amount_float}")
-                
-                # Force log to admin
-                success = log_payment_to_admin_direct(username, tier, credits_int, amount_float)
-                
-                if success:
-                    print(f"✅ Payment logged via ensure_payment_logging")
-                else:
-                    print(f"❌ ensure_payment_logging failed")
-                    
-            except Exception as e:
-                print(f"❌ ensure_payment_logging error: {e}")
 
 def check_scraper_authorization(username: str, estimated_leads: int) -> Tuple[bool, str]:
     """Authorization including demo mode handling"""
@@ -9267,67 +9191,6 @@ with tab6:  # Settings tab
             # Save preferences button
             st.markdown("---")
             
-            def debug_user_data_locations(username: str):
-                """Debug function to find where user data still exists"""
-                import os
-                import json
-                
-                st.write(f"Searching for user data: {username}")
-                
-                # Check PostgreSQL
-                try:
-                    from postgres_credit_system import credit_system
-                    user_info = credit_system.get_user_info(username)
-                    
-                    if user_info:
-                        st.error(f"User still exists in PostgreSQL: {user_info}")
-                    else:
-                        st.success("User not found in PostgreSQL")
-                        
-                except Exception as e:
-                    st.write(f"PostgreSQL check failed: {e}")
-                
-                # Check JSON files
-                json_files = ["users.json", "users_credits.json", "users_credit.json"]
-                
-                for filename in json_files:
-                    if os.path.exists(filename):
-                        try:
-                            with open(filename, "r") as f:
-                                data = json.load(f)
-                            
-                            if username in data:
-                                st.error(f"User still exists in {filename}")
-                                st.json(data[username])
-                            else:
-                                st.success(f"User not in {filename}")
-                                
-                        except Exception as e:
-                            st.write(f"Error checking {filename}: {e}")
-                    else:
-                        st.info(f"File {filename} doesn't exist")
-                
-                # Check login process
-                st.write("Testing login process...")
-                try:
-                    from postgres_credit_system import credit_system
-                    success, message, user_data = credit_system.login_user(username, "any_password")
-                    
-                    if success:
-                        st.error(f"Login succeeded when it shouldn't: {message}")
-                        st.json(user_data)
-                    else:
-                        st.success(f"Login properly failed: {message}")
-                        
-                except Exception as e:
-                    st.write(f"Login test error: {e}")
-
-            # Add this to your settings section temporarily
-            st.subheader("Debug User Deletion")
-            debug_username = st.text_input("Enter username to debug:", value="Kathy")  # Changed to Kathy
-            if st.button("Debug User Data"):
-                debug_user_data_locations(debug_username)
-                
             if st.button("💾 Save All Settings", type="primary", use_container_width=True):
                 try:
                     # Get current username

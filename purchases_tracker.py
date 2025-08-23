@@ -46,7 +46,6 @@ def automatic_payment_capture():
                         st.balloons()
                         st.success(f"🎉 Payment Successful! {tier} - ${amount}")
                         st.success(f"✅ {credits} credits added to your account!")
-                        st.success("📊 Purchase automatically logged to admin!")
                         
                         if st.button("🏠 Continue", type="primary"):
                             st.query_params.clear()

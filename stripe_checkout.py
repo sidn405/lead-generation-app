@@ -19,23 +19,24 @@ def handle_payment_success_url():
     if not st.query_params.get("payment_success"):
         return False
 
-    # pull params
+    # Pull params
     qp = st.query_params
-    payment_type = qp.get("type", "subscription")  # 'subscription' | 'credits'
+    payment_type = qp.get("type", "subscription")
     tier_name = (qp.get("tier") or "").replace("_", " ").strip().lower()
     monthly_credits = int(qp.get("monthly_credits", "0") or 0)
     credits = int(qp.get("credits", "0") or 0)
     username = qp.get("username") or st.session_state.get("username")
     payment_intent = qp.get("session_id") or qp.get("payment_intent") or "unknown"
+    amount = float(qp.get("amount", "0") or 0)  # Add amount tracking
 
     if not username:
         st.error("You're not signed in. Please log in and try again.")
         return True
 
-    # import here to avoid circulars
     from postgres_credit_system import credit_system
-
-    # Decide subscription vs one-time credits
+    from datetime import datetime
+    from frontend_app import log_payment_to_admin_system
+    # Process payment
     is_subscription = (payment_type == "subscription") or (monthly_credits > 0)
     credit_amount = monthly_credits if is_subscription else credits
 
@@ -55,18 +56,64 @@ def handle_payment_success_url():
             stripe_session_id=payment_intent,
         )
 
-    # refresh live session state from DB so UI updates immediately
+    # ADMIN LOGGING - Add this section
+    if ok:
+        try:
+            # Log to admin system (replace with your actual admin logging)
+            admin_log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "username": username,
+                "tier": tier_name,
+                "credits": credit_amount,
+                "amount": amount,
+                "payment_intent": payment_intent,
+                "type": payment_type
+            }
+            
+            # Write to admin log file or send to admin system
+            log_payment_to_admin_system(admin_log_entry)
+            
+            print(f"✅ Payment logged to admin: {username} - {tier_name} - ${amount}")
+            
+        except Exception as e:
+            print(f"⚠️ Admin logging failed (non-critical): {e}")
+            # Don't fail the whole payment process if admin logging fails
+
+    # Restore session state
     if ok:
         fresh = credit_system.get_user_info(username)
         if fresh:
+            st.session_state.authenticated = True
+            st.session_state.username = username
             st.session_state.user_data = fresh
             st.session_state.credits = fresh.get("credits", 0)
+            st.session_state.user_plan = fresh.get("plan", "demo")
+            st.session_state.show_login = False
+            st.session_state.show_register = False
 
-    # clear query string and re-render once so tabs aren’t blank
+    # Clear query params and rerun
     st.query_params.clear()
     st.rerun()
     return True
 
+def ensure_user_session(username: str):
+    """Ensure user session is properly maintained"""
+    if not st.session_state.get('authenticated', False):
+        # Try to restore session from database
+        from postgres_credit_system import credit_system
+        user_info = credit_system.get_user_info(username)
+        
+        if user_info:
+            st.session_state.authenticated = True
+            st.session_state.username = username
+            st.session_state.user_data = user_info
+            st.session_state.credits = user_info.get("credits", 0)
+            st.session_state.user_plan = user_info.get("plan", "demo")
+            
+            print(f"🔧 Session restored for {username}")
+            return True
+    
+    return st.session_state.get('authenticated', False)
 
 def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str:
     """Create Stripe checkout with proper username handling"""
