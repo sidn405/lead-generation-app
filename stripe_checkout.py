@@ -33,9 +33,10 @@ def handle_payment_success_url():
         st.error("You're not signed in. Please log in and try again.")
         return True
 
+    
     from postgres_credit_system import credit_system
     from datetime import datetime
-    from frontend_app import log_payment_to_admin_system
+    
     # Process payment
     is_subscription = (payment_type == "subscription") or (monthly_credits > 0)
     credit_amount = monthly_credits if is_subscription else credits
@@ -59,7 +60,8 @@ def handle_payment_success_url():
     # ADMIN LOGGING - Add this section
     if ok:
         try:
-            # Log to admin system (replace with your actual admin logging)
+            # Import only when needed to avoid circular import
+            from frontend_app import log_payment_to_admin_system
             admin_log_entry = {
                 "timestamp": datetime.now().isoformat(),
                 "username": username,
