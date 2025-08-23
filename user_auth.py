@@ -290,48 +290,47 @@ class SimpleCreditAuth:
         return st.session_state.get('authenticated', False)
     
     def delete_user_account(self) -> bool:
-        """FIXED: Remove all user data and handle the cleanup properly"""
+        """UPDATED: Complete account deletion including PostgreSQL cleanup"""
         import streamlit as st
         
         username = self.get_current_user()
         if not username:
-            st.error("❌ No user currently logged in.")
+            st.error("No user currently logged in.")
             return False
 
-        st.write(f"🗑️ Starting account deletion for: {username}")
+        st.write(f"Starting account deletion for: {username}")
         
-        # Step 1: Delete all user data files
+        # Step 1: Delete from PostgreSQL database FIRST
         try:
-            deletion_successful = delete_user_data(username)
-            st.write(f"📋 File deletion result: {deletion_successful}")
-        except Exception as e:
-            st.error(f"❌ Error during file deletion: {e}")
-            return False
-
-        # Step 2: Try to reload/sync the credit system
-        try:
-            # Import here to avoid circular imports
             from postgres_credit_system import credit_system
             
-            # Force reload the credit system
-            if hasattr(credit_system, 'reload_user_data'):
-                credit_system.reload_user_data()
-                st.write("✅ Credit system reloaded successfully")
+            # Delete from PostgreSQL
+            postgres_success = credit_system.delete_user(username)
+            if postgres_success:
+                st.write("✅ User deleted from PostgreSQL database")
             else:
-                st.write("⚠️ Credit system reload method not available")
+                st.write("⚠️ PostgreSQL deletion failed or user not found")
                 
         except ImportError:
-            st.write("⚠️ Credit system not available for reload")
+            st.write("⚠️ PostgreSQL system not available")
         except Exception as e:
-            st.write(f"⚠️ Credit system reload warning: {e}")
+            st.write(f"⚠️ PostgreSQL deletion error: {e}")
+
+        # Step 2: Delete from JSON files (legacy cleanup)
+        try:
+            deletion_successful = delete_user_data(username)
+            st.write(f"JSON file cleanup result: {deletion_successful}")
+        except Exception as e:
+            st.error(f"Error during JSON file deletion: {e}")
+            return False
 
         # Step 3: Clear ALL session state thoroughly
-        st.write("🧹 Clearing session state...")
+        st.write("Clearing session state...")
         
         # List of ALL possible session keys to clear
         keys_to_clear = [
             # Auth keys
-            'authenticated', 'username', 'user_data', 'credits',
+            'authenticated', 'username', 'user_data', 'credits', 'user_plan',
             # Login/register keys  
             'show_login', 'show_register',
             'login_username', 'login_password',
@@ -343,6 +342,7 @@ class SimpleCreditAuth:
             'show_close_expander', 'confirm_close', 'close_reason', 'close_feedback',
             # Password reset keys
             'show_forgot_password', 'show_password_reset', 'show_update_password',
+            'update_current_password', 'update_new_password', 'update_confirm_password',
             'demo_reset_token', 'demo_reset_username', 'demo_reset_email',
             # Any other user-specific keys
             'current_page', 'search_results', 'selected_platforms',
@@ -361,24 +361,20 @@ class SimpleCreditAuth:
                 del st.session_state[key]
                 additional_cleared += 1
         
-        st.write(f"🧹 Cleared {cleared_count} standard keys + {additional_cleared} user-specific keys")
+        st.write(f"Cleared {cleared_count} standard keys + {additional_cleared} user-specific keys")
         
         # Step 4: Reset auth object state
         self.current_user = None
         self.user_data = None
         
-        # Step 5: Force redirect to login
-        st.session_state.show_login = True
+        # Step 5: FIXED - Don't set show_login, go to homepage instead
+        # DON'T DO: st.session_state.show_login = True
         
-        # Step 6: Show success and rerun
-        if deletion_successful:
-            st.success("✅ Account successfully deleted. All your data has been removed.")
-        else:
-            st.warning("⚠️ Account deletion completed, but no user data was found to remove.")
+        # Step 6: Show success message
+        st.success("✅ Account successfully deleted. All your data has been removed.")
+        st.info("Redirecting to homepage...")
         
-        st.info("🔄 Redirecting to login page...")
-        
-        # Force a complete rerun
+        # Force a complete rerun to homepage (not login)
         st.rerun()
         
         return True

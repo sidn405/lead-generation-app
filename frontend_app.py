@@ -9190,19 +9190,19 @@ with tab6:  # Settings tab
                                     try:
                                         # Log the deletion reason and feedback
                                         current_user = simple_auth.get_current_user()
-                                        st.write(f"📝 Deletion reason: {reason}")
+                                        st.write(f"Deletion reason: {reason}")
                                         if feedback.strip():
-                                            st.write(f"💬 User feedback: {feedback}")
+                                            st.write(f"User feedback: {feedback}")
                                         
                                         # Perform the actual deletion
                                         deletion_successful = simple_auth.delete_user_account()
                                         
-                                        # The delete_user_account method will handle the rerun
-                                        # So we don't need to do anything else here
-                                        
+                                        # The delete_user_account method handles the rerun to homepage
+                                        # No additional code needed here
+                                                
                                     except Exception as e:
-                                        st.error(f"❌ Account deletion failed: {str(e)}")
-                                        st.info("💡 Please try again or contact support if the problem persists")
+                                        st.error(f"Account deletion failed: {str(e)}")
+                                        st.info("Please try again or contact support if the problem persists")
                                         
                                         # Log the error for debugging
                                         st.write(f"🐛 Error details: {e}")

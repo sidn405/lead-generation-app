@@ -277,6 +277,35 @@ class CreditSystem:
             self.save_data()
         
         return True, "Demo account created with 5 free demo leads"
+    
+    # In your postgres_credit_system.py, add this method:
+    def delete_user(self, username: str) -> bool:
+        """Delete user completely from PostgreSQL"""
+        try:
+            if not self.connection:
+                return False
+            
+            cursor = self.connection.cursor()
+            
+            # Delete from users table
+            cursor.execute("DELETE FROM users WHERE username = %s", (username,))
+            deleted_count = cursor.rowcount
+            
+            self.connection.commit()
+            cursor.close()
+            
+            # Also remove from memory cache if it exists
+            if hasattr(self, 'users') and username in self.users:
+                del self.users[username]
+            
+            print(f"✅ Deleted user {username} from PostgreSQL (rows affected: {deleted_count})")
+            return deleted_count > 0
+            
+        except Exception as e:
+            print(f"❌ PostgreSQL user deletion failed: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
 
     def get_demo_status(self, username: str) -> Tuple[bool, int, int]:
         """Get demo status: (is_demo, used, remaining)"""
