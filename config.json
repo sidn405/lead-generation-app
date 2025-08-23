@@ -77,7 +77,7 @@
             "lead_output_file": "twitter_leads.csv",
             "backup_output_file": "twitter_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 40,
+            "max_scrolls": 10,
             "excluded_accounts": [
                 "ai leads guy"
             ]

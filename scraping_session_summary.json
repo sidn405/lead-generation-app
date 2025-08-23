@@ -1,14 +1,25 @@
 {
+  "timestamp": "2025-08-22T19:58:55.078609",
+  "user": [
+    null,
+    null,
+    0
+  ],
+  "plan": [
+    null,
+    null,
+    0
+  ],
+  "search_term": "business coach",
+  "niche": "business coach",
+  "platforms_run": [
+    "twitter"
+  ],
   "total_leads": 0,
-  "successful_platforms": 0,
   "results_by_platform": {
-    "youtube": 0,
-    "twitter": 0,
-    "tiktok": 0,
-    "instagram": 0,
-    "reddit": 0,
-    "medium": 0,
-    "facebook": 0
+    "twitter": 0
   },
-  "execution_mode": "parallel"
+  "execution_mode": "parallel",
+  "status": "success_no_matches",
+  "suggestions_provided": true
 }
