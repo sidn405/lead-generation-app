@@ -1057,6 +1057,17 @@ def main():
                 print(f"🔍 Files saved: {', '.join(files_saved)}")
                 print(f"🎯 Performance target: 15+ leads - {'✅ ACHIEVED' if len(leads) >= 15 else '❌ MISSED'}")
                 
+                # After saving files for <username>:
+                try:
+                    # Recompute fresh totals from CSV_DIR and persist
+                    from pathlib import Path
+                    from frontend_app import calculate_empire_from_csvs
+                    stats = calculate_empire_from_csvs(username)
+                    snapshot = {"platforms": stats, "total_empire": sum(stats.values())}
+                    (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+                except Exception as e:
+                    print(f"ℹ️ Could not write empire snapshot: {e}")
+                
                 # Upload to Google Sheets
                 try:
                     from sheets_writer import write_leads_to_google_sheet
