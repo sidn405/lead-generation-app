@@ -1529,7 +1529,7 @@ def show_password_reset_form():
             st.rerun()
 
 def show_update_password_form():
-    """PostgreSQL-based password update form"""
+    """PostgreSQL-based password update with real-time validation"""
     if not st.session_state.get('authenticated', False):
         st.error("❌ You must be logged in to change your password")
         return
@@ -1542,104 +1542,134 @@ def show_update_password_form():
     st.markdown("### 🔐 Update Password")
     st.markdown("Change your account password")
     
-    # Use PostgreSQL credit system instead of JSON files
+    # Use PostgreSQL credit system
     try:
         from postgres_credit_system import credit_system
         
-        # Check if user exists in PostgreSQL
         user_info = credit_system.get_user_info(username)
-        
         if not user_info:
             st.error("❌ User account not found in database")
-            st.info("💡 Try logging out and back in")
             return
         
         st.success(f"✅ Account found: {username}")
         
-        with st.form("postgres_password_update"):
-            current_password = st.text_input(
-                "🔐 Current Password",
-                type="password",
-                placeholder="Enter your current password",
-                help="We need to verify your current password"
-            )
+        # Initialize session state for real-time validation
+        if 'update_current_password' not in st.session_state:
+            st.session_state.update_current_password = ""
+        if 'update_new_password' not in st.session_state:
+            st.session_state.update_new_password = ""
+        if 'update_confirm_password' not in st.session_state:
+            st.session_state.update_confirm_password = ""
+        
+        # Current password input with validation
+        new_current = st.text_input(
+            "🔐 Current Password",
+            value=st.session_state.update_current_password,
+            type="password",
+            placeholder="Enter your current password",
+            key="current_password_input"
+        )
+        if new_current != st.session_state.update_current_password:
+            st.session_state.update_current_password = new_current
+            st.rerun()
+        
+        # Validate current password
+        current_valid = False
+        if st.session_state.update_current_password:
+            test_success, _ = credit_system.login_user(username, st.session_state.update_current_password)
+            current_valid = test_success
+            if current_valid:
+                st.success("✅ Current password verified")
+            else:
+                st.error("❌ Current password is incorrect")
+        
+        # New password input with real-time validation
+        new_password_input = st.text_input(
+            "🔐 New Password",
+            value=st.session_state.update_new_password,
+            type="password",
+            placeholder="Enter your new password",
+            key="new_password_input"
+        )
+        if new_password_input != st.session_state.update_new_password:
+            st.session_state.update_new_password = new_password_input
+            st.rerun()
+        
+        # Validate new password
+        password_valid = False
+        password_reqs = {}
+        if st.session_state.update_new_password:
+            password_valid, password_msg, password_state, password_reqs = validate_password_realtime(st.session_state.update_new_password)
             
-            new_password = st.text_input(
-                "🔐 New Password", 
-                type="password",
-                placeholder="Enter your new password",
-                help="Choose a strong password"
-            )
+            if password_valid:
+                st.success("✅ Strong new password")
+            else:
+                st.error(password_msg)
             
-            confirm_password = st.text_input(
-                "🔐 Confirm New Password",
-                type="password", 
-                placeholder="Confirm your new password"
-            )
-            
-            # Validation
-            current_valid = False
-            password_valid = False
-            passwords_match = False
-            password_different = True
-            
-            # Verify current password
-            if current_password:
-                test_success, _ = credit_system.login_user(username, current_password)
-                current_valid = test_success
-                if current_valid:
-                    st.success("✅ Current password verified")
-                else:
-                    st.error("❌ Current password is incorrect")
-            
-            # Validate new password
-            if new_password:
-                password_valid, password_msg, _, password_reqs = validate_password_realtime(new_password)
-                if password_valid:
-                    st.success("✅ Strong new password")
-                else:
-                    st.error(password_msg)
-                
-                # Show requirements checklist
-                create_password_requirements_checklist(password_reqs)
-                
-                # Check if different from current
-                if current_password and new_password == current_password:
-                    st.warning("⚠️ New password must be different from current password")
-                    password_different = False
-            
-            # Confirm passwords match
-            if new_password and confirm_password:
-                passwords_match = new_password == confirm_password
-                if passwords_match:
-                    st.success("✅ Passwords match")
-                else:
-                    st.error("❌ Passwords don't match")
-            
-            # Submit button
-            can_update = (current_valid and password_valid and passwords_match and password_different)
-            
-            if st.form_submit_button(
+            # Show requirements checklist
+            create_password_requirements_checklist(password_reqs)
+        
+        # Check if new password is different from current
+        password_different = True
+        if st.session_state.update_current_password and st.session_state.update_new_password:
+            if st.session_state.update_current_password == st.session_state.update_new_password:
+                st.warning("⚠️ New password must be different from current password")
+                password_different = False
+        
+        # Confirm password input with real-time validation
+        new_confirm = st.text_input(
+            "🔐 Confirm New Password",
+            value=st.session_state.update_confirm_password,
+            type="password",
+            placeholder="Confirm your new password",
+            key="confirm_password_input"
+        )
+        if new_confirm != st.session_state.update_confirm_password:
+            st.session_state.update_confirm_password = new_confirm
+            st.rerun()
+        
+        # Validate password confirmation
+        passwords_match = False
+        if st.session_state.update_new_password and st.session_state.update_confirm_password:
+            passwords_match = st.session_state.update_new_password == st.session_state.update_confirm_password
+            if passwords_match:
+                st.success("✅ Passwords match")
+            else:
+                st.error("❌ Passwords don't match")
+        
+        # Submit button with dynamic state
+        can_update = (current_valid and password_valid and passwords_match and password_different)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button(
                 "🔐 Update Password" if can_update else "Complete All Requirements",
                 type="primary" if can_update else "secondary",
                 disabled=not can_update,
-                use_container_width=True
+                use_container_width=True,
+                key="update_password_submit"
             ):
                 if can_update:
                     try:
                         # Update password in PostgreSQL
-                        success = credit_system.update_user_password(username, new_password)
+                        success = credit_system.update_user_password(username, st.session_state.update_new_password)
                         
                         if success:
                             st.success("✅ Password updated successfully!")
                             st.balloons()
                             
                             # Test new password immediately
-                            test_success, test_msg = credit_system.login_user(username, new_password)
+                            test_success, test_msg = credit_system.login_user(username, st.session_state.update_new_password)
                             if test_success:
                                 st.info("🎉 New password verified and working!")
                             else:
                                 st.warning("⚠️ Password updated but verification failed")
+                            
+                            # Clear the form data
+                            st.session_state.update_current_password = ""
+                            st.session_state.update_new_password = ""
+                            st.session_state.update_confirm_password = ""
                             
                             time.sleep(2)
                             st.rerun()
@@ -1648,15 +1678,35 @@ def show_update_password_form():
                             
                     except Exception as e:
                         st.error(f"❌ Update error: {e}")
-                        import traceback
-                        st.code(traceback.format_exc())
+        
+        with col2:
+            if st.button("❌ Cancel Password Change", use_container_width=True, key="cancel_password_update"):
+                # Clear form data
+                st.session_state.update_current_password = ""
+                st.session_state.update_new_password = ""
+                st.session_state.update_confirm_password = ""
+                st.session_state.show_update_password = False
+                st.rerun()
+        
+        # Show what's missing if button is disabled
+        if not can_update:
+            missing = []
+            if not current_valid:
+                missing.append("Valid current password")
+            if not password_valid:
+                missing.append("Strong new password")
+            if not passwords_match:
+                missing.append("Password confirmation")
+            if not password_different:
+                missing.append("Different password")
+            
+            if missing:
+                st.info(f"💡 Still needed: {', '.join(missing)}")
     
     except ImportError:
         st.error("❌ PostgreSQL credit system not available")
     except Exception as e:
         st.error(f"❌ System error: {e}")
-        import traceback
-        st.code(traceback.format_exc())
 
 def show_password_management_menu():
     """Show password management options in settings"""
