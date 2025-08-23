@@ -4129,6 +4129,19 @@ with st.sidebar:
     st.caption(" Lead Generator Empire")
     st.caption(f"Powered by 8 platforms")
 
+# --- Jump-to-Pricing controller (place near the top, before the tabs/sections render) ---
+try:
+    # Streamlit 1.30+ has st.query_params; older has experimental_*
+    get_qp = getattr(st, "query_params", None) or st.query_params
+    set_qp = getattr(st, "query_params", None) or st.query_params
+except Exception:
+    get_qp = st.query_params
+    set_qp = st.query_params
+
+_q = get_qp()
+if _q.get("tab", [""])[0] == "pricing":
+    # Flag so the Pricing block can open/focus
+    st.session_state["open_pricing"] = True
 
 # 🌍 NEW: Enhanced tabs with multilingual support
 # Always create 6 tabs - much simpler!
@@ -7308,6 +7321,21 @@ if MULTILINGUAL_AVAILABLE:
 # Continue with the rest of the tabs...
 with tab4: # Pricing Plans
     
+    st.markdown('<span id="pricing-plans-anchor"></span>', unsafe_allow_html=True)
+
+    _open = st.session_state.pop("open_pricing", False)
+
+    if _open:
+        st.markdown(
+            """
+            <script>
+            const el = document.getElementById('pricing-plans-anchor');
+            if (el) { el.scrollIntoView({behavior:'smooth', block:'start'}); }
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+    
     if "payment_success" in st.query_params:
         from stripe_checkout import handle_payment_success_url
         if handle_payment_success_url():
@@ -8457,13 +8485,13 @@ with tab6:  # Settings tab
             with quick_col1:
                 if user_plan == "demo":
                     if st.button("🚀 Upgrade Account", type="primary", use_container_width=True):
-                        # Switch to pricing tab
-                        st.session_state.show_pricing = True
+                        st.query_params(tab="pricing")
+                        st.session_state["open_pricing"] = True
                         st.rerun()
                 else:
                     if st.button("💎 Buy More Credits", type="primary", use_container_width=True):
-                        # Switch to pricing tab
-                        st.session_state.show_pricing = True
+                        st.query_params(tab="pricing")
+                        st.session_state["open_pricing"] = True
                         st.rerun()
             
             with quick_col2:
@@ -8775,7 +8803,6 @@ with tab6:  # Settings tab
                         st.error("Please enter a username")
             
             # Quick Actions
-            st.markdown("---")
             st.markdown("#### ⚡ Exclusion Tools")
             
             quick_col1, quick_col2, quick_col3 = st.columns(3)
