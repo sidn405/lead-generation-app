@@ -165,6 +165,33 @@ from stripe_integration import handle_payment_flow, show_purchase_buttons
 from package_system import show_package_store, show_my_packages
 from purchases_tracker import automatic_payment_capture
 
+# --- Query param helpers (no experimental API) ---
+import streamlit as st
+
+def get_qp() -> dict:
+    """Return query params as a plain dict (new Streamlit uses a mapping)."""
+    try:
+        return dict(st.query_params)
+    except Exception:
+        return {}
+
+def set_qp(**kwargs) -> None:
+    """Set/override query params (new Streamlit). Safe no-op on failure."""
+    try:
+        for k, v in kwargs.items():
+            st.query_params[k] = v
+    except Exception:
+        pass
+
+# Read and normalize ?tab=
+_q = get_qp()
+_tab = _q.get("tab")
+if isinstance(_tab, list):
+    _tab = _tab[0] if _tab else ""
+if (_tab or "") == "pricing":
+    st.session_state["open_pricing"] = True
+# -------------------------------------------------
+
 from pathlib import Path
 import os
 
@@ -4129,19 +4156,22 @@ with st.sidebar:
     st.caption(" Lead Generator Empire")
     st.caption(f"Powered by 8 platforms")
 
-# --- Jump-to-Pricing controller (place near the top, before the tabs/sections render) ---
-try:
-    # Streamlit 1.30+ has st.query_params; older has experimental_*
-    get_qp = getattr(st, "query_params", None) or st.query_params
-    set_qp = getattr(st, "query_params", None) or st.query_params
-except Exception:
-    get_qp = st.query_params
-    set_qp = st.query_params
+# ---- Pricing Plans (section header) ----
+st.markdown('<span id="pricing-plans-anchor"></span>', unsafe_allow_html=True)
 
-_q = get_qp()
-if _q.get("tab", [""])[0] == "pricing":
-    # Flag so the Pricing block can open/focus
-    st.session_state["open_pricing"] = True
+if st.session_state.pop("open_pricing", False):
+    st.markdown(
+        """
+        <script>
+        const el = document.getElementById('pricing-plans-anchor');
+        if (el) { el.scrollIntoView({behavior:'smooth', block:'start'}); }
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
+
+# ... your existing Pricing UI continues ...
+
 
 # 🌍 NEW: Enhanced tabs with multilingual support
 # Always create 6 tabs - much simpler!
@@ -8485,23 +8515,25 @@ with tab6:  # Settings tab
             with quick_col1:
                 if user_plan == "demo":
                     if st.button("🚀 Upgrade Account", type="primary", use_container_width=True):
-                        st.query_params(tab="pricing")
+                        set_qp(tab="pricing")
                         st.session_state["open_pricing"] = True
                         st.rerun()
                 else:
                     if st.button("💎 Buy More Credits", type="primary", use_container_width=True):
-                        st.query_params(tab="pricing")
+                        set_qp(tab="pricing")
                         st.session_state["open_pricing"] = True
                         st.rerun()
-            
+
             with quick_col2:
                 if st.button("🔐 Change Password", use_container_width=True):
+                    st.session_state.show_usage_details = False
                     st.session_state.show_password_change = True
                     st.rerun()
-            
+
             with quick_col3:
                 if "show_usage_details" not in st.session_state:
                     st.session_state.show_usage_details = False
+
 
             # now, conditionally render the Detailed Usage panel
             if st.session_state.show_usage_details:

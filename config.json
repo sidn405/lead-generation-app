@@ -133,7 +133,8 @@
             "location_csv": "locations.csv",
             "max_scrolls": 50,
             "excluded_accounts": [
-                "4smart_itech"
+                "4smart_itech",
+                "HollyannMom"
             ]
         },
         "reddit": {
