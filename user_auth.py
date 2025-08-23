@@ -1670,6 +1670,9 @@ def show_update_password_form():
                             st.session_state.update_current_password = ""
                             st.session_state.update_new_password = ""
                             st.session_state.update_confirm_password = ""
+    
+                            # ADD THIS LINE - Hide the password form
+                            st.session_state.show_update_password = False
                             
                             time.sleep(2)
                             st.rerun()
