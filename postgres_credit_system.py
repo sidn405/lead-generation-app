@@ -282,29 +282,29 @@ class CreditSystem:
     def delete_user(self, username: str) -> bool:
         """Delete user completely from PostgreSQL"""
         try:
-            if not self.connection:
+            if not self.conn:  # Changed from self.connection to self.conn
                 return False
             
-            cursor = self.connection.cursor()
+            cursor = self.conn.cursor()  # Changed from self.connection to self.conn
             
             # Delete from users table
             cursor.execute("DELETE FROM users WHERE username = %s", (username,))
             deleted_count = cursor.rowcount
             
-            self.connection.commit()
+            self.conn.commit()  # Changed from self.connection to self.conn
             cursor.close()
             
             # Also remove from memory cache if it exists
             if hasattr(self, 'users') and username in self.users:
                 del self.users[username]
             
-            print(f"✅ Deleted user {username} from PostgreSQL (rows affected: {deleted_count})")
+            print(f"Deleted user {username} from PostgreSQL (rows affected: {deleted_count})")
             return deleted_count > 0
             
         except Exception as e:
-            print(f"❌ PostgreSQL user deletion failed: {e}")
-            if self.connection:
-                self.connection.rollback()
+            print(f"PostgreSQL user deletion failed: {e}")
+            if self.conn:  # Changed from self.connection to self.conn
+                self.conn.rollback()
             return False
 
     def get_demo_status(self, username: str) -> Tuple[bool, int, int]:
