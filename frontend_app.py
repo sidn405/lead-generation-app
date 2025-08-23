@@ -8990,7 +8990,7 @@ with tab6:  # Settings tab
             security_col1, security_col2 = st.columns(2)
 
             with security_col1:
-                st.markdown("**🔐 Password Security**")
+                st.markdown("")
 
                 # Single source of truth: renders the button and, when clicked,
                 # shows the in-place password form with validation & balloons.

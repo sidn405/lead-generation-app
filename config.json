@@ -59,7 +59,7 @@
         "auto_deliver_leads": true
     },
     "global": {
-        "search_term": "personal trainer",
+        "search_term": "cake decorator",
         "max_scrolls": 10,
         "enable_multilingual": true,
         "default_dm": "Hi there! I love your content and would be excited to connect. Let's chat!",
@@ -106,7 +106,8 @@
             "location_csv": "locations.csv",
             "max_scrolls": 40,
             "excluded_accounts": [
-                "eyenvest"
+                "eyenvest",
+                "HollyannMom"
             ]
         },
         "youtube": {
@@ -133,8 +134,8 @@
             "location_csv": "locations.csv",
             "max_scrolls": 50,
             "excluded_accounts": [
-                "4smart_itech",
-                "HollyannMom"
+                "4smart_itech"
+                
             ]
         },
         "reddit": {

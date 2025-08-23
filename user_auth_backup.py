@@ -1529,7 +1529,7 @@ def show_password_reset_form():
             st.rerun()
 
 def show_update_password_form():
-    """UPDATED: Update password form for logged-in users with debugging"""
+    """UPDATED: Update password form for logged-in users with credit system sync"""
     if not st.session_state.get('authenticated', False):
         st.error("❌ You must be logged in to change your password")
         return
@@ -1542,43 +1542,11 @@ def show_update_password_form():
     st.markdown("### 🔐 Update Password")
     st.markdown("Change your account password")
     
-    # 🔧 DEBUG: Show what we're looking for
-    st.info(f"🔍 **Debug Info:**")
-    st.write(f"- Session username: `{username}`")
-    st.write(f"- Session authenticated: `{st.session_state.get('authenticated')}`")
-    st.write(f"- Available session keys: `{list(st.session_state.keys())}`")
-    
     # Find user in both files to determine source
     user_data, found_username, source_file = load_user_from_both_files(username)
     
-    # 🔧 DEBUG: Show file search results
-    st.write(f"- Found username: `{found_username}`")
-    st.write(f"- Source file: `{source_file}`")
-    st.write(f"- User data found: `{bool(user_data)}`")
-    
-    # 🔧 DEBUG: Check if files exist
-    import os
-    st.write(f"- users.json exists: `{os.path.exists('users.json')}`")
-    st.write(f"- users_credits.json exists: `{os.path.exists('users_credits.json')}`")
-    
     if not user_data:
-        st.error("❌ User account not found in JSON files")
-        
-        # 🔧 DEBUG: Show what's actually in the files
-        try:
-            if os.path.exists("users_credits.json"):
-                with open("users_credits.json", "r") as f:
-                    users_credits = json.load(f)
-                st.write(f"- users_credits.json usernames: `{list(users_credits.keys())}`")
-            
-            if os.path.exists("users.json"):
-                with open("users.json", "r") as f:
-                    users_json = json.load(f)
-                st.write(f"- users.json usernames: `{list(users_json.keys())}`")
-                
-        except Exception as e:
-            st.error(f"Error reading files: {e}")
-        
+        st.error("❌ User account not found")
         return
     
     with st.form("update_password_form_v2"):
