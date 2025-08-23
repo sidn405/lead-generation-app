@@ -8984,7 +8984,7 @@ with tab6:  # Settings tab
                     )
             
             # Security Settings
-            st.markdown("")
+            st.markdown("---")
             st.subheader("🔐 Security & Privacy")
             security_col1, security_col2 = st.columns(2)
             with security_col1:
