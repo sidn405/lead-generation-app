@@ -10,10 +10,12 @@ import random
 from dm_sequences import generate_dm_with_fallback
 import os
 from persistence import save_leads_to_files
+from pathlib import Path
 
 # Directory where your CSV files are saved
-CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
-os.makedirs(CSV_DIR, exist_ok=True)
+CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+CSV_DIR.mkdir(parents=True, exist_ok=True)
+
 # Import the centralized usage tracker
 from usage_tracker import setup_scraper_with_limits, finalize_scraper_results
 

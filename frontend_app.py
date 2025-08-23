@@ -3809,80 +3809,32 @@ elif "cancelled" in query_params:
     
     st.stop()
 st.markdown('<div id="top"></div>', unsafe_allow_html=True)
-# Header (simplified - no unnecessary dashboard button)
-st.markdown("""
-<style>
-/* tighten the main container top padding */
-main .block-container { padding-top: 0rem; }  /* adjust to taste */
-
-/* remove any extra margin above your title */
-h1.main-header { padding-top: 0rem !important; 
-    margin-top: 0rem !important;
-}
-
-/* optional: shrink space just under the header row */
-.lge-header-spacer { height: 4px; }
-</style>
-""", unsafe_allow_html=True)
-
 import base64
 from pathlib import Path
 import streamlit as st
 
-# ---- config ----
-LOGO_SRC = Path("assets/logo-192.png")   # or logo-288.png
-HEADER_LOGO_PX = 36                      # size next to the H1
-APP_TITLE = "Lead Generator Empire"
-
-def header_logo_left(path: Path, width: int = 36, title: str = "App"):
-    if not path.exists():
-        st.markdown(f"<small style='color:#888'>Logo not found: {path}</small>", unsafe_allow_html=True)
-        return
-    b64 = base64.b64encode(path.read_bytes()).decode()
-
-    st.markdown(f"""
-    <style>
-      /* tighten Streamlit default top padding */
-      main .block-container {{ padding-top: *0.5rem !important; }}
-
-      /* header row */
-      .lge-header {{ 
-        display:flex; align-items:center; gap:10px; 
-        margin:0 !important; padding:0 !important;
-      }}
-      .lge-header h1 {{
-        margin:0 !important; padding:0 !important;
-        line-height:1.1; font-size:2.25rem;  /* tweak to taste */
-      }}
-      .lge-underline {{
-        width:56px;height:3px;margin-top:6px;
-        background:linear-gradient(90deg,#C29D41,transparent);border-radius:2px;
-      }}
-      @media (max-width:640px){{
-        .lge-header h1 {{ font-size:1.75rem; }}
-      }}
-    </style>
-
-    <div class="lge-header">
-      <img src="data:image/png;base64,{b64}" width="{width}" height="{width}" alt="" style="border-radius:8px"/>
-      <div>
-        <h1>{title}</h1>
-        <div class="lge-underline"></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Tighten top padding + zero out H1 margins
+# Simplified CSS - remove duplicates
 st.markdown("""
 <style>
-main .block-container { padding-top: 0rem !important; }
-h1.main-header { margin: 0 !important; line-height: 1.1; }
-.lge-head { display:flex; align-items:center; gap:10px; margin:0; padding:0; }
+main .block-container { 
+    padding-top: 0rem !important; 
+}
+h1.main-header { 
+    margin: 0 !important; 
+    line-height: 1.1; 
+}
+.lge-head { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    margin: 0; 
+    padding: 0; 
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Base64 the logo so path issues can’t break it
-logo_path = Path("assets/logo-192.png")   # or logo-288.png
+# Simple header
+logo_path = Path("assets/logo-192.png")
 logo_b64 = base64.b64encode(logo_path.read_bytes()).decode() if logo_path.exists() else ""
 
 col1, col2 = st.columns([2, 1])

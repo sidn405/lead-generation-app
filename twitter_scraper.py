@@ -10,10 +10,11 @@ import json
 import random
 from dm_sequences import generate_dm_with_fallback
 from persistence import save_leads_to_files
+from pathlib import Path
 
 # Directory where your CSV files are saved
-CSV_DIR = os.path.join(os.getcwd(), "csv_exports")
-os.makedirs(CSV_DIR, exist_ok=True)
+CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+CSV_DIR.mkdir(parents=True, exist_ok=True)
 
 # Import the centralized usage tracker
 from usage_tracker import setup_scraper_with_limits, finalize_scraper_results
@@ -603,12 +604,12 @@ def debug_scraper():
         print(f"Error during browser test: {e}")
         print(f"Error type: {type(e).__name__}")
         traceback.print_exc()
-
+        
 # Add this at the start of your main scraper function
 if __name__ == "__main__":
     debug_scraper()
     # ... rest of your scraper code
-
+    
 def login_and_scrape():
     """Main stealth scraper with smart user-aware deduplication"""
     estimated_leads = MAX_SCROLLS * 5
