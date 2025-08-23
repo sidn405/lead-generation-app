@@ -8984,19 +8984,36 @@ with tab6:  # Settings tab
                     )
             
             # Security Settings
-            st.markdown("---")
             st.subheader("🔐 Security & Privacy")
-
             security_col1, security_col2 = st.columns(2)
-
             with security_col1:
                 st.markdown("")
-
-                # Single source of truth: renders the button and, when clicked,
-                # shows the in-place password form with validation & balloons.
-                from user_auth import show_password_management_menu
-                show_password_management_menu()
-
+                
+                # Simple password management
+                if st.button("🔐 Change Password", use_container_width=True):
+                    st.session_state.show_update_password = True
+                
+                if st.button("🛡️ Password Security Tips", use_container_width=True):
+                    st.session_state.show_password_tips = True
+                
+                # Show password update form if requested
+                if st.session_state.get('show_update_password', False):
+                    st.markdown("---")
+                    show_update_password_form()
+                    
+                    if st.button("❌ Cancel Password Change", key="cancel_password_update"):
+                        st.session_state.show_update_password = False
+                        st.rerun()
+                
+                # Show password tips if requested
+                if st.session_state.get('show_password_tips', False):
+                    st.markdown("---")
+                    show_password_security_tips()
+                    
+                    if st.button("❌ Close Tips", key="close_password_tips"):
+                        st.session_state.show_password_tips = False
+                        st.rerun()
+                
                 # Password requirements (reference only)
                 with st.expander("🛡️ Password Requirements"):
                     st.markdown("""

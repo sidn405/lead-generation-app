@@ -1529,7 +1529,7 @@ def show_password_reset_form():
             st.rerun()
 
 def show_update_password_form():
-    """UPDATED: Update password form for logged-in users with debugging"""
+    """PostgreSQL-based password update form"""
     if not st.session_state.get('authenticated', False):
         st.error("❌ You must be logged in to change your password")
         return
@@ -1542,163 +1542,121 @@ def show_update_password_form():
     st.markdown("### 🔐 Update Password")
     st.markdown("Change your account password")
     
-    # 🔧 DEBUG: Show what we're looking for
-    st.info(f"🔍 **Debug Info:**")
-    st.write(f"- Session username: `{username}`")
-    st.write(f"- Session authenticated: `{st.session_state.get('authenticated')}`")
-    st.write(f"- Available session keys: `{list(st.session_state.keys())}`")
-    
-    # Find user in both files to determine source
-    user_data, found_username, source_file = load_user_from_both_files(username)
-    
-    # 🔧 DEBUG: Show file search results
-    st.write(f"- Found username: `{found_username}`")
-    st.write(f"- Source file: `{source_file}`")
-    st.write(f"- User data found: `{bool(user_data)}`")
-    
-    # 🔧 DEBUG: Check if files exist
-    import os
-    st.write(f"- users.json exists: `{os.path.exists('users.json')}`")
-    st.write(f"- users_credits.json exists: `{os.path.exists('users_credits.json')}`")
-    
-    if not user_data:
-        st.error("❌ User account not found in JSON files")
+    # Use PostgreSQL credit system instead of JSON files
+    try:
+        from postgres_credit_system import credit_system
         
-        # 🔧 DEBUG: Show what's actually in the files
-        try:
-            if os.path.exists("users_credits.json"):
-                with open("users_credits.json", "r") as f:
-                    users_credits = json.load(f)
-                st.write(f"- users_credits.json usernames: `{list(users_credits.keys())}`")
+        # Check if user exists in PostgreSQL
+        user_info = credit_system.get_user_info(username)
+        
+        if not user_info:
+            st.error("❌ User account not found in database")
+            st.info("💡 Try logging out and back in")
+            return
+        
+        st.success(f"✅ Account found: {username}")
+        
+        with st.form("postgres_password_update"):
+            current_password = st.text_input(
+                "🔐 Current Password",
+                type="password",
+                placeholder="Enter your current password",
+                help="We need to verify your current password"
+            )
             
-            if os.path.exists("users.json"):
-                with open("users.json", "r") as f:
-                    users_json = json.load(f)
-                st.write(f"- users.json usernames: `{list(users_json.keys())}`")
-                
-        except Exception as e:
-            st.error(f"Error reading files: {e}")
-        
-        return
-    
-    with st.form("update_password_form_v2"):
-        current_password = st.text_input(
-            "🔒 Current Password",
-            type="password",
-            placeholder="Enter your current password",
-            help="We need to verify your current password"
-        )
-        
-        new_password = st.text_input(
-            "🔒 New Password",
-            type="password",
-            placeholder="Enter your new password",
-            help="Choose a strong password"
-        )
-        
-        confirm_password = st.text_input(
-            "🔒 Confirm New Password",
-            type="password",
-            placeholder="Confirm your new password"
-        )
-        
-        # Validate current password
-        if current_password:
-            current_valid = verify_current_password(username, current_password, source_file)
-            if current_valid:
-                st.success("✅ Current password verified")
-            else:
-                st.error("❌ Current password is incorrect")
-        else:
+            new_password = st.text_input(
+                "🔐 New Password", 
+                type="password",
+                placeholder="Enter your new password",
+                help="Choose a strong password"
+            )
+            
+            confirm_password = st.text_input(
+                "🔐 Confirm New Password",
+                type="password", 
+                placeholder="Confirm your new password"
+            )
+            
+            # Validation
             current_valid = False
-        
-        # Validate new password
-        if new_password:
-            password_valid, password_msg, password_state, password_reqs = validate_password_realtime(new_password)
-            
-            if password_valid:
-                st.success("✅ Strong new password")
-            else:
-                st.error(password_msg)
-            
-            # Show requirements checklist
-            create_password_requirements_checklist(password_reqs)
-        else:
             password_valid = False
-        
-        # Password confirmation check
-        if new_password and confirm_password:
-            if new_password == confirm_password:
-                st.success("✅ Passwords match")
-                passwords_match = True
-            else:
-                st.error("❌ Passwords don't match")
-                passwords_match = False
-        else:
             passwords_match = False
-        
-        # Check if new password is different from current
-        if current_password and new_password and current_password == new_password:
-            st.warning("⚠️ New password must be different from current password")
-            password_different = False
-        else:
             password_different = True
-        
-        # Submit button
-        can_update = (current_valid and password_valid and passwords_match and password_different)
-        
-        if st.form_submit_button(
-            "🔐 Update Password" if can_update else "Complete All Requirements",
-            type="primary" if can_update else "secondary",
-            disabled=not can_update,
-            use_container_width=True
-        ):
-            if not can_update:
-                st.error("❌ Please complete all requirements correctly")
-                return
             
-            # 🔧 USE THE ENHANCED UPDATE FUNCTION
-            if update_user_password(username, new_password, source_file):
-                st.success("✅ Password updated successfully!")
-                st.info("🔑 Your password has been changed")
+            # Verify current password
+            if current_password:
+                test_success, _ = credit_system.login_user(username, current_password)
+                current_valid = test_success
+                if current_valid:
+                    st.success("✅ Current password verified")
+                else:
+                    st.error("❌ Current password is incorrect")
+            
+            # Validate new password
+            if new_password:
+                password_valid, password_msg, _, password_reqs = validate_password_realtime(new_password)
+                if password_valid:
+                    st.success("✅ Strong new password")
+                else:
+                    st.error(password_msg)
                 
-                # 🔧 TEST THE NEW PASSWORD IMMEDIATELY
-                st.markdown("**🧪 Testing Your New Password:**")
-                try:
-                    test_success, test_message = simple_auth.login_user(username, new_password)
-                    if test_success:
-                        st.success(f"✅ Password change verified: {test_message}")
-                        st.info("🎉 Your new password is working correctly!")
-                    else:
-                        st.warning(f"⚠️ Verification: {test_message}")
-                        st.info("💡 Password was updated, but please test logging in again")
-                except Exception as e:
-                    st.info("💡 Password updated successfully")
+                # Show requirements checklist
+                create_password_requirements_checklist(password_reqs)
                 
-                # Log the update
-                try:
-                    # Add transaction record if using credits system
-                    if source_file == "users_credits.json":
-                        with open(source_file, "r") as f:
-                            users = json.load(f)
+                # Check if different from current
+                if current_password and new_password == current_password:
+                    st.warning("⚠️ New password must be different from current password")
+                    password_different = False
+            
+            # Confirm passwords match
+            if new_password and confirm_password:
+                passwords_match = new_password == confirm_password
+                if passwords_match:
+                    st.success("✅ Passwords match")
+                else:
+                    st.error("❌ Passwords don't match")
+            
+            # Submit button
+            can_update = (current_valid and password_valid and passwords_match and password_different)
+            
+            if st.form_submit_button(
+                "🔐 Update Password" if can_update else "Complete All Requirements",
+                type="primary" if can_update else "secondary",
+                disabled=not can_update,
+                use_container_width=True
+            ):
+                if can_update:
+                    try:
+                        # Update password in PostgreSQL
+                        success = credit_system.update_user_password(username, new_password)
                         
-                        if username in users:
-                            if "transactions" not in users[username]:
-                                users[username]["transactions"] = []
+                        if success:
+                            st.success("✅ Password updated successfully!")
+                            st.balloons()
                             
-                            users[username]["transactions"].append({
-                                "type": "password_update",
-                                "timestamp": datetime.now().isoformat(),
-                                "source": "user_initiated"
-                            })
+                            # Test new password immediately
+                            test_success, test_msg = credit_system.login_user(username, new_password)
+                            if test_success:
+                                st.info("🎉 New password verified and working!")
+                            else:
+                                st.warning("⚠️ Password updated but verification failed")
                             
-                            with open(source_file, "w") as f:
-                                json.dump(users, f, indent=4)
-                except Exception as e:
-                    print(f"Warning: Could not log password update: {e}")
-                
-                time.sleep(2)
-                st.rerun()
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to update password")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Update error: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+    
+    except ImportError:
+        st.error("❌ PostgreSQL credit system not available")
+    except Exception as e:
+        st.error(f"❌ System error: {e}")
+        import traceback
+        st.code(traceback.format_exc())
 
 def show_password_management_menu():
     """Show password management options in settings"""
