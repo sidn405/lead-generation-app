@@ -165,33 +165,6 @@ from stripe_integration import handle_payment_flow, show_purchase_buttons
 from package_system import show_package_store, show_my_packages
 from purchases_tracker import automatic_payment_capture
 
-# --- Query param helpers (no experimental API) ---
-import streamlit as st
-
-def get_qp() -> dict:
-    """Return query params as a plain dict (new Streamlit uses a mapping)."""
-    try:
-        return dict(st.query_params)
-    except Exception:
-        return {}
-
-def set_qp(**kwargs) -> None:
-    """Set/override query params (new Streamlit). Safe no-op on failure."""
-    try:
-        for k, v in kwargs.items():
-            st.query_params[k] = v
-    except Exception:
-        pass
-
-# Read and normalize ?tab=
-_q = get_qp()
-_tab = _q.get("tab")
-if isinstance(_tab, list):
-    _tab = _tab[0] if _tab else ""
-if (_tab or "") == "pricing":
-    st.session_state["open_pricing"] = True
-# -------------------------------------------------
-
 from pathlib import Path
 import os
 
@@ -7351,21 +7324,6 @@ if MULTILINGUAL_AVAILABLE:
 # Continue with the rest of the tabs...
 with tab4: # Pricing Plans
     
-    st.markdown('<span id="pricing-plans-anchor"></span>', unsafe_allow_html=True)
-
-    _open = st.session_state.pop("open_pricing", False)
-
-    if _open:
-        st.markdown(
-            """
-            <script>
-            const el = document.getElementById('pricing-plans-anchor');
-            if (el) { el.scrollIntoView({behavior:'smooth', block:'start'}); }
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-    
     if "payment_success" in st.query_params:
         from stripe_checkout import handle_payment_success_url
         if handle_payment_success_url():
@@ -8505,35 +8463,6 @@ with tab6:  # Settings tab
                     User Plan: {user_plan if 'user_plan' in locals() else 'Not set'}
                     Session Credits: {st.session_state.get('credits', 'Not set')}
                     """)
-            
-            # Quick actions
-            st.markdown("---")
-            st.subheader("⚡ Quick Actions")
-            
-            quick_col1, quick_col2, quick_col3 = st.columns(3)
-            
-            with quick_col1:
-                if user_plan == "demo":
-                    if st.button("🚀 Upgrade Account", type="primary", use_container_width=True):
-                        set_qp(tab="pricing")
-                        st.session_state["open_pricing"] = True
-                        st.rerun()
-                else:
-                    if st.button("💎 Buy More Credits", type="primary", use_container_width=True):
-                        set_qp(tab="pricing")
-                        st.session_state["open_pricing"] = True
-                        st.rerun()
-
-            with quick_col2:
-                if st.button("🔐 Change Password", use_container_width=True):
-                    st.session_state.show_usage_details = False
-                    st.session_state.show_password_change = True
-                    st.rerun()
-
-            with quick_col3:
-                if "show_usage_details" not in st.session_state:
-                    st.session_state.show_usage_details = False
-
 
             # now, conditionally render the Detailed Usage panel
             if st.session_state.show_usage_details:
@@ -9057,27 +8986,28 @@ with tab6:  # Settings tab
             # Security Settings
             st.markdown("---")
             st.subheader("🔐 Security & Privacy")
-            
+
             security_col1, security_col2 = st.columns(2)
-            
+
             with security_col1:
                 st.markdown("**🔐 Password Security**")
-                
-                if st.button("🔑 Change Password", use_container_width=True, key="change_password_main"):
-                    st.session_state.show_update_password = True
-                    st.rerun()
-                
-                # Show password requirements
+
+                # Single source of truth: renders the button and, when clicked,
+                # shows the in-place password form with validation & balloons.
+                from user_auth import show_password_management_menu
+                show_password_management_menu()
+
+                # Password requirements (reference only)
                 with st.expander("🛡️ Password Requirements"):
                     st.markdown("""
                     **Strong passwords must include:**
                     - At least 8 characters
-                    - One uppercase letter (A-Z)
-                    - One lowercase letter (a-z)  
-                    - One number (0-9)
+                    - One uppercase letter (A–Z)
+                    - One lowercase letter (a–z)
+                    - One number (0–9)
                     - One special character (!@#$%^&*)
                     """)
-            
+
             with security_col2:
                 st.markdown("**🔒 Privacy Settings**")
                 
