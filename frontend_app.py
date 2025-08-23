@@ -165,6 +165,16 @@ from stripe_integration import handle_payment_flow, show_purchase_buttons
 from package_system import show_package_store, show_my_packages
 from purchases_tracker import automatic_payment_capture
 
+from pathlib import Path
+import os
+
+# Persisted volume (overridable from Railway env)
+CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+CSV_DIR.mkdir(parents=True, exist_ok=True)
+
+# Where we keep the per-user cached json (same volume so it survives deploys)
+EMPIRE_CACHE_DIR = CSV_DIR
+
 # Initialize database on startup
 @st.cache_resource
 def init_database():
@@ -580,12 +590,20 @@ CSV_DIR = _detect_csv_dir()
 import os, glob, json
 from datetime import datetime, timedelta
 
-def calculate_empire_from_csvs(username: str):
-    import glob
+def calculate_empire_from_csvs(username: str) -> dict:
+    """
+    Count per-platform leads for this user from CSV files in CSV_DIR.
+    No admin/system files are considered.
+    """
+    import glob, os
     from datetime import datetime, timedelta
 
-    platform_counts = {}
-    patterns_by_platform = {
+    u = (username or "").strip().lower()
+    if not u:
+        return {}
+
+    platform_counts = { }  # platform -> count
+    platform_patterns = {
         'twitter':   ['*twitter*leads*.csv'],
         'facebook':  ['*facebook*leads*.csv'],
         'linkedin':  ['*linkedin*leads*.csv'],
@@ -596,24 +614,27 @@ def calculate_empire_from_csvs(username: str):
         'reddit':    ['*reddit*leads*.csv'],
     }
 
-    cutoff = datetime.now() - timedelta(days=90)
-    u = username.lower()
+    cutoff_date = datetime.now() - timedelta(days=90)
 
-    for platform, patterns in patterns_by_platform.items():
+    for platform, pats in platform_patterns.items():
         total = 0
-        for pat in patterns:
-            for path in glob.glob(str(CSV_DIR / pat)):
+        for pat in pats:
+            full_pat = str(CSV_DIR / pat)
+            for file in glob.glob(full_pat):
+                fname = os.path.basename(file).lower()
+                # only files that include the username
+                if u not in fname:
+                    continue
                 try:
-                    base = os.path.basename(path).lower()
-                    if u not in base:           # keep this if your filenames include username
+                    mtime = datetime.fromtimestamp(os.path.getmtime(file))
+                    if mtime < cutoff_date:
                         continue
-                    mtime = datetime.fromtimestamp(os.path.getmtime(path))
-                    if mtime < cutoff:
-                        continue
-                    with open(path, "r", encoding="utf-8") as f:
-                        total += max(0, sum(1 for _ in f) - 1)
-                except Exception as e:
-                    print(f"⚠️ read error {path}: {e}")
+                    # count rows (lines - header)
+                    with open(file, "r", encoding="utf-8", errors="ignore") as f:
+                        lines = max(0, sum(1 for _ in f) - 1)
+                    total += lines
+                except Exception:
+                    continue
         if total > 0:
             platform_counts[platform] = total
 
@@ -621,80 +642,113 @@ def calculate_empire_from_csvs(username: str):
 
 def load_accurate_empire_stats(username: str):
     """
-    Load empire stats for `username`.
-    1) Try cached JSON if present
-    2) Else compute from CSVs
-    Returns (empire_stats: dict, total_leads: int)
+    Load per-platform totals for this user.
+    - First tries a cached json in the volume (survives deploys).
+    - If missing/stale/empty, rebuild from CSV_DIR and rewrite cache.
     """
-    empire_stats = {}
-    total_leads = 0
+    import json, os
+    from datetime import datetime
+
+    u = (username or "").strip()
+    if not u:
+        return {}, 0
+
+    cache_file = EMPIRE_CACHE_DIR / f"empire_totals_{u}.json"
+
+    # 1) Try cache
     try:
-        empire_file = f"empire_totals_{username}.json"
-        if os.path.exists(empire_file):
-            with open(empire_file, "r") as f:
+        if cache_file.exists():
+            with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            empire_stats = data.get("platforms", {}) or {}
-            total_leads = int(data.get("total_empire", 0) or 0)
-        else:
-            print("📊 Calculating empire stats from CSV files for", username)
-            empire_stats = calculate_empire_from_csvs(username)
-            total_leads = sum(empire_stats.values())
-    except Exception as e:
-        print(f"❌ Error loading empire stats for {username}: {e}")
-        empire_stats, total_leads = {}, 0
+            platforms = data.get("platforms", {})
+            total_empire = int(data.get("total_empire", 0))
+            if platforms and total_empire >= 0:
+                return platforms, total_empire
+    except Exception:
+        pass
 
-    return empire_stats, total_leads
+    # 2) Rebuild from CSVs (user-only) and cache it
+    platforms = calculate_empire_from_csvs(u)
+    total_empire = sum(platforms.values())
 
-def get_user_csv_files(username: str):
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(cache_file, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "user": u,
+                    "platforms": platforms,
+                    "total_empire": total_empire,
+                    "cached_at": datetime.utcnow().isoformat(),
+                },
+                f,
+                ensure_ascii=False,
+            )
+    except Exception:
+        pass
+
+    return platforms, total_empire
+
+def get_user_csv_files(username: str) -> list[dict]:
+    """
+    Find *only this user's* CSV lead files inside CSV_DIR,
+    even right after a fresh deploy. Case-insensitive match.
+    """
     import glob, os
     from datetime import datetime
 
-    csv_files = []
-    found_files = set()
+    u = (username or "").strip().lower()
+    if not u:
+        return []
 
-    # Patterns to find user's CSV files in the CSV_DIR
+    # Strictly user files; no 'system', no fallbacks
     patterns = [
-        f"*{username}*leads*.csv",
-        f"*leads*{username}*.csv",
-        f"{username}_*.csv",
-        "*unified_leads*.csv"
+        str(CSV_DIR / f"*{u}*leads*.csv"),
+        str(CSV_DIR / f"*leads*{u}*.csv"),
+        str(CSV_DIR / f"*_{u}_*.csv"),
     ]
 
-    for pattern in patterns:
-        files = glob.glob(os.path.join(CSV_DIR, pattern))
-        for file in files:
-            if file not in found_files and username.lower() in file.lower():
-                found_files.add(file)
+    seen, files = set(), []
+    for pat in patterns:
+        for path in glob.glob(pat):
+            if path in seen:
+                continue
+            seen.add(path)
+            try:
+                stat = os.stat(path)
+                size = stat.st_size
+                mtime = datetime.fromtimestamp(stat.st_mtime)
+                name = os.path.basename(path).lower()
 
-    for file_path in found_files:
-        try:
-            stat = os.stat(file_path)
-            file_size = stat.st_size
-            mod_time = datetime.fromtimestamp(stat.st_mtime)
+                platform = "unknown"
+                for p in ("twitter","facebook","linkedin","instagram","tiktok","youtube","medium","reddit"):
+                    if p in name:
+                        platform = p
+                        break
 
-            with open(file_path, 'r', encoding='utf-8') as f:
-                lead_count = max(0, sum(1 for line in f) - 1)
+                # lightweight row count
+                try:
+                    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                        leads = max(0, sum(1 for _ in f) - 1)
+                except Exception:
+                    leads = 0
 
-            filename = os.path.basename(file_path)
-            platform = extract_platform_from_filename(filename)
-            search_term = extract_search_term_from_filename(filename)
+                files.append({
+                    "name": os.path.basename(path),
+                    "path": path,
+                    "size": size,
+                    "size_mb": size/1024/1024,
+                    "date": mtime.strftime("%m/%d %H:%M"),
+                    "leads": leads,
+                    "platform": platform,
+                    "search_term": "unknown",
+                })
+            except Exception:
+                continue
 
-            csv_files.append({
-                'name': filename,
-                'path': file_path,
-                'size': file_size,
-                'size_mb': file_size / 1024 / 1024,
-                'date': mod_time.strftime('%m/%d %H:%M'),
-                'leads': lead_count,
-                'platform': platform,
-                'search_term': search_term
-            })
-        except Exception as e:
-            print(f"Error processing {file_path}: {e}")
-            continue
+    files.sort(key=lambda f: os.path.getmtime(f["path"]), reverse=True)
+    return files
 
-    csv_files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
-    return csv_files
 
 def extract_platform_from_filename(filename):
     """Extract platform name from filename"""
@@ -3820,14 +3874,14 @@ main .block-container {
     padding-top: 0rem !important; 
 }
 h1.main-header { 
-    margin: -4 !important; 
+    margin: -4px !important; 
     line-height: 1.1; 
 }
 .lge-head { 
     display: flex; 
     align-items: center; 
     gap: 10px; 
-    margin: 0; 
+    margin: -4px; 
     padding: 0; 
 }
 </style>
@@ -6002,7 +6056,7 @@ with tab2: # Lead Results
 
             current_username = st.session_state.username
 
-            # ✅ Load FRESH, ACCURATE empire stats for current user
+            # Load stats that survive deploys (cache or rebuilt from CSV_DIR)
             user_empire_stats, user_total_leads = load_accurate_empire_stats(current_username)
 
             st.markdown(f"### 👑 Empire Command Center - {current_username}")

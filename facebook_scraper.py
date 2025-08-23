@@ -14,8 +14,8 @@ from persistence import save_leads_to_files
 
 
 # Use your app volume mount. If you set CSV_DIR in Railway env, it will override.
-#CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
-#CSV_DIR.mkdir(parents=True, exist_ok=True)
+CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+CSV_DIR.mkdir(parents=True, exist_ok=True)
 
 # Import the centralized usage tracker
 from usage_tracker import setup_scraper_with_limits, finalize_scraper_results
