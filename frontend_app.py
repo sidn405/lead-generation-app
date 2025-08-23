@@ -3839,18 +3839,19 @@ import streamlit as st
 st.markdown("""
 <style>
 main .block-container { 
-    padding-top: *.05rem !important; 
-}
-h1.main-header { 
-    margin: -4px !important; 
-    line-height: 1.1; 
+    padding-top: 0rem !important; 
 }
 .lge-head { 
     display: flex; 
     align-items: center; 
     gap: 10px; 
     margin: 0; 
-    padding: 0; 
+    padding: 0;
+    transform: translateY(-20px); /* Move up 20px */
+}
+h1.main-header { 
+    margin: 0 !important; 
+    line-height: 1.1; 
 }
 </style>
 """, unsafe_allow_html=True)
@@ -8248,17 +8249,6 @@ with tab6:  # Settings tab
                                 # Fallback: use total leads as approximation
                                 total_leads = user_info.get('total_leads_downloaded', 0)
                                 st.metric("Credits Used", total_leads, delta="≈ leads generated")
-                    
-                    with usage_col4:
-                        member_since = user_info.get('created_at', '')
-                        if member_since:
-                            try:
-                                days_active = (datetime.now() - datetime.fromisoformat(member_since)).days
-                                st.metric("Days Active", days_active)
-                            except:
-                                st.metric("Status", "Active")
-                        else:
-                            st.metric("Status", "Active")
 
                     # ============================================================
                     # ✅ PLATFORM PERFORMANCE + RECENT ACTIVITY + QUICK STATS
@@ -8400,6 +8390,26 @@ with tab6:  # Settings tab
                     # ----------------------------------------------------------------
                     st.markdown("---")
                     st.subheader("⚡ Quick Stats Summary")
+                    
+                    # --- Derive days_active based on the earliest and latest CSV timestamps ---
+                    days_active = 0
+                    user_csv_files = get_user_csv_files(current_username)
+
+                    if user_csv_files:
+                        try:
+                            from datetime import datetime
+                            dates = [
+                                datetime.strptime(f['date'], "%m/%d %H:%M")
+                                for f in user_csv_files if f.get('date')
+                            ]
+                            if dates:
+                                days_active = max((max(dates) - min(dates)).days, 1)
+                        except Exception as e:
+                            print(f"[DEBUG] Could not calculate days_active: {e}")
+                            days_active = 1
+                    else:
+                        days_active = 1
+
 
                     summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
                     with summary_col1:
