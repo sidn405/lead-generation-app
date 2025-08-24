@@ -29,6 +29,17 @@ def handle_payment_success_url():
     payment_intent = qp.get("session_id") or qp.get("payment_intent") or "unknown"
     amount = float(qp.get("amount", "0") or 0)
 
+    # --- Idempotency guard: prevent double credit adds on reruns ---
+    pid = payment_intent  # from qp.get("session_id") or "payment_intent"
+    if pid and pid != "unknown":
+        flag = f"_paid_{pid}"
+        if st.session_state.get(flag):
+            # Already processed in this browser session, just clean URL and rerun
+            st.query_params.clear()
+            st.rerun()
+            return True
+        st.session_state[flag] = True
+
     if not username:
         st.error("You're not signed in. Please log in and try again.")
         return True
@@ -73,7 +84,7 @@ def handle_payment_success_url():
                 print(f"SESSION RESTORED: {username} with {fresh.get('credits', 0)} credits")
                 
                 # Show success message
-                st.balloons()
+                #st.balloons()
                 st.success(f"Payment successful! {credit_amount} credits added to your account!")
                 
         except Exception as e:
@@ -545,7 +556,7 @@ def handle_payment_success(username: str, tier_name: str, credits: int = None, m
     st.session_state.stripe_checkout_url_full = None
     st.session_state.purchasing_tier_full = None
     
-    st.balloons()
+    #st.balloons()
     st.success(f"🎉 Payment Successful!")
     
     # Import here to avoid circular imports
