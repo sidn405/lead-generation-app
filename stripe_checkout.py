@@ -103,6 +103,14 @@ def handle_payment_success_url():
 
     # Pull params
     qp = st.query_params
+    print(f"DEBUG: All query params: {dict(qp)}")
+    
+    # Print specific checks
+    print(f"payment_success: {qp.get('payment_success')}")
+    print(f"success: {qp.get('success')}")
+    print(f"package: {qp.get('package')}")
+    print(f"username: {qp.get('username')}")
+    
     is_credit_success = bool(qp.get("payment_success"))
     is_package_success = bool(qp.get("success") and qp.get("package"))
     

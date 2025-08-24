@@ -57,9 +57,11 @@ def create_package_stripe_session(
                     }
                 ],
                 mode="payment",
-                success_url=(
+                success_url = (
                     f"{base}/?success=1"
-                    f"&package={package_key}"
+                    f"&package_success=1"                   # <-- add this
+                    f"&package={quote_plus(package_name)}"  # <-- send display name here
+                    f"&package_key={package_key}"           # <-- keep key if you need it elsewhere
                     f"&username={username}"
                     f"&amount={price}"
                     f"&industry={ind}"
@@ -424,12 +426,18 @@ def show_my_packages(username: str):
     # Handle successful purchases from Stripe redirect
     if "package_success" in st.query_params:
         username_from_stripe = st.query_params.get("username", "unknown")
-        package_name = st.query_params.get("package", "unknown")
+        raw = st.query_params.get("package", "unknown")
 
-        # Add to database immediately (in case webhook is slow)
+        # Accept either a key or a display name
+        key_to_name = {
+            "starter": "Niche Starter Pack",
+            "deep_dive": "Industry Deep Dive",
+            "domination": "Market Domination",
+        }
+        package_name = key_to_name.get(raw, raw)  # map if it's a key
+
         add_package_to_database(username_from_stripe, package_name)
 
-        st.balloons()
         st.success(f"🎉 {package_name} purchased successfully!")
         st.info("📁 Your package is now available for download below")
 
