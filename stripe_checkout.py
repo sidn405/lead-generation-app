@@ -8,110 +8,110 @@ import streamlit as st
 from typing import Tuple, List, Dict
 #from simple_credit_system import credit_system
 from postgres_credit_system import credit_system
+from datetime import datetime
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
 )
 
-# ---- Handle ?payment_success=1 redirects deterministically ----
-def handle_payment_success_url():
-    """Finalize purchase from query params, update Postgres, refresh session/UI."""
-    if not st.query_params.get("payment_success"):
+def create_package_download(username: str, package_type: str, industry: str, location: str) -> bool:
+    """Create downloadable package file for user"""
+    try:
+        import os
+        import shutil
+        from datetime import datetime
+        
+        # Map package types to your existing CSV files
+        package_files = {
+            "starter": "leads/fitness_wellness_500.csv",
+            "deep_dive": "leads/fitness_wellness_2000.csv", 
+            "domination": "leads/fitness_wellness_5000.csv"
+        }
+        
+        # Get source file
+        source_file = package_files.get(package_type)
+        if not source_file or not os.path.exists(source_file):
+            print(f"Source file not found: {source_file}")
+            return False
+        
+        # Create user downloads directory
+        downloads_dir = f"downloads/{username}"
+        os.makedirs(downloads_dir, exist_ok=True)
+        
+        # Create unique filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{package_type}_{industry}_{location}_{timestamp}.csv"
+        destination = os.path.join(downloads_dir, filename)
+        
+        # Copy the file
+        shutil.copy2(source_file, destination)
+        
+        # Add to downloads tracking system
+        add_to_downloads_database(username, filename, package_type, industry, location)
+        
+        print(f"Package created: {destination}")
+        return True
+        
+    except Exception as e:
+        print(f"Package creation error: {e}")
         return False
 
-    # Pull params
-    qp = st.query_params
-    payment_type = qp.get("type", "subscription")
-    tier_name = (qp.get("tier") or "").replace("_", " ").strip().lower()
-    monthly_credits = int(qp.get("monthly_credits", "0") or 0)
-    credits = int(qp.get("credits", "0") or 0)
-    username = qp.get("username") or st.session_state.get("username")
-    payment_intent = qp.get("session_id") or qp.get("payment_intent") or "unknown"
-    amount = float(qp.get("amount", "0") or 0)
+def add_to_downloads_database(username: str, filename: str, package_type: str, industry: str, location: str):
+    """Add package to downloads tracking system"""
+    try:
+        # This should integrate with however your "My Downloads" tab works
+        # You might need to create/update a downloads.json file or database table
+        
+        download_entry = {
+            "username": username,
+            "filename": filename,
+            "package_type": package_type,
+            "industry": industry,
+            "location": location,
+            "created_at": datetime.now().isoformat(),
+            "downloaded_count": 0
+        }
+        
+        # Save to your downloads system
+        # (You'll need to implement this based on how My Downloads reads data)
+        
+    except Exception as e:
+        print(f"Downloads database error: {e}")
+        
+def _restore_session_state(username: str):
+    """Helper to restore session state after package purchase"""
+    try:
+        from postgres_credit_system import credit_system
+        user_info = credit_system.get_user_info(username)
+        
+        if user_info:
+            st.session_state.authenticated = True
+            st.session_state.username = username
+            st.session_state.user_data = user_info
+            st.session_state.credits = user_info.get("credits", 0)
+            st.session_state.user_plan = user_info.get("plan", "demo")
+            st.session_state.show_login = False
+            st.session_state.show_register = False
+    except Exception as e:
+        print(f"Session restore error: {e}")
 
-    # --- Idempotency guard: prevent double credit adds on reruns ---
-    pid = payment_intent  # from qp.get("session_id") or "payment_intent"
-    if pid and pid != "unknown":
-        flag = f"_paid_{pid}"
-        if st.session_state.get(flag):
-            # Already processed in this browser session, just clean URL and rerun
-            st.query_params.clear()
-            st.rerun()
-            return True
-        st.session_state[flag] = True
-
-    if not username:
-        st.error("You're not signed in. Please log in and try again.")
-        return True
-
-    from postgres_credit_system import credit_system
-    from datetime import datetime
-    
-    # Process payment
-    is_subscription = (payment_type == "subscription") or (monthly_credits > 0)
-    credit_amount = monthly_credits if is_subscription else credits
-
-    ok = False
-    if is_subscription:
-        ok = credit_system.activate_subscription(
-            username=username,
-            plan=tier_name or "pro",
-            monthly_credits=credit_amount or 2000,
-            stripe_session_id=payment_intent,
-        )
-    else:
-        ok = credit_system.add_credits(
-            username=username,
-            credits=credit_amount,
-            plan="credit_purchase",
-            stripe_session_id=payment_intent,
-        )
-
-    # CRITICAL FIX: Restore session state BEFORE doing anything else
-    if ok:
-        try:
-            fresh = credit_system.get_user_info(username)
-            if fresh:
-                # Force restore COMPLETE session state
-                st.session_state.authenticated = True
-                st.session_state.username = username
-                st.session_state.user_data = fresh
-                st.session_state.credits = fresh.get("credits", 0)
-                st.session_state.user_plan = fresh.get("plan", "demo")
-                st.session_state.show_login = False
-                st.session_state.show_register = False
-                
-                print(f"SESSION RESTORED: {username} with {fresh.get('credits', 0)} credits")
-                
-                # Show success message
-                #st.balloons()
-                st.success(f"Payment successful! {credit_amount} credits added to your account!")
-                
-        except Exception as e:
-            print(f"Session restore error: {e}")
-
-    # Admin logging (after session restore)
-    if ok:
-        try:
-            from frontend_app import log_payment_to_admin_system
-            admin_log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "username": username,
-                "tier": tier_name,
-                "credits": credit_amount,
-                "amount": amount,
-                "payment_intent": payment_intent,
-                "type": payment_type
-            }
-            log_payment_to_admin_system(admin_log_entry)
-            print(f"Payment logged to admin: {username} - {tier_name} - ${amount}")
-        except Exception as e:
-            print(f"Admin logging failed (non-critical): {e}")
-
-    # Clear query params and rerun (session state should now be preserved)
-    st.query_params.clear()
-    st.rerun()
-    return True
+# ---- Handle ?payment_success=1 redirects deterministically ----
+def _restore_session_state(username: str):
+    """Helper to restore session state after package purchase"""
+    try:
+        from postgres_credit_system import credit_system
+        user_info = credit_system.get_user_info(username)
+        
+        if user_info:
+            st.session_state.authenticated = True
+            st.session_state.username = username
+            st.session_state.user_data = user_info
+            st.session_state.credits = user_info.get("credits", 0)
+            st.session_state.user_plan = user_info.get("plan", "demo")
+            st.session_state.show_login = False
+            st.session_state.show_register = False
+    except Exception as e:
+        print(f"Session restore error: {e}")
 
 def ensure_user_session(username: str):
     """Ensure user session is properly maintained"""
