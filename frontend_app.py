@@ -811,22 +811,24 @@ def calculate_empire_from_csvs(username: str, csv_dir: str = None):
     return platform_counts
 
 def get_user_csv_files(username: str, csv_dir: str = None):
+    import os
+    from datetime import datetime
     csv_dir = csv_dir or os.getenv("CSV_DIR", "/app/client_configs")
     files = _files_for_user(username, csv_dir)
     files_sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
     _, meta = _calc_platforms_cached(files_sig)
-    # convert epoch to display string expected by your code
-    from datetime import datetime
+
     out = []
     for m in meta:
+        size_mb = round(os.path.getsize(m["file"]) / (1024 * 1024), 3)
         out.append({
             "file": m["file"],
             "platform": m["platform"],
             "leads": m["leads"],
             "date": datetime.fromtimestamp(m["date"]).strftime("%m/%d %H:%M"),
+            "size_mb": size_mb,              # ← add this
         })
     return out
-
 
 def load_accurate_empire_stats(username: str):
     """
@@ -6204,7 +6206,11 @@ with tab2: # Lead Results
                 if user_csv_files:
                     # Summary metrics
                     total_files = len(user_csv_files)
-                    total_size_mb = sum(f['size_mb'] for f in user_csv_files)
+                    import os
+                    total_size_mb = sum(
+                        f.get("size_mb", os.path.getsize(f["file"]) / (1024 * 1024))
+                        for f in user_csv_files
+                    )
                     newest_date = user_csv_files[0]['date']
 
                     col1, col2, col3 = st.columns(3)
