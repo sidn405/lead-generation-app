@@ -262,15 +262,25 @@ def create_package_stripe_session(stripe, username: str, package_type: str, amou
         
     base = APP_BASE_URL.rstrip("/")
     # Create package-specific success URL
-    success_url = f"https://leadgeneratorempire.com/?success=true&package={package_type}&username={username}&amount={amount}&industry={industry.replace(' ', '+')}&location={location.replace(' ', '+')}&timestamp={int(time.time())}"
+    success_url = (
+        f"{base}/?success=1"
+        f"&package_success=1"                 # <-- add this
+        f"&package={package_type}"
+        f"&username={username}"
+        f"&amount={amount}"
+        f"&industry={quote_plus(industry or '')}"
+        f"&location={quote_plus(location or '')}"
+        f"&timestamp={int(time.time())}"
+    )
+
     cancel_url = (
         f"{base}/?success=0"
-        f"&cancel=1"
+        f"&package_cancelled=1"               # <-- and this
         f"&package={package_type}"
         f"&username={username}"
         f"&industry={quote_plus(industry or '')}"
         f"&location={quote_plus(location or '')}"
-)
+    )
     
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
@@ -403,11 +413,11 @@ def show_payment_success_message() -> bool:
             st.markdown("---")
             st.markdown("### 📧 What Happens Next?")
             st.markdown("""
-            1. **📧 Confirmation Email**: You'll receive a detailed order confirmation
-            2. **🔬 Research Phase**: Our team begins targeting and research
-            3. **📊 Lead Generation**: We generate your targeted leads
-            4. **📤 Delivery**: Results delivered via email as promised
-            5. **💬 Support**: Dedicated support throughout the process
+            1. **📂 Instant Access**: Your lead package is immediately available for download
+            2. **💾 Go to Downloads**: Click "My Downloads" in the sidebar to access your files  
+            3. **📊 Multiple Formats**: Available as CSV, Excel, and JSON formats
+            4. **🔄 Re-download Anytime**: Access your purchased leads whenever needed
+            5. **📧 Email Backup**: Download link also sent to your registered email
             """)
             
             if st.button("🏠 Back to Dashboard", type="primary"):
@@ -498,7 +508,24 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                     
                 except Exception as e:
                     print(f"⚠️ Package logging warning: {e}")
-    
+                    
+                # Make the package downloadable in "My Downloads"
+                try:
+                    from package_system import add_package_to_database
+                    name_map = {
+                        "starter": "Niche Starter Pack",
+                        "deep_dive": "Industry Deep Dive",
+                        "domination": "Market Domination",
+                    }
+                    display_name = name_map.get(package, package.replace("_", " ").title())
+                    add_package_to_database(username, display_name)
+                    # cache for email/UI fallbacks
+                    st.session_state["package_industry"] = industry
+                    st.session_state["package_location"] = location
+                    print(f"✅ Added {display_name} to downloads for {username}")
+                except Exception as e:
+                    print(f"⚠️ Package DB add warning: {e}")
+  
     except Exception as e:
         print(f"⚠️ Payment success processing error: {e}")
 

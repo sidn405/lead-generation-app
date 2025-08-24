@@ -1166,8 +1166,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-
 def restore_auth_after_payment():
     """Improved automatic authentication restoration after Stripe payment"""
     query_params = st.query_params
