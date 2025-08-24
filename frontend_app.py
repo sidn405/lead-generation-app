@@ -176,33 +176,38 @@ CSV_DIR.mkdir(parents=True, exist_ok=True)
 EMPIRE_CACHE_DIR = CSV_DIR
 
 # --- Stripe return + session rehydrate (RUN FIRST) ---
-from stripe_checkout import handle_payment_success  # you already import this
-# your restore_auth_after_payment()/automatic_session_restore live in this file
+from payment_auth_recovery import restore_payment_authentication  # already imported above
+from stripe_checkout import handle_payment_success
 
-# If the credit system must be available for the success handler, init it early
+# If your success handler needs DB, init it early (safe no-op if already ready)
 try:
     if not credit_system:
-        success, message = initialize_postgres_credit_system()
-        if not success:
-            st.error(f"❌ Database initialization failed: {message}")
+        ok, msg = initialize_postgres_credit_system()
+        if not ok:
+            st.error(f"❌ Database initialization failed: {msg}")
             st.stop()
 except Exception:
-    # if import order hasn’t defined credit_system yet, we’ll recheck later
     pass
 
-# A) Try to restore auth from the URL (uses your helper)
-if restore_auth_after_payment():     # may show recovery UI if auto-restore fails
+# A) Rehydrate auth if we just returned from Stripe
+if restore_payment_authentication():   # <— use this name, not restore_auth_after_payment
     st.stop()
 
-# B) Apply the purchase (credits/plan) from Stripe success URL
+# B) Apply credits/plan from the success URL
 if st.query_params.get("payment_success"):
-    if handle_payment_success():     # clears query params + reruns on success
+    if handle_payment_success():       # clears query params + reruns
         st.stop()
 # --- end Stripe preflight ---
+
 
 # Add this as the FIRST thing in your main app
 payment_handled = automatic_payment_capture()
 if payment_handled:
+    st.stop()
+
+from payment_auth_recovery import restore_payment_authentication as restore_auth_after_payment
+# now you can call:
+if restore_auth_after_payment():
     st.stop()
 
 # Initialize database on startup
