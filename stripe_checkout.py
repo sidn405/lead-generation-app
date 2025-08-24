@@ -96,22 +96,165 @@ def _restore_session_state(username: str):
         print(f"Session restore error: {e}")
 
 # ---- Handle ?payment_success=1 redirects deterministically ----
-def _restore_session_state(username: str):
-    """Helper to restore session state after package purchase"""
-    try:
-        from postgres_credit_system import credit_system
-        user_info = credit_system.get_user_info(username)
+def handle_payment_success_url():
+    """Finalize purchase from query params, update Postgres, refresh session/UI."""
+    if not st.query_params.get("payment_success"):
+        return False
+
+    # Pull params
+    qp = st.query_params
+    is_credit_success = bool(qp.get("payment_success"))
+    is_package_success = bool(qp.get("success") and qp.get("package"))
+    
+    if not (is_credit_success or is_package_success):
+        return False
+
+    # Handle package purchases
+    if is_package_success:
+        username = qp.get("username")
+        package_key = qp.get("package")
         
-        if user_info:
-            st.session_state.authenticated = True
-            st.session_state.username = username
-            st.session_state.user_data = user_info
-            st.session_state.credits = user_info.get("credits", 0)
-            st.session_state.user_plan = user_info.get("plan", "demo")
-            st.session_state.show_login = False
-            st.session_state.show_register = False
-    except Exception as e:
-        print(f"Session restore error: {e}")
+        if username and package_key:
+            # Map package keys to display names
+            package_names = {
+                "starter": "Niche Starter Pack",
+                "deep_dive": "Industry Deep Dive", 
+                "domination": "Market Domination"
+            }
+            
+            package_name = package_names.get(package_key, package_key)
+            
+            # Add to package database
+            from package_system import add_package_to_database
+            add_package_to_database(username, package_name)
+            
+            # Restore session state
+            _restore_session_state(username)
+            
+            # Show success message
+            st.balloons()
+            st.success(f"Package '{package_name}' added to your downloads!")
+            
+            # Clear params and redirect
+            st.query_params.clear()
+            st.rerun()
+            return True
+        
+    payment_type = qp.get("type", "subscription")
+    tier_name = (qp.get("tier") or "").replace("_", " ").strip().lower()
+    monthly_credits = int(qp.get("monthly_credits", "0") or 0)
+    credits = int(qp.get("credits", "0") or 0)
+    username = qp.get("username") or st.session_state.get("username")
+    payment_intent = qp.get("session_id") or qp.get("payment_intent") or "unknown"
+    amount = float(qp.get("amount", "0") or 0)
+    
+    # NEW: Check for package purchases
+    package_type = qp.get("package")
+    industry = qp.get("industry", "").replace('+', ' ')
+    location = qp.get("location", "").replace('+', ' ')
+
+    # --- Idempotency guard: prevent double credit adds on reruns ---
+    pid = payment_intent  # from qp.get("session_id") or "payment_intent"
+    if pid and pid != "unknown":
+        flag = f"_paid_{pid}"
+        if st.session_state.get(flag):
+            # Already processed in this browser session, just clean URL and rerun
+            st.query_params.clear()
+            st.rerun()
+            return True
+        st.session_state[flag] = True
+
+    if not username:
+        st.error("You're not signed in. Please log in and try again.")
+        return True
+
+    from postgres_credit_system import credit_system
+    from datetime import datetime
+    
+    # Process payment
+    is_subscription = (payment_type == "subscription") or (monthly_credits > 0)
+    credit_amount = monthly_credits if is_subscription else credits
+    is_package = bool(package_type)
+
+    ok = False
+    if is_package:
+        # Handle package purchase - CREATE DOWNLOADABLE FILE
+        print(f"Processing package purchase: {package_type} for {username}")
+        
+        try:
+            # Create the actual downloadable package
+            success = create_package_download(username, package_type, industry, location)
+            
+            if success:
+                st.success(f"Package created and added to your downloads!")
+                ok = True
+            else:
+                st.error("Failed to create package download")
+                
+        except Exception as e:
+            print(f"Package creation error: {e}")
+            st.error(f"Package creation failed: {e}")
+    
+    elif is_subscription:
+        ok = credit_system.activate_subscription(
+            username=username,
+            plan=tier_name or "pro",
+            monthly_credits=credit_amount or 2000,
+            stripe_session_id=payment_intent,
+        )
+    else:
+        ok = credit_system.add_credits(
+            username=username,
+            credits=credit_amount,
+            plan="credit_purchase",
+            stripe_session_id=payment_intent,
+        )
+
+    # CRITICAL FIX: Restore session state BEFORE doing anything else
+    if ok:
+        try:
+            fresh = credit_system.get_user_info(username)
+            if fresh:
+                # Force restore COMPLETE session state
+                st.session_state.authenticated = True
+                st.session_state.username = username
+                st.session_state.user_data = fresh
+                st.session_state.credits = fresh.get("credits", 0)
+                st.session_state.user_plan = fresh.get("plan", "demo")
+                st.session_state.show_login = False
+                st.session_state.show_register = False
+                
+                print(f"SESSION RESTORED: {username} with {fresh.get('credits', 0)} credits")
+                
+                # Show success message
+                #st.balloons()
+                st.success(f"Payment successful! {credit_amount} credits added to your account!")
+                
+        except Exception as e:
+            print(f"Session restore error: {e}")
+
+    # Admin logging (after session restore)
+    if ok:
+        try:
+            from frontend_app import log_payment_to_admin_system
+            admin_log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "username": username,
+                "tier": tier_name,
+                "credits": credit_amount,
+                "amount": amount,
+                "payment_intent": payment_intent,
+                "type": payment_type
+            }
+            log_payment_to_admin_system(admin_log_entry)
+            print(f"Payment logged to admin: {username} - {tier_name} - ${amount}")
+        except Exception as e:
+            print(f"Admin logging failed (non-critical): {e}")
+
+    # Clear query params and rerun (session state should now be preserved)
+    st.query_params.clear()
+    st.rerun()
+    return True
 
 def ensure_user_session(username: str):
     """Ensure user session is properly maintained"""
