@@ -175,6 +175,36 @@ CSV_DIR.mkdir(parents=True, exist_ok=True)
 # Where we keep the per-user cached json (same volume so it survives deploys)
 EMPIRE_CACHE_DIR = CSV_DIR
 
+# --- Stripe return + session rehydrate (RUN FIRST) ---
+from stripe_checkout import handle_payment_success  # you already import this
+# your restore_auth_after_payment()/automatic_session_restore live in this file
+
+# If the credit system must be available for the success handler, init it early
+try:
+    if not credit_system:
+        success, message = initialize_postgres_credit_system()
+        if not success:
+            st.error(f"❌ Database initialization failed: {message}")
+            st.stop()
+except Exception:
+    # if import order hasn’t defined credit_system yet, we’ll recheck later
+    pass
+
+# A) Try to restore auth from the URL (uses your helper)
+if restore_auth_after_payment():     # may show recovery UI if auto-restore fails
+    st.stop()
+
+# B) Apply the purchase (credits/plan) from Stripe success URL
+if st.query_params.get("payment_success"):
+    if handle_payment_success():     # clears query params + reruns on success
+        st.stop()
+# --- end Stripe preflight ---
+
+# Add this as the FIRST thing in your main app
+payment_handled = automatic_payment_capture()
+if payment_handled:
+    st.stop()
+
 # Initialize database on startup
 @st.cache_resource
 def init_database():
@@ -190,12 +220,6 @@ def init_database():
 # Initialize database early in your app
 if 'db_initialized' not in st.session_state:
     st.session_state.db_initialized = init_database()
-    
-
-# Add this as the FIRST thing in your main app
-payment_handled = automatic_payment_capture()
-if payment_handled:
-    st.stop()
 
 # if any auth modal flag is set, show it and stop
 show_auth_section_if_needed()
@@ -1018,18 +1042,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# top of frontend_app.py (after imports)
-from stripe_checkout import handle_payment_success_url, ensure_user_session
-import streamlit as st
-
-# If Stripe sent us back with a username, hydrate the session ASAP
-if st.query_params.get("username"):
-    ensure_user_session(st.query_params.get("username"))
-
-# Process the Stripe success redirect BEFORE rendering anything else
-if st.query_params.get("payment_success"):
-    if handle_payment_success_url():
-        st.stop()  # don't render the "logged out" fallback over a freshly restored session
 
 
 def restore_auth_after_payment():
@@ -1121,45 +1133,27 @@ def automatic_session_restore(username):
         return False
 
 def create_automatic_recovery_account(username):
-    """Create recovery account automatically using credit_system"""
+    """Create a minimal account so the success handler can apply credits."""
     try:
-        print(f"🚨 Creating emergency recovery account for {username}")
-        
-        # Determine plan based on payment (if available)
-        query_params = st.query_params
-        credits = int(query_params.get("credits", 250))
-        tier = query_params.get("tier", "starter")
+        qp = st.query_params
+        tier = (qp.get("tier") or "starter").lower()
+        credits_hint = int(qp.get("credits", "0") or 0)
 
-        agree_key = f"agree_compact_{tier['name'].lower().replace(' ','_')}"
-        agreed_to_terms = st.checkbox(
-            "✅ Agree to terms",
-            key=agree_key,
-            help="I agree to Terms of Service & No-Refund Policy"
-        )
-
-        # disable the buy button until they agree
-        buy_label = f"Buy {tier['name']}"
-        if st.button(buy_label, disabled=not agreed_to_terms, key=f"buy_{tier['name']}"):
-            # call your stripe_check logic…
-            checkout_session = create_no_refund_checkout(username, user_email, tier)
-            st.write("Redirecting…", checkout_session)
-        
-        # Map credits/tier to plan
-        if credits >= 1000 or "ultimate" in tier.lower():
+        # pick a provisional plan; real values will be set by handle_payment_success()
+        if "ultimate" in tier or credits_hint >= 1000:
             plan = "ultimate"
-        elif credits >= 500 or "pro" in tier.lower():
+        elif "pro" in tier or credits_hint >= 500:
             plan = "pro"
         else:
             plan = "starter"
-        
-        print(f"🎯 Recovery account plan: {plan} (based on {credits} credits)")
-        
-        # Create user data structure
+
+        email = qp.get("email") or f"{username}@payment-recovery.com"
+
         user_data = {
             "username": username,
             "plan": plan,
-            "credits": credits,
-            "email": f"{username}@payment-recovery.com",
+            "credits": 0,  # leave 0 here; success handler will add exact credits
+            "email": email,
             "created_at": datetime.now().isoformat(),
             "last_login": datetime.now().isoformat(),
             "auto_recovery": True,
@@ -1167,28 +1161,23 @@ def create_automatic_recovery_account(username):
             "total_leads_downloaded": 0,
             "transactions": []
         }
-        
-        # Set session state using simple_auth
+
+        # restore auth
         simple_auth.current_user = username
         simple_auth.user_data = user_data
-        
-        # Set Streamlit session state
         st.session_state.authenticated = True
         st.session_state.username = username
         st.session_state.user_data = user_data
-        st.session_state.user_data = user_data
-        st.session_state.plan = user_data.get("plan", "starter")
-        st.session_state.credits = user_data.get("credits", 250)
+        st.session_state.plan = plan
+        st.session_state.credits = 0
         st.session_state.login_time = datetime.now().isoformat()
-        
-        # Try to save to permanent storage (non-blocking)
-        try_save_user_to_credit_system(username, user_data, credits, plan)
-        
-        print(f"✅ Auto-created recovery account for {username} with {plan} plan")
+
+        # persist best-effort (no credit adds here to avoid double-count)
+        try_save_user_to_credit_system(username, user_data)
+        print(f"✅ Auto-created recovery account for {username} ({plan})")
         return True
-        
     except Exception as e:
-        print(f"❌ Auto-recovery account creation failed: {str(e)}")
+        print(f"❌ Auto-recovery account creation failed: {e}")
         return False
 
 def try_save_user_to_credit_system(username, user_data, credits, plan):
