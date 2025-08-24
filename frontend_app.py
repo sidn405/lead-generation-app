@@ -25,7 +25,8 @@ from datetime import datetime, timedelta
 #from simple_credit_system import credit_system, check_user_credits, consume_user_credits
 from postgres_credit_system import postgres_credit_system as credit_system, initialize_postgres_credit_system, consume_user_credits
 from stripe_checkout import (
-    display_pricing_tiers_with_enforcement, 
+    display_pricing_tiers_with_enforcement,
+    handle_payment_success_url,  
     handle_payment_success, 
     show_user_credit_status,
     enforce_credit_limits_on_scraper,
@@ -177,9 +178,9 @@ EMPIRE_CACHE_DIR = CSV_DIR
 
 # --- Stripe return preflight (run FIRST) ---
 from payment_auth_recovery import restore_payment_authentication
-from stripe_checkout import handle_payment_success
 
-# If your handler needs DB, safe to init early (no-op if already ready)
+
+# If handler needs DB, safe early init (no-op if already inited)
 try:
     if not credit_system:
         ok, msg = initialize_postgres_credit_system()
@@ -189,21 +190,17 @@ try:
 except Exception:
     pass
 
-# 1) If we came back from Stripe, ensure a session exists (NO st.stop here)
+# 1) Rehydrate session if we just came back from Stripe (no stop here)
 try:
     restore_payment_authentication()
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
-    
-print("🔎 payment_success param:", st.query_params.get("payment_success"))
-print("🔎 entering handle_payment_success()…")
 
-# 2) If ?payment_success=1 is present, ALWAYS run the purchase handler
+# 2) If ?payment_success=1 is present, finalize purchase
 if st.query_params.get("payment_success"):
-    handled = handle_payment_success()   # this should clear params + st.rerun()
-    if handled:
-        st.stop()
+    handle_payment_success_url()   # this clears query params and calls st.rerun()
 # --- end preflight ---
+
 # Add this as the FIRST thing in your main app
 if not (st.query_params.get("payment_success") or st.query_params.get("session_id") or st.query_params.get("success")):
     payment_handled = automatic_payment_capture()
