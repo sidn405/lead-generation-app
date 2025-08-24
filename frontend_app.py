@@ -820,15 +820,18 @@ def get_user_csv_files(username: str, csv_dir: str = None):
 
     out = []
     for m in meta:
-        size_mb = round(os.path.getsize(m["file"]) / (1024 * 1024), 3)
+        path = m["file"]
+        size_mb = round(os.path.getsize(path) / (1024 * 1024), 3)
         out.append({
-            "file": m["file"],
+            "file": path,
+            "name": os.path.basename(path),                      # ← add this
             "platform": m["platform"],
             "leads": m["leads"],
             "date": datetime.fromtimestamp(m["date"]).strftime("%m/%d %H:%M"),
-            "size_mb": size_mb,              # ← add this
+            "size_mb": size_mb,
         })
     return out
+
 
 def load_accurate_empire_stats(username: str):
     """
@@ -6231,7 +6234,10 @@ with tab2: # Lead Results
                         with c1:
                             # get_platform_emoji and extract_* are assumed to be defined at module-level
                             emoji = get_platform_emoji(file.get('platform', 'unknown'))
-                            st.write(f"{emoji} **{file['name']}**")
+                            import os
+                            file_name = file.get("name") or os.path.basename(file.get("file", ""))
+                            st.write(f"{emoji} **{file_name}**")
+
                             st.caption(f"🔍 Search: {file.get('search_term', 'Unknown')}")
 
                         with c2:
