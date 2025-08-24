@@ -236,16 +236,6 @@ if not any(k in st.query_params for k in ("payment_success", "success", "session
     payment_handled = automatic_payment_capture()
     if payment_handled:
         st.stop()
-        
-base = APP_BASE_URL.rstrip("/")
-# Credits/subscriptions
-cancel_url = (
-    f"{base}/?success=0"
-    f"&cancel=1"
-    f"&username={username}"
-)
-# (packages: you can also include &package=..., &industry=..., &location=...)
-
 
 from payment_auth_recovery import restore_payment_authentication as restore_auth_after_payment
 # now you can call:
