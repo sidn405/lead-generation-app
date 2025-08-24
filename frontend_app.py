@@ -176,10 +176,10 @@ CSV_DIR.mkdir(parents=True, exist_ok=True)
 EMPIRE_CACHE_DIR = CSV_DIR
 
 # --- Stripe return + session rehydrate (RUN FIRST) ---
-from payment_auth_recovery import restore_payment_authentication  # already imported above
+from payment_auth_recovery import restore_payment_authentication  # you already import this
 from stripe_checkout import handle_payment_success
 
-# If your success handler needs DB, init it early (safe no-op if already ready)
+# If the credit system is needed by the handler, initialize it early (safe if already init'd)
 try:
     if not credit_system:
         ok, msg = initialize_postgres_credit_system()
@@ -189,21 +189,23 @@ try:
 except Exception:
     pass
 
-# A) Rehydrate auth if we just returned from Stripe
-if restore_payment_authentication():   # <— use this name, not restore_auth_after_payment
+# A) Rehydrate auth if this is a Stripe return
+if restore_payment_authentication():   # shows a recovery UI only if auto-restore fails
     st.stop()
 
 # B) Apply credits/plan from the success URL
 if st.query_params.get("payment_success"):
-    if handle_payment_success():       # clears query params + reruns
-        st.stop()
+    handle_payment_success()           # this function clears query params + st.rerun()
+    # no st.stop() here — the handler already reruns
 # --- end Stripe preflight ---
 
 
+
 # Add this as the FIRST thing in your main app
-payment_handled = automatic_payment_capture()
-if payment_handled:
-    st.stop()
+if not (st.query_params.get("payment_success") or st.query_params.get("session_id") or st.query_params.get("success")):
+    payment_handled = automatic_payment_capture()
+    if payment_handled:
+        st.stop()
 
 from payment_auth_recovery import restore_payment_authentication as restore_auth_after_payment
 # now you can call:
