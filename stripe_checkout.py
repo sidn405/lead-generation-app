@@ -187,6 +187,7 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
                 f"&monthly_credits={credits}"
                 f"&username={username}"
                 f"&amount={price}"
+                f"&session_id={session.id}"
             )
         else:
             success_url = (
@@ -196,6 +197,7 @@ def create_no_refund_checkout(username: str, user_email: str, tier: dict) -> str
                 f"&credits={credits}"
                 f"&username={username}"
                 f"&amount={price}"
+                f"&session_id={session.id}"
             )
         print(f"🔗 Success URL: {success_url}")
 

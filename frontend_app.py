@@ -1433,6 +1433,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# very top, after imports
+from stripe_checkout import handle_payment_success_url, ensure_user_session
+import streamlit as st
+
+# try to rehydrate session from username in the success_url BEFORE anything else
+if st.query_params.get("username"):
+    ensure_user_session(st.query_params.get("username"))
+
+# process Stripe return BEFORE any auth gating or page selection
+if st.query_params.get("payment_success"):
+    if handle_payment_success_url():
+        st.stop()  # prevents fallback UI from rendering over the restored session
+
 # Add this RIGHT AFTER imports, before any other code
 def debug_payment_session():
     """Debug payment success and session state"""
