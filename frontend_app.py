@@ -317,9 +317,6 @@ if st.session_state.get("show_login", False):
 # AFTER the fast-path above
 show_auth_section_if_needed()  # it can handle forgot/reset flows etc.
 
-if st.session_state.get("_stats_user") != current_username:
-    st.cache_data.clear()
-    st.session_state["_stats_user"] = current_username
 
 # right after the preflight block:
 if st.query_params.get("cancel") or st.query_params.get("success") == "0":
@@ -6134,6 +6131,11 @@ with tab2: # Lead Results
             print(f"📊 Calculating empire stats from CSV files for {username} (CSV_DIR={CSV_DIR})")
             user_empire_stats = calculate_empire_from_csvs(username)
             user_total_leads = sum(empire_stats.values())
+            
+            if st.session_state.get("_stats_user") != current_username:
+                st.cache_data.clear()
+                st.session_state["_stats_user"] = current_username
+
 
             st.markdown(f"### 👑 Empire Command Center - {current_username}")
 
