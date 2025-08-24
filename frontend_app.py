@@ -276,6 +276,20 @@ else:
         st.query_params.clear()
         st.rerun()
 # --- end unified preflight ---
+# --- Login Fast-Path (run BEFORE any other auth/UI gating) ---
+# open via query param (?login=1) or session flag set by the button
+if st.query_params.get("login") == "1":
+    st.session_state["show_login"] = True
+    st.query_params.clear()
+    st.rerun()
+
+if st.session_state.get("show_login", False):
+    # show the full login modal and stop so nothing else overrides it
+    show_enhanced_login_with_forgot_password()
+    st.stop()
+# --- end Login Fast-Path ---
+# AFTER the fast-path above
+show_auth_section_if_needed()  # it can handle forgot/reset flows etc.
 
 
 # right after the preflight block:
@@ -310,9 +324,6 @@ def init_database():
 # Initialize database early in your app
 if 'db_initialized' not in st.session_state:
     st.session_state.db_initialized = init_database()
-
-# if any auth modal flag is set, show it and stop
-show_auth_section_if_needed()
 
 # Add initialization check
 if not credit_system:
