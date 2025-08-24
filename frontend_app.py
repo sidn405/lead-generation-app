@@ -3820,7 +3820,7 @@ main .block-container {
     gap: 10px; 
     margin: 0; 
     padding: 0;
-    transform: translateY(-20px); /* Move up 20px */
+    transform: translateY(-25px); /* Move up 20px */
 }
 h1.main-header { 
     margin: 0 !important; 
@@ -9355,7 +9355,7 @@ st.markdown(
     </style>
 
     <div class="footer">
-      ⚙️ Lead Generator Empire Settings | Secure &amp; Private
+       Lead Generator Empire | Secure &amp; Private
     </div>
     """,
     unsafe_allow_html=True,

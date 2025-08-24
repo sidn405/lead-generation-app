@@ -4,9 +4,9 @@
 Payment Authentication Recovery Module
 Handles authentication restoration after Stripe payment returns
 """
-
 import streamlit as st
-import os
+from emailer import send_admin_package_notification, EMAIL_ADDRESS
+import os 
 import json
 import time
 from datetime import datetime
@@ -178,6 +178,44 @@ def show_payment_success_message() -> bool:
         elif package:
             #st.balloons()
             st.success(f"📦 Package purchase successful! Your {package} package will be delivered soon!")
+            
+            # ---- Admin notification (idempotent by timestamp) ----
+            username = st.session_state.get("username") or st.query_params.get("username", "")
+            user_email = (st.session_state.get("user_data") or {}).get("email", "")
+            amount_val = float(amount or 0)
+            session_id = st.query_params.get("session_id") or st.query_params.get("payment_intent")
+            stamp = st.query_params.get("timestamp")  # added by your package success_url
+            notice_flag = f"_pkg_notice_{stamp or ''}"
+            
+            # Resolve industry/location with robust fallbacks
+            industry = (
+                st.query_params.get("industry")
+                or st.session_state.get("package_industry")
+                or ""
+            )
+            location = (
+                st.query_params.get("location")
+                or st.session_state.get("package_location")
+                or ""
+            )
+
+
+            if stamp and not st.session_state.get(notice_flag):
+                admin_email = os.getenv("ADMIN_EMAIL", EMAIL_ADDRESS)
+                sent = send_admin_package_notification(
+                    admin_email=admin_email,
+                    username=username,
+                    user_email=user_email,
+                    package_type=package,
+                    amount=amount_val,
+                    industry=industry,
+                    location=location,
+                    session_id=session_id,
+                    timestamp=stamp
+                )
+                st.session_state[notice_flag] = True
+                if sent:
+                    st.info("📨 Admin has been notified. We’re preparing your package now.")
             
             if st.button("🏠 Back to Dashboard", type="primary"):
                 st.query_params.clear()

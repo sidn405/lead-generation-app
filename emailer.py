@@ -158,3 +158,42 @@ Lead Generator Empire Team
     except Exception as e:
         print(f"❌ Confirmation email failed: {e}")
         return False
+    
+# 📣 Admin notification for package purchases
+def send_admin_package_notification(admin_email: str,
+                                    username: str,
+                                    user_email: str,
+                                    package_type: str,
+                                    amount: float,
+                                    industry: str,
+                                    location: str,
+                                    session_id: str = None,
+                                    timestamp: str = None) -> bool:
+    try:
+        msg = EmailMessage()
+        subject_bits = [f"NEW PACKAGE: {package_type}", f"user={username}", f"${amount:.2f}"]
+        msg["Subject"] = " | ".join(subject_bits)
+        msg["From"] = EMAIL_ADDRESS
+        msg["To"] = admin_email
+
+        details = [
+            f"Package: {package_type}",
+            f"Amount: ${amount:.2f}",
+            f"User: {username}",
+            f"User Email: {user_email or 'unknown'}",
+            f"Industry: {industry or 'n/a'}",
+            f"Location: {location or 'n/a'}",
+            f"Stripe Session: {session_id or 'n/a'}",
+            f"Timestamp: {timestamp or datetime.now().isoformat()}",
+        ]
+        msg.set_content("A new package order needs fulfillment.\n\n" + "\n".join("• " + d for d in details))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            smtp.send_message(msg)
+
+        print(f"✅ Admin notified about package '{package_type}' for {username}")
+        return True
+    except Exception as e:
+        print(f"❌ Admin notification failed: {e}")
+        return False
