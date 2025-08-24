@@ -176,8 +176,9 @@ CSV_DIR.mkdir(parents=True, exist_ok=True)
 # Where we keep the per-user cached json (same volume so it survives deploys)
 EMPIRE_CACHE_DIR = CSV_DIR
 APP_BASE_URL = (
-    os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
+    os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com")
 )
+
 # --- Unified Stripe preflight (RUN FIRST) ---
 from payment_auth_recovery import (
     restore_payment_authentication,
@@ -267,6 +268,17 @@ elif qp.get("success") == "1":
     if show_payment_success_message():
         scroll_to_top()
         st.stop()                      # hold on the confirmation page
+        
+# ✅ package store SUCCESS (legacy flag)
+elif qp.get("package_success") in ("1", "true", "True"):
+    if show_payment_success_message():
+        st.stop()
+
+# ✅ package store CANCEL (legacy flag)
+elif qp.get("package_cancelled") in ("1", "true", "True"):
+    st.toast("Checkout canceled. No changes made.")
+    st.query_params.clear()
+    st.rerun()
 
 # 4) Any cancel path (handle all variants, keep user logged in)
 else:
