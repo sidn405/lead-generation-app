@@ -166,7 +166,7 @@ def show_payment_success_message() -> bool:
         package = query_params.get("package", "")
         
         if plan:
-            st.balloons()
+            #st.balloons()
             st.success(f"🎉 Plan upgrade successful! Welcome to {plan.title()} plan!")
             
             if st.button("🚀 Continue to Dashboard", type="primary"):
@@ -176,7 +176,7 @@ def show_payment_success_message() -> bool:
             return True
             
         elif package:
-            st.balloons()
+            #st.balloons()
             st.success(f"📦 Package purchase successful! Your {package} package will be delivered soon!")
             
             if st.button("🏠 Back to Dashboard", type="primary"):
@@ -269,7 +269,7 @@ def show_payment_success_message() -> bool:
         
         if plan:
             # Plan upgrade success
-            st.balloons()
+            #st.balloons()
             st.success(f"🎉 Plan upgrade successful! Welcome to {plan.title()} plan!")
             
             # Show plan benefits
@@ -306,7 +306,7 @@ def show_payment_success_message() -> bool:
             
         elif package:
             # Package purchase success
-            st.balloons()
+            #st.balloons()
             
             package_names = {
                 "starter": "Niche Starter Pack",

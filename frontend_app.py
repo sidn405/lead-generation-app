@@ -176,11 +176,15 @@ CSV_DIR.mkdir(parents=True, exist_ok=True)
 # Where we keep the per-user cached json (same volume so it survives deploys)
 EMPIRE_CACHE_DIR = CSV_DIR
 
-# --- Stripe return preflight (run FIRST) ---
-from payment_auth_recovery import restore_payment_authentication
+# --- Unified Stripe preflight (RUN FIRST) ---
+from payment_auth_recovery import (
+    restore_payment_authentication,
+    show_payment_success_message,  # for packages/plans confirmation page
+    scroll_to_top,
+)
+from stripe_checkout import handle_payment_success_url  # for credits/subscriptions
 
-
-# If handler needs DB, safe early init (no-op if already inited)
+# 0) Make sure DB is ready if the handlers need it (safe no-op if already init'd)
 try:
     if not credit_system:
         ok, msg = initialize_postgres_credit_system()
@@ -190,22 +194,33 @@ try:
 except Exception:
     pass
 
-# 1) Rehydrate session if we just came back from Stripe (no stop here)
+# 1) Always rehydrate auth first (no stop here)
 try:
     restore_payment_authentication()
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
 
-# 2) If ?payment_success=1 is present, finalize purchase
-if st.query_params.get("payment_success"):
-    handle_payment_success_url()   # this clears query params and calls st.rerun()
-# --- end preflight ---
+# 2) Credits / Subscription returns (?payment_success=1)
+if "payment_success" in st.query_params:
+    # Reads all params, applies credits/plan, clears query params, and st.rerun()'s
+    handle_payment_success_url()
+    # no st.stop(): the handler already reruns
 
-# Add this as the FIRST thing in your main app
-if not (st.query_params.get("payment_success") or st.query_params.get("session_id") or st.query_params.get("success")):
+# 3) Package / Plan confirmation page (?success=1)
+elif "success" in st.query_params:
+    # Renders your confirmation UI and keeps user on this page
+    if show_payment_success_message():
+        scroll_to_top()  # optional
+        st.stop()
+# --- end unified preflight ---
+
+
+# Don’t run this on Stripe returns (prevents blank page)
+if not any(k in st.query_params for k in ("payment_success", "success", "session_id")):
     payment_handled = automatic_payment_capture()
     if payment_handled:
         st.stop()
+
 
 from payment_auth_recovery import restore_payment_authentication as restore_auth_after_payment
 # now you can call:
