@@ -175,7 +175,9 @@ CSV_DIR.mkdir(parents=True, exist_ok=True)
 
 # Where we keep the per-user cached json (same volume so it survives deploys)
 EMPIRE_CACHE_DIR = CSV_DIR
-
+APP_BASE_URL = (
+    os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
+)
 # --- Unified Stripe preflight (RUN FIRST) ---
 from payment_auth_recovery import (
     restore_payment_authentication,
@@ -213,23 +215,36 @@ elif "success" in st.query_params:
         scroll_to_top()  # optional
         st.stop()
         
-# 4) Cancelled checkout (any flow)
-elif "cancel" in st.query_params or st.query_params.get("success") == "0":
-    # keep user logged in, show a quick toast, then clean URL
-    st.toast("Checkout canceled. No changes made.")
-    st.query_params.clear()
-    st.rerun()
-# --- end preflight ---
+# 4) Any cancel path (support all spellings/legacy keys)
+else:
+    cancel_keys = ("cancel", "canceled", "cancelled", "payment_cancelled", "payment_canceled")
+    if st.query_params.get("success") == "0" or any(k in st.query_params for k in cancel_keys):
+        # keep the user logged in and exit cleanly
+        st.toast("Checkout canceled. No changes made.")
+        st.query_params.clear()
+        st.rerun()
+# --- end unified preflight ---
 
 # right after the preflight block:
 if st.query_params.get("cancel") or st.query_params.get("success") == "0":
     st.session_state["suppress_demo"] = True
 
 # Don’t run this on Stripe returns (prevents blank page)
-if not any(k in st.query_params for k in ("payment_success", "success", "session_id", "cancel")):
+if not any(k in st.query_params for k in ("payment_success", "success", "session_id",
+                                          "cancel", "canceled", "cancelled",
+                                          "payment_cancelled", "payment_canceled")):
     payment_handled = automatic_payment_capture()
     if payment_handled:
         st.stop()
+        
+base = APP_BASE_URL.rstrip("/")
+# Credits/subscriptions
+cancel_url = (
+    f"{base}/?success=0"
+    f"&cancel=1"
+    f"&username={username}"
+)
+# (packages: you can also include &package=..., &industry=..., &location=...)
 
 
 from payment_auth_recovery import restore_payment_authentication as restore_auth_after_payment
