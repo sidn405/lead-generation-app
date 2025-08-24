@@ -181,12 +181,14 @@ APP_BASE_URL = (
 # --- Unified Stripe preflight (RUN FIRST) ---
 from payment_auth_recovery import (
     restore_payment_authentication,
-    show_payment_success_message,  # for packages/plans confirmation page
+    show_payment_success_message,
     scroll_to_top,
 )
-from stripe_checkout import handle_payment_success_url  # for credits/subscriptions
+from stripe_checkout import handle_payment_success_url
+from datetime import datetime
+import json, os
 
-# 0) Make sure DB is ready if the handlers need it (safe no-op if already init'd)
+# 0) DB init if needed (safe no-op if already initialized)
 try:
     if not credit_system:
         ok, msg = initialize_postgres_credit_system()
@@ -196,34 +198,85 @@ try:
 except Exception:
     pass
 
-# 1) Always rehydrate auth first (no stop here)
+# 0.5) QUICK rehydrate from username in querystring (works even on cancel)
+def _quick_rehydrate_from_qs():
+    if st.session_state.get("authenticated"):
+        return False
+    qp = st.query_params
+    username = qp.get("username") or qp.get("user") or qp.get("u")
+    if not username:
+        return False
+    try:
+        info = credit_system.get_user_info(username)
+        if info:
+            # restore simple_auth + session
+            simple_auth.current_user = username
+            simple_auth.user_data = info
+            st.session_state.update(
+                authenticated=True,
+                username=username,
+                user_data=info,
+                plan=info.get("plan", "starter"),
+                credits=info.get("credits", 0),
+                login_time=datetime.now().isoformat(),
+            )
+            print(f"✅ QUICK REHYDRATE via credit_system: {username}")
+            return True
+    except Exception as e:
+        print(f"⚠️ quick rehydrate (credit_system) failed: {e}")
+
+    # fallback: users.json
+    try:
+        if os.path.exists("users.json"):
+            users = json.load(open("users.json"))
+            if username in users:
+                ud = users[username]
+                simple_auth.current_user = username
+                simple_auth.user_data = ud
+                st.session_state.update(
+                    authenticated=True,
+                    username=username,
+                    user_data=ud,
+                    plan=ud.get("plan", "starter"),
+                    credits=ud.get("credits", 0),
+                    login_time=datetime.now().isoformat(),
+                )
+                print(f"✅ QUICK REHYDRATE via users.json: {username}")
+                return True
+    except Exception as e:
+        print(f"⚠️ quick rehydrate (users.json) failed: {e}")
+    return False
+
+_quick_rehydrate_from_qs()   # <<< ensure a session even on cancel
+
+# 1) Full restore for success/confirmation flows (silent no-op if already authed)
 try:
     restore_payment_authentication()
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
 
-# 2) Credits / Subscription returns (?payment_success=1)
-if "payment_success" in st.query_params:
-    # Reads all params, applies credits/plan, clears query params, and st.rerun()'s
-    handle_payment_success_url()
-    # no st.stop(): the handler already reruns
+qp = st.query_params
 
-# 3) Package / Plan confirmation page (?success=1)
-elif "success" in st.query_params:
-    # Renders your confirmation UI and keeps user on this page
+# 2) Credits / Subscription success (?payment_success=1)
+if "payment_success" in qp:
+    handle_payment_success_url()      # clears params + st.rerun()
+    # no stop; handler reruns
+
+# 3) Packages / Plans confirmation (?success=1)
+elif qp.get("success") == "1":
     if show_payment_success_message():
-        scroll_to_top()  # optional
-        st.stop()
-        
-# 4) Any cancel path (support all spellings/legacy keys)
+        scroll_to_top()
+        st.stop()                      # hold on the confirmation page
+
+# 4) Any cancel path (handle all variants, keep user logged in)
 else:
     cancel_keys = ("cancel", "canceled", "cancelled", "payment_cancelled", "payment_canceled")
-    if st.query_params.get("success") == "0" or any(k in st.query_params for k in cancel_keys):
-        # keep the user logged in and exit cleanly
+    if qp.get("success") == "0" or any(k in qp for k in cancel_keys):
         st.toast("Checkout canceled. No changes made.")
         st.query_params.clear()
         st.rerun()
 # --- end unified preflight ---
+
 
 # right after the preflight block:
 if st.query_params.get("cancel") or st.query_params.get("success") == "0":

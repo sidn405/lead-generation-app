@@ -597,7 +597,7 @@ st.markdown(
     </style>
 
     <div class="footer">
-      ⚙️ Lead Generator Empire Settings | Secure &amp; Private
+       Lead Generator Empire | Secure &amp; Private
     </div>
     """,
     unsafe_allow_html=True,
