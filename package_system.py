@@ -1,6 +1,6 @@
 
 import streamlit as st
-from payment_auth_recovery import create_package_stripe_session
+from urllib.parse import quote_plus
 import sqlite3
 import pandas as pd
 import os
@@ -17,42 +17,73 @@ STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")  # Replace with your actual sec
 # Initialize Stripe with your API key
 stripe.api_key = STRIPE_API_KEY
 
-def create_package_stripe_session(api_key: str, username: str, package_key: str, price: float, package_name: str):
+def create_package_stripe_session(
+    api_key: str,
+    username: str,
+    package_key: str,
+    price: float,
+    package_name: str,
+    industry: str = None,
+    location: str = None,
+):
     """Create a Stripe checkout session for package purchase"""
-    
     try:
+        base = os.getenv("APP_BASE_URL", "https://leadgeneratorempire.com")
+        stamp = str(int(time.time()))
+        ind = quote_plus(industry or "")
+        loc = quote_plus(location or "")
+
         # Package definitions for file mapping
         package_files = {
             "starter": "fitness_wellness_500.csv",
-            "deep_dive": "fitness_wellness_2000.csv", 
-            "domination": "fitness_wellness_5000.csv"
+            "deep_dive": "fitness_wellness_2000.csv",
+            "domination": "fitness_wellness_5000.csv",
         }
-        
-        # Show loading message
-        with st.spinner('Creating checkout session...'):
+
+        with st.spinner("Creating checkout session..."):
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": "usd",
-                        "product_data": {
-                            "name": f"Fitness & Wellness Leads - {package_name}",
-                            "description": f"Verified leads • Instant download"
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": "usd",
+                            "product_data": {
+                                "name": f"Fitness & Wellness Leads - {package_name}",
+                                "description": "Verified leads • Instant download",
+                            },
+                            "unit_amount": int(price * 100),
                         },
-                        "unit_amount": int(price * 100),  # Convert to cents
-                    },
-                    "quantity": 1,
-                }],
+                        "quantity": 1,
+                    }
+                ],
                 mode="payment",
-                success_url=f"https://leadgeneratorempire.com/?package_success=true&username={username}&package={package_name}&timestamp={int(time.time())}",
-                cancel_url="https://leadgeneratorempire.com/?package_cancelled=true&username={username}",
+                success_url=(
+                    f"{base}/?success=1"
+                    f"&package={package_key}"
+                    f"&username={username}"
+                    f"&amount={price}"
+                    f"&industry={ind}"
+                    f"&location={loc}"
+                    f"&timestamp={stamp}"
+                    "&session_id={CHECKOUT_SESSION_ID}"
+                ),
+                cancel_url=(
+                    f"{base}/?success=0"
+                    f"&cancel=1"
+                    f"&package={package_key}"
+                    f"&username={username}"
+                    f"&industry={ind}"
+                    f"&location={loc}"
+                ),
                 customer_email=f"{username}@example.com",
                 metadata={
                     "username": username,
                     "package_name": package_name,
                     "package_key": package_key,
-                    "file_path": package_files.get(package_key, "")
-                }
+                    "file_path": package_files.get(package_key, ""),
+                    "industry": industry or "",
+                    "location": location or "",
+                },
             )
         
         # Show success message and direct redirect
@@ -162,10 +193,15 @@ def add_package_to_database(username: str, package_name: str):
 def show_package_store(username: str, user_authenticated: bool):
     """The package store page with real Stripe integration"""
 
-    # 1) Handle cancelled purchases
-    if "package_cancelled" in st.query_params:
+    # 1) Handle cancelled purchases (support unified + legacy flags)
+    if (
+        st.query_params.get("success") == "0"
+        or "cancel" in st.query_params
+        or "package_cancelled" in st.query_params
+    ):
         st.warning("⚠️ Purchase was cancelled. You can try again anytime.")
         st.query_params.clear()
+        st.rerun()
 
     # 2) Anchor & title
     st.markdown('<div id="top"></div>', unsafe_allow_html=True)
@@ -376,7 +412,7 @@ def show_package_store(username: str, user_authenticated: bool):
         </style>
 
         <div class="footer">
-        ⚙️ Lead Generator Empire Pre-Built Packages | Secure &amp; Private
+         Lead Generator Empire Pre-Built Packages | Secure &amp; Private
         </div>
         """,
         unsafe_allow_html=True,
