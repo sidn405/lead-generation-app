@@ -212,11 +212,21 @@ elif "success" in st.query_params:
     if show_payment_success_message():
         scroll_to_top()  # optional
         st.stop()
-# --- end unified preflight ---
+        
+# 4) Cancelled checkout (any flow)
+elif "cancel" in st.query_params or st.query_params.get("success") == "0":
+    # keep user logged in, show a quick toast, then clean URL
+    st.toast("Checkout canceled. No changes made.")
+    st.query_params.clear()
+    st.rerun()
+# --- end preflight ---
 
+# right after the preflight block:
+if st.query_params.get("cancel") or st.query_params.get("success") == "0":
+    st.session_state["suppress_demo"] = True
 
 # Don’t run this on Stripe returns (prevents blank page)
-if not any(k in st.query_params for k in ("payment_success", "success", "session_id")):
+if not any(k in st.query_params for k in ("payment_success", "success", "session_id", "cancel")):
     payment_handled = automatic_payment_capture()
     if payment_handled:
         st.stop()
@@ -579,9 +589,11 @@ try:
     print("✅ Using reliable client demo simulator")
     
 except ImportError:
-    def get_demo_display():
-        return "Demo Mode: 5 real demo leads remaining (used 0/5)"
-    print("⚠️ Fallback demo display")
+    if not st.session_state.get("suppress_demo"):
+    # show demo fallback
+        def get_demo_display():
+            return "Demo Mode: 5 real demo leads remaining (used 0/5)"
+        print("⚠️ Fallback demo display")
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False

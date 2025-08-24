@@ -12,6 +12,10 @@ import time
 from datetime import datetime
 from typing import Tuple, Optional, Dict, Any
 
+APP_BASE_URL = (
+    os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
+)
+
 def restore_payment_authentication() -> bool:
     """
     CRITICAL: Handle authentication restoration after Stripe payment
@@ -248,17 +252,25 @@ def update_simple_auth_state(simple_auth_instance) -> None:
 def create_package_stripe_session(stripe, username: str, package_type: str, amount: float, description: str, industry: str, location: str):
     """Create Stripe session for package purchases (one-time payments)"""
     import time
-    
+    from urllib.parse import quote_plus
     # Get user email safely
     try:
         user_data = st.session_state.get('user_data', {})
         user_email = user_data.get('email', f"{username}@empire.com")
     except:
         user_email = f"{username}@empire.com"
-    
+        
+    base = APP_BASE_URL.rstrip("/")
     # Create package-specific success URL
     success_url = f"https://leadgeneratorempire.com/?success=true&package={package_type}&username={username}&amount={amount}&industry={industry.replace(' ', '+')}&location={location.replace(' ', '+')}&timestamp={int(time.time())}"
-    cancel_url = f"https://leadgeneratorempire.com/?cancelled=true&username={username}"
+    cancel_url = (
+        f"{base}/?success=0"
+        f"&cancel=1"
+        f"&package={package_type}"
+        f"&username={username}"
+        f"&industry={quote_plus(industry or '')}"
+        f"&location={quote_plus(location or '')}"
+)
     
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
@@ -499,10 +511,16 @@ def create_improved_stripe_session(stripe, username: str, plan_type: str, amount
         user_email = user_data.get('email', f"{username}@empire.com")
     except:
         user_email = f"{username}@empire.com"
-    
+        
+    base = APP_BASE_URL.rstrip("/")
     # Create more robust success URL
     success_url = f"https://leadgeneratorempire.com/?success=true&plan={plan_type}&username={username}&amount={amount}&timestamp={int(time.time())}"
-    cancel_url = f"https://leadgeneratorempire.com/?cancelled=true&username={username}"
+    cancel_url = (
+        f"{base}/?cancel=1"
+        f"&type=credits"
+        f"&tier={plan_type.lower().replace(' ', '_')}"
+        f"&username={username}"
+    )
     
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
