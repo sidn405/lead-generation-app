@@ -317,6 +317,9 @@ if st.session_state.get("show_login", False):
 # AFTER the fast-path above
 show_auth_section_if_needed()  # it can handle forgot/reset flows etc.
 
+if st.session_state.get("_stats_user") != current_username:
+    st.cache_data.clear()
+    st.session_state["_stats_user"] = current_username
 
 # right after the preflight block:
 if st.query_params.get("cancel") or st.query_params.get("success") == "0":
@@ -738,84 +741,95 @@ CSV_DIR = _detect_csv_dir()
 
 # --- CSV helpers (must use CSV_DIR) ---
 
-def get_user_csv_files(username: str):
-    """
-    Return a list of CSV files for this user FROM CSV_DIR.
-    Each item: dict(name, path, size, size_mb, date, leads, platform, search_term)
-    """
-    import os
+import os, glob, pandas as pd, streamlit as st
+
+PLATFORM_MAP = {
+    "x": "twitter",
+    "tw": "twitter",
+    "twitter.com": "twitter",
+    "fb": "facebook",
+    "facebook.com": "facebook",
+    "li": "linkedin",
+    "linkedin.com": "linkedin",
+}
+
+def _guess_platform_from_filename(path: str) -> str:
+    base = os.path.basename(path).lower()
+    # common patterns: twitter_leads_norm_*.csv, leads_norm_twitter_*.csv, etc.
+    for p in ["twitter", "facebook", "linkedin", "tiktok", "instagram", "youtube", "medium", "reddit"]:
+        if p in base:
+            return p
+    return "unknown"
+
+def _files_for_user(username: str, csv_dir: str):
+    # match both orders of username/leads tokens
+    patterns = [
+        os.path.join(csv_dir, f"*{username}*leads*.csv"),
+        os.path.join(csv_dir, f"*leads*{username}*.csv"),
+        os.path.join(csv_dir, f"*{username}*.csv"),
+    ]
+    files = []
+    for pat in patterns:
+        files.extend(glob.glob(pat))
+    # de-dupe while preserving order
+    seen, uniq = set(), []
+    for f in files:
+        if f not in seen:
+            seen.add(f); uniq.append(f)
+    return uniq
+
+@st.cache_data(show_spinner=False)
+def _calc_platforms_cached(files_sig):
+    files = [f for (f, _, _) in files_sig]
+    platform_counts = {}
+    meta = []
+    for f in files:
+        try:
+            df = pd.read_csv(f)
+            # normalize platform column
+            plat_col = next((c for c in df.columns if str(c).lower() in ("platform","source","site","network")), None)
+            if plat_col:
+                plat_series = df[plat_col].astype(str).str.strip().str.lower().map(lambda s: PLATFORM_MAP.get(s, s or "unknown"))
+                plat = plat_series.mode().iat[0] if not plat_series.empty else "unknown"
+            else:
+                plat = _guess_platform_from_filename(f)
+
+            n = len(df)
+            if n:
+                platform_counts[plat] = platform_counts.get(plat, 0) + n
+
+            # meta for “campaigns”
+            mtime = os.path.getmtime(f)
+            meta.append({"file": f, "platform": plat, "leads": n, "date": mtime})
+        except Exception as e:
+            print(f"[stats] skip {f}: {e}")
+
+    return platform_counts, meta
+
+def calculate_empire_from_csvs(username: str, csv_dir: str = None):
+    csv_dir = csv_dir or os.getenv("CSV_DIR", "/app/client_configs")
+    files = _files_for_user(username, csv_dir)
+    files_sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
+    platform_counts, _ = _calc_platforms_cached(files_sig)
+    return platform_counts
+
+def get_user_csv_files(username: str, csv_dir: str = None):
+    csv_dir = csv_dir or os.getenv("CSV_DIR", "/app/client_configs")
+    files = _files_for_user(username, csv_dir)
+    files_sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
+    _, meta = _calc_platforms_cached(files_sig)
+    # convert epoch to display string expected by your code
     from datetime import datetime
+    out = []
+    for m in meta:
+        out.append({
+            "file": m["file"],
+            "platform": m["platform"],
+            "leads": m["leads"],
+            "date": datetime.fromtimestamp(m["date"]).strftime("%m/%d %H:%M"),
+        })
+    return out
 
-    csv_files = []
-    if not CSV_DIR.exists():
-        return csv_files
-
-    for p in sorted(CSV_DIR.glob("*.csv"), key=lambda x: x.stat().st_mtime, reverse=True):
-        fname = p.name
-        # Only files that look like they belong to this user (filename contains username)
-        if username and username.lower() not in fname.lower():
-            continue
-
-        # Basic file stats
-        try:
-            stat = p.stat()
-            file_size = stat.st_size
-            mod_time = datetime.fromtimestamp(stat.st_mtime).strftime('%m/%d %H:%M')
-
-            # Count leads: lines minus header (best-effort)
-            try:
-                with p.open("r", encoding="utf-8") as f:
-                    lead_count = max(0, sum(1 for _ in f) - 1)
-            except Exception:
-                lead_count = 0
-
-            platform = extract_platform_from_filename(fname)
-            search_term = extract_search_term_from_filename(fname)
-
-            csv_files.append({
-                "name": fname,
-                "path": str(p),
-                "size": file_size,
-                "size_mb": file_size / 1024 / 1024,
-                "date": mod_time,
-                "leads": lead_count,
-                "platform": platform,
-                "search_term": search_term
-            })
-        except Exception:
-            continue
-
-    return csv_files
-
-
-def calculate_empire_from_csvs(username: str):
-    """
-    RETURN dict of platform -> lead count FOR THIS USER by scanning CSV_DIR only.
-    """
-    from collections import defaultdict
-
-    counts = defaultdict(int)
-    if not CSV_DIR.exists():
-        return dict(counts)
-
-    for p in CSV_DIR.glob("*.csv"):
-        fname = p.name
-        if username and username.lower() not in fname.lower():
-            continue
-
-        try:
-            # count rows
-            with p.open("r", encoding="utf-8") as f:
-                rows = max(0, sum(1 for _ in f) - 1)
-            if rows <= 0:
-                continue
-
-            platform = extract_platform_from_filename(fname)
-            counts[platform] += rows
-        except Exception:
-            continue
-
-    return dict(counts)
 
 def load_accurate_empire_stats(username: str):
     """
@@ -8431,8 +8445,18 @@ with tab6:  # Settings tab
                                 summary = latest_type.replace('_', ' ').title()
                             st.metric("🕒 Latest Activity", summary)
                         with activity_summary_col3:
-                            if len(recent_transactions) >= 2 and time:
-                                st.metric("📅 Activity Span", f"{(max(time)-min(time)).days} days")
+                            ts = []
+                            for t in recent_transactions:
+                                s = t.get("timestamp")
+                                if not s:
+                                    continue
+                                try:
+                                    ts.append(datetime.fromisoformat(s))
+                                except Exception:
+                                    pass
+                            if len(ts) >= 2:
+                                span_days = (max(ts) - min(ts)).days
+                                st.metric("📅 Activity Span", f"{span_days} days")
                             else:
                                 st.metric("📅 Status", "Active")
 
