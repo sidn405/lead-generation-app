@@ -175,11 +175,11 @@ CSV_DIR.mkdir(parents=True, exist_ok=True)
 # Where we keep the per-user cached json (same volume so it survives deploys)
 EMPIRE_CACHE_DIR = CSV_DIR
 
-# --- Stripe return + session rehydrate (RUN FIRST) ---
-from payment_auth_recovery import restore_payment_authentication  # you already import this
+# --- Stripe return preflight (run FIRST) ---
+from payment_auth_recovery import restore_payment_authentication
 from stripe_checkout import handle_payment_success
 
-# If the credit system is needed by the handler, initialize it early (safe if already init'd)
+# If your handler needs DB, safe to init early (no-op if already ready)
 try:
     if not credit_system:
         ok, msg = initialize_postgres_credit_system()
@@ -189,18 +189,21 @@ try:
 except Exception:
     pass
 
-# A) Rehydrate auth if this is a Stripe return
-if restore_payment_authentication():   # shows a recovery UI only if auto-restore fails
-    st.stop()
+# 1) If we came back from Stripe, ensure a session exists (NO st.stop here)
+try:
+    restore_payment_authentication()
+except Exception as e:
+    print(f"restore_payment_authentication error: {e}")
+    
+print("🔎 payment_success param:", st.query_params.get("payment_success"))
+print("🔎 entering handle_payment_success()…")
 
-# B) Apply credits/plan from the success URL
+# 2) If ?payment_success=1 is present, ALWAYS run the purchase handler
 if st.query_params.get("payment_success"):
-    handle_payment_success()           # this function clears query params + st.rerun()
-    # no st.stop() here — the handler already reruns
-# --- end Stripe preflight ---
-
-
-
+    handled = handle_payment_success()   # this should clear params + st.rerun()
+    if handled:
+        st.stop()
+# --- end preflight ---
 # Add this as the FIRST thing in your main app
 if not (st.query_params.get("payment_success") or st.query_params.get("session_id") or st.query_params.get("success")):
     payment_handled = automatic_payment_capture()
