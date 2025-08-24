@@ -1433,7 +1433,80 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Add this RIGHT AFTER imports, before any other code
+def debug_payment_session():
+    """Debug payment success and session state"""
+    qp = st.query_params
+    
+    print(f"=== PAYMENT DEBUG ===")
+    print(f"Query params: {dict(qp)}")
+    print(f"Session authenticated: {st.session_state.get('authenticated', False)}")
+    print(f"Session username: {st.session_state.get('username', 'None')}")
+    print(f"Session credits: {st.session_state.get('credits', 'None')}")
+    
+    if qp.get("payment_success"):
+        print(f"PAYMENT SUCCESS DETECTED")
+        username = qp.get("username")
+        print(f"Payment username: {username}")
+        
+        if username and not st.session_state.get('authenticated', False):
+            print(f"USER NOT AUTHENTICATED - RESTORING SESSION")
+            
+            try:
+                from postgres_credit_system import credit_system
+                user_info = credit_system.get_user_info(username)
+                
+                if user_info:
+                    st.session_state.authenticated = True
+                    st.session_state.username = username
+                    st.session_state.user_data = user_info
+                    st.session_state.credits = user_info.get("credits", 0)
+                    st.session_state.user_plan = user_info.get("plan", "demo")
+                    st.session_state.show_login = False
+                    st.session_state.show_register = False
+                    
+                    print(f"SESSION RESTORED: {username} with {user_info.get('credits', 0)} credits")
+                else:
+                    print(f"USER INFO NOT FOUND FOR: {username}")
+            except Exception as e:
+                print(f"SESSION RESTORE ERROR: {e}")
 
+# Call this immediately
+debug_payment_session()
+
+def force_session_check():
+    """Force check and restore session if payment success detected"""
+    qp = st.query_params
+    
+    if qp.get("payment_success") and not st.session_state.get('authenticated', False):
+        username = qp.get("username")
+        
+        if username:
+            try:
+                from postgres_credit_system import credit_system
+                user_info = credit_system.get_user_info(username)
+                
+                if user_info:
+                    # Force set all session variables
+                    st.session_state.authenticated = True
+                    st.session_state.username = username
+                    st.session_state.user_data = user_info
+                    st.session_state.credits = user_info.get("credits", 0)
+                    st.session_state.user_plan = user_info.get("plan", "demo")
+                    
+                    # Clear auth modals
+                    for key in ['show_login', 'show_register']:
+                        st.session_state[key] = False
+                    
+                    return True
+            except Exception as e:
+                print(f"Force session restore error: {e}")
+    
+    return False
+
+# Call this before any UI logic
+if force_session_check():
+    st.rerun()
 
 def failsafe_payment_logger():
     """Failsafe logger that catches any payment success and logs it to admin"""
@@ -7436,11 +7509,6 @@ with tab4: # Pricing Plans
     st.markdown("---")
     st.header("💎 Buy Additional Credits")
     
-    # Add this at the top of any tab/section that handles payments
-    if "payment_success" in st.query_params:
-        from stripe_checkout import handle_payment_success_url
-        if handle_payment_success_url():
-            st.stop()
     
     if user_authenticated:
         username = simple_auth.get_current_user()
