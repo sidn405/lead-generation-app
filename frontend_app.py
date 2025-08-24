@@ -248,7 +248,21 @@ def _quick_rehydrate_from_qs():
         print(f"⚠️ quick rehydrate (users.json) failed: {e}")
     return False
 
-_quick_rehydrate_from_qs()   # <<< ensure a session even on cancel
+def _is_stripe_return(qp: dict) -> bool:
+    return (
+        "payment_success" in qp                      # credits/subs success
+        or qp.get("success") in ("1", "0")           # package confirm/cancel
+        or "session_id" in qp                        # checkout return
+        or any(k in qp for k in (                    # legacy + cancel flags
+            "cancel", "canceled", "cancelled",
+            "payment_cancelled", "payment_canceled",
+            "package_success", "package_cancelled",
+        ))
+    )
+
+# only rehydrate on Stripe returns, and not while opening login/register
+if _is_stripe_return(st.query_params) and not st.session_state.get("show_login") and not st.session_state.get("show_register"):
+    _quick_rehydrate_from_qs()
 
 # 1) Full restore for success/confirmation flows (silent no-op if already authed)
 try:
@@ -315,11 +329,6 @@ if not any(k in st.query_params for k in ("payment_success", "success", "session
     payment_handled = automatic_payment_capture()
     if payment_handled:
         st.stop()
-
-from payment_auth_recovery import restore_payment_authentication as restore_auth_after_payment
-# now you can call:
-if restore_auth_after_payment():
-    st.stop()
 
 # Initialize database on startup
 @st.cache_resource
