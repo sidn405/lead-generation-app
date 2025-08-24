@@ -38,7 +38,10 @@ def restore_payment_authentication() -> bool:
     # If user is already authenticated, we're good
     if st.session_state.get('authenticated', False):
         print("✅ User already authenticated")
+        # even if authed, finalize the purchase (idempotent)
+        _process_payment_success(query_params, username_from_url or st.session_state.get("username", ""))
         return True
+
     
     # Attempt to restore authentication
     if username_from_url and username_from_url != "unknown":
@@ -137,6 +140,14 @@ def _set_session_state(username: str, user_data: Dict) -> None:
 
 def _process_payment_success(query_params: Dict, username: str) -> None:
     """Process payment success actions"""
+    # idempotency: avoid double-inserting on reruns/back navigations
+    stamp = query_params.get("timestamp") or query_params.get("session_id")
+    if stamp:
+        flag = f"_pkg_proc_{stamp}"
+        if st.session_state.get(flag):
+            return
+        st.session_state[flag] = True
+
     try:
         if "success" in query_params and "plan" in query_params:
             plan = query_params.get("plan", "")
