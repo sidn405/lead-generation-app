@@ -303,6 +303,49 @@ def force_session_check():
 # Call this before any UI logic
 if force_session_check():
     st.rerun()
+    
+def restore_session_after_payment():
+    """Restore session immediately after payment before any UI renders"""
+    qp = st.query_params
+    
+    # If we have payment success but no session, restore it
+    if qp.get("payment_success") and not st.session_state.get('authenticated', False):
+        username = qp.get("username")
+        
+        if username:
+            print(f"RESTORING SESSION FOR: {username}")
+            
+            try:
+                from postgres_credit_system import credit_system
+                user_info = credit_system.get_user_info(username)
+                
+                if user_info:
+                    # Force restore ALL session variables
+                    st.session_state.authenticated = True
+                    st.session_state.username = username
+                    st.session_state.user_data = user_info
+                    st.session_state.credits = user_info.get("credits", 0)
+                    st.session_state.user_plan = user_info.get("plan", "demo")
+                    st.session_state.show_login = False
+                    st.session_state.show_register = False
+                    
+                    print(f"SESSION RESTORED: {username} - {user_info.get('credits', 0)} credits")
+                    
+                    # Show success message
+                    st.success("Payment successful! Credits added to your account.")
+                    
+                    # NOW clear params and rerun
+                    st.query_params.clear()
+                    st.rerun()
+                    
+                else:
+                    print(f"USER INFO NOT FOUND: {username}")
+                    
+            except Exception as e:
+                print(f"SESSION RESTORE ERROR: {e}")
+
+# Call this FIRST THING in your main app
+restore_session_after_payment()
 
 # 2) Callback to save the campaign
 def save_dms_callback():
