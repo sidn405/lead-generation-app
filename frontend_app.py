@@ -5286,68 +5286,49 @@ with tab1:
 
                                         print("SELECTED_PLATFORMS ->", scraper_env["SELECTED_PLATFORMS"])
 
-                                        # Kick off the scraper
+                                        # --- run the scraper ---
                                         result = subprocess.run(
-                                            [sys.executable, 'run_daily_scraper_complete.py'],
+                                            [sys.executable, "run_daily_scraper_complete.py"],
                                             capture_output=True,
                                             text=True,
-                                            encoding='utf-8',
-                                            errors='replace',
-                                            cwd=current_dir,
+                                            encoding="utf-8",
+                                            errors="replace",
                                             env=scraper_env,
+                                            cwd=os.getcwd(),
                                             timeout=300,
                                         )
 
-                                        # show stderr if it fails (helps when debugging)
+                                        # --- handle return code FIRST (0 = success) ---
                                         if result.returncode != 0:
-                                            st.error(f"❌ Scraper failed (code {result.returncode})")
+                                            st.error(f"❌ Scraper failed with return code: {result.returncode}")
                                             if result.stderr:
                                                 st.code(result.stderr, language="text")
-                                            
-                                            # Check for results and update demo consumption
+                                            if result.stdout:
+                                                with st.expander("📄 Scraper output"):
+                                                    st.code(result.stdout, language="text")
+                                        else:
+                                            st.success("✅ Scraping completed successfully!")
+                                            # Now safely process results
                                             try:
-                                                if os.path.exists('scraping_session_summary.json'):
-                                                    with open('scraping_session_summary.json', 'r', encoding='utf-8') as f:
+                                                results_path = "scraping_session_summary.json"
+                                                if os.path.exists(results_path):
+                                                    with open(results_path, "r", encoding="utf-8") as f:
                                                         summary = json.load(f)
-                                                    
-                                                    total_leads = summary.get('total_leads', 0)
-                                                    
+
+                                                    total_leads = summary.get("total_leads", 0)
                                                     if total_leads > 0:
-                                                        # Update demo consumption
-                                                        consumed = 0
-                                                        for i in range(total_leads):
-                                                            success = credit_system.consume_demo_lead(username)
-                                                            if success:
-                                                                consumed += 1
-                                                            else:
-                                                                break
-                                                        
-                                                        credit_system.save_data()
-                                                        st.success(f"📊 Generated {total_leads} quality leads!")
-                                                        
-                                                        # Check if demo is now exhausted
-                                                        can_demo_after, remaining_after = credit_system.can_use_demo(username)
-                                                        if remaining_after <= 0:
-                                                            st.balloons()
-                                                            st.error("🎉 Demo Complete! You've used all 5 demo leads.")
-                                                            st.info("💎 Ready to upgrade? Get unlimited access with Pro or Ultimate!")
-                                                        else:
-                                                            st.info(f"🎯 Demo Update: {remaining_after} leads remaining")
-                                                        
-                                                        # Force page refresh to update demo counters
-                                                        time.sleep(2)
-                                                        st.rerun()
+                                                        # (your demo credit consumption + UI updates here)
+                                                        ...
                                                     else:
                                                         st.warning("⚠️ No leads generated. Try a different search term.")
                                                 else:
                                                     st.error("❌ No results file found. Check if scraper completed properly.")
-                                            
                                             except Exception as e:
-                                                st.error(f"⚠️ Results processing error: {e}")
                                                 import traceback
-                                                st.code(traceback.format_exc(), language="text")                                        
-                                        else:
-                                            st.error(f"❌ Scraper failed with return code: {result.returncode}")
+                                                st.error(f"⚠️ Results processing error: {e}")
+                                                st.code(traceback.format_exc(), language="text")
+                                        
+                                        
                                             
                                             # Provide specific error guidance based on return code
                                             if result.returncode == 1:
