@@ -92,6 +92,7 @@ def _restore_session_state(username: str):
             st.session_state.user_plan = user_info.get("plan", "demo")
             st.session_state.show_login = False
             st.session_state.show_register = False
+            print(f"Session state set: plan={st.session_state.user_plan}, credits={st.session_state.credits}")
     except Exception as e:
         print(f"Session restore error: {e}")
 

@@ -239,6 +239,9 @@ class SimpleCreditAuth:
             st.session_state.user_data = user_data
             st.session_state.user_plan = user_data['plan']
             st.session_state.user_credits = user_data['credits']
+            
+            # Add debug to verify:
+            print(f"Login: Set user_plan to {st.session_state.user_plan}")
         
         return success, message, user_data
     
