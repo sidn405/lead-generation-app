@@ -1039,7 +1039,7 @@ def _dynamic_perf_signature(username: str):
 def compute_sidebar_performance(username: str, total_leads: int, empire_stats: dict):
     # signature: filenames + mtime + size so it updates when new files land
     import glob, os
-    current_username = st.session_state.get('username')
+    
     pats = [f"*{username}*leads*.csv", f"*leads*{username}*.csv", f"*{username}*.csv"]
     files = []
     for p in pats:
@@ -1063,9 +1063,23 @@ def compute_sidebar_performance(username: str, total_leads: int, empire_stats: d
     platforms_active = len([c for c in (empire_stats or {}).values() if c > 0])
     return lpm, success, platforms_active
 
-lpm, success_rate, platforms_active = compute_sidebar_performance(
-    current_username, total_leads, empire_stats
+# Who's logged in?
+current_username = (
+    st.session_state.get("username")
+    or getattr(simple_auth, "current_user", None)
+    or ""
 )
+
+# Safe defaults if not logged in yet
+if not current_username:
+    lpm, success_rate, platforms_active = 0.0, "0%", 0
+else:
+    # total_leads and empire_stats should already be computed above
+    lpm, success_rate, platforms_active = compute_sidebar_performance(
+        current_username,
+        int(total_leads or 0),
+        empire_stats or {},
+    )
 st.sidebar.subheader("⚡ Performance")
 st.sidebar.metric("Leads/Minute", lpm)
 st.sidebar.metric("Success Rate", success_rate)
