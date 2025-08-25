@@ -166,23 +166,31 @@ from stripe_integration import handle_payment_flow, show_purchase_buttons
 from package_system import show_package_store, show_my_packages
 from purchases_tracker import automatic_payment_capture
 
+# --- CSV root (ONE definition only) ---
 from pathlib import Path
-import os
+import os, glob, pandas as pd, time
+import streamlit as st
 
-# Persisted volume (overridable from Railway env)
-CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
-CSV_DIR.mkdir(parents=True, exist_ok=True)
+def _detect_csv_dir() -> Path:
+    env_dir = os.getenv("CSV_DIR")
+    if env_dir:
+        p = Path(env_dir); p.mkdir(parents=True, exist_ok=True); return p
+    for c in ("/client_configs", "/app/client_configs", "/data", "/app/data"):
+        p = Path(c)
+        if p.exists():
+            p.mkdir(parents=True, exist_ok=True)
+            return p
+    p = Path("./client_configs")
+    p.mkdir(parents=True, exist_ok=True)
+    return p
 
-def get_latest_csv(pattern: str):
-    files = sorted(
-        CSV_DIR.glob(pattern),                     # yields Path objects
-        key=lambda p: p.stat().st_mtime,
-        reverse=True
-    )
+CSV_DIR: Path = _detect_csv_dir()
+EMPIRE_CACHE_DIR: Path = CSV_DIR
+
+def get_latest_csv(pattern: str) -> str | None:
+    files = sorted(CSV_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
     return str(files[0]) if files else None
 
-# Where we keep the per-user cached json (same volume so it survives deploys)
-EMPIRE_CACHE_DIR = CSV_DIR
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com")
 )
@@ -783,36 +791,33 @@ PLATFORM_MAP = {
 }
 
 def _guess_platform_from_filename(path: str) -> str:
+    import os
     base = os.path.basename(path).lower()
-    # common patterns: twitter_leads_norm_*.csv, leads_norm_twitter_*.csv, etc.
-    for p in ["twitter", "facebook", "linkedin", "tiktok", "instagram", "youtube", "medium", "reddit"]:
-        if p in base:
-            return p
+    for p in ["twitter","facebook","linkedin","tiktok","instagram","youtube","medium","reddit"]:
+        if p in base: return p
     return "unknown"
 
-def _files_for_user(u: str, csv_dir: str):
-    pats = [f"*{u}*leads*.csv", f"*leads*{u}*.csv", f"*{u}*.csv"]
+def _files_for_user(u: str, csv_dir: Path | None = None):
+    base = str(csv_dir or CSV_DIR)
     files = []
-    for pat in pats:
-        files += glob.glob(os.path.join(csv_dir, pat))
+    for pat in (f"*{u}*leads*.csv", f"*leads*{u}*.csv", f"*{u}*.csv"):
+        files += glob.glob(os.path.join(base, pat))
     seen, uniq = set(), []
     for f in files:
-        if f not in seen: seen.add(f); uniq.append(f)
+        if f not in seen:
+            seen.add(f); uniq.append(f)
     return uniq
 
 @st.cache_data(show_spinner=False)
 def _calc_platforms(files_sig):
-    files = [f for (f,_,_) in files_sig]
     counts, meta = {}, []
-    for f in files:
+    for f, _, _ in files_sig:
         try:
             df = pd.read_csv(f)
-            # count rows; skip empty (see §3)
             n = int(len(df))
             if n == 0:
                 continue
-            plat_col = next((c for c in df.columns
-                             if str(c).lower() in ("platform","source","site","network")), None)
+            plat_col = next((c for c in df.columns if str(c).lower() in ("platform","source","site","network")), None)
             if plat_col:
                 cand = str(df[plat_col].astype(str).str.lower().mode().iat[0]) if len(df) else "unknown"
                 plat = PLATFORM_MAP.get(cand, cand or "unknown")
@@ -824,17 +829,15 @@ def _calc_platforms(files_sig):
             print(f"[stats] skip {f}: {e}")
     return counts, meta
 
-def calculate_empire_from_csvs(username: str, csv_dir: str = None):
-    csv_dir = csv_dir or os.getenv("CSV_DIR", "/app/client_configs")
-    files = _files_for_user(username, csv_dir)
+def calculate_empire_from_csvs(username: str, csv_dir: Path | None = None):
+    files = _files_for_user(username, csv_dir or CSV_DIR)
     sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
     counts, _ = _calc_platforms(sig)
     return counts
 
-def get_user_csv_files(username: str, csv_dir: str = None):
+def get_user_csv_files(username: str, csv_dir: Path | None = None):
     from datetime import datetime
-    csv_dir = csv_dir or os.getenv("CSV_DIR", "/app/client_configs")
-    files = _files_for_user(username, csv_dir)
+    files = _files_for_user(username, csv_dir or CSV_DIR)
     sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
     _, meta = _calc_platforms(sig)
     out = []
@@ -941,80 +944,62 @@ def get_platform_emoji(platform):
 
 
 def download_csv_file(file_path: str, filename: str):
-    """Render a one-off download button for a file."""
     try:
-        with open(file_path, 'rb') as f:
+        with open(file_path, "rb") as f:
             data = f.read()
         st.download_button(
             label=f"💾 Download {filename}",
             data=data,
             file_name=filename,
-            mime='text/csv',
-            key=f"dl_{filename}_{int(time.time())}"
+            mime="text/csv",
+            key=f"dl_{os.path.basename(file_path)}_{int(time.time())}",
         )
     except Exception as e:
         st.error(f"❌ Error downloading file: {e}")
 
-
 def create_bulk_download(csv_files, username):
-    """Create zip file with all CSV files"""
-    import zipfile
-    import io
+    import zipfile, io
     from datetime import datetime
-
     try:
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for file_info in csv_files:
-                try:
-                    zip_file.write(file_info['path'], file_info['name'])
-                except Exception as e:
-                    print(f"Error adding {file_info['name']} to zip: {e}")
-
-        zip_buffer.seek(0)
-        zip_filename = f"{username}_leads_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for info in csv_files:
+                file_path = info.get("file") or info.get("path")  # tolerate older callers
+                if not file_path or not os.path.exists(file_path):
+                    continue
+                arc = info.get("name", os.path.basename(file_path))
+                zf.write(file_path, arcname=arc)
+        buf.seek(0)
+        zip_name = f"{username}_leads_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
         st.download_button(
             label="📦 Download ZIP File",
-            data=zip_buffer.getvalue(),
-            file_name=zip_filename,
-            mime='application/zip',
-            key=f"bulk_download_zip_{username}_{datetime.now().strftime('%H%M%S')}"
+            data=buf.getvalue(),
+            file_name=zip_name,
+            mime="application/zip",
+            key=f"bulk_download_zip_{username}_{datetime.now().strftime('%H%M%S')}",
         )
-        st.success(f"✅ Created {zip_filename} with {len(csv_files)} files")
-
+        st.success(f"✅ Created {zip_name} with {len(csv_files)} files")
     except Exception as e:
         st.error(f"❌ Error creating bulk download: {e}")
 
-
 def clean_old_csv_files(username):
-    """Clean CSV files older than 30 days"""
-    import glob
-    import os
     from datetime import datetime, timedelta
-
-    cleaned_count = 0
-    cutoff_date = datetime.now() - timedelta(days=30)
-    patterns = [f"*{username}*leads*.csv", f"*leads*{username}*.csv"]
-
-    for pattern in patterns:
-        files = glob.glob(pattern)
-        for file in files:
+    cleaned = 0
+    cutoff = datetime.now() - timedelta(days=30)
+    for pat in (f"*{username}*leads*.csv", f"*leads*{username}*.csv"):
+        for p in CSV_DIR.glob(pat):
             try:
-                file_time = datetime.fromtimestamp(os.path.getmtime(file))
-                if file_time < cutoff_date:
-                    os.remove(file)
-                    cleaned_count += 1
-                    print(f"🗑️ Deleted old file: {file}")
+                if datetime.fromtimestamp(p.stat().st_mtime) < cutoff:
+                    p.unlink()
+                    cleaned += 1
+                    print(f"🗑️ Deleted old file: {p}")
             except Exception as e:
-                print(f"Error deleting {file}: {e}")
-
-    return cleaned_count
+                print(f"Error deleting {p}: {e}")
+    return cleaned
 
 import os, glob, pandas as pd
 from datetime import datetime
 import streamlit as st
-
-CSV_DIR = os.getenv("CSV_DIR", "/app/client_configs")
 
 @st.cache_data(show_spinner=False)
 def _dynamic_perf_signature(username: str):
