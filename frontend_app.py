@@ -1067,23 +1067,30 @@ def compute_sidebar_performance(username: str, total_leads: int, empire_stats: d
 current_username = (
     st.session_state.get("username")
     or getattr(simple_auth, "current_user", None)
-    or ""
 )
 
-# Safe defaults if not logged in yet
-if not current_username:
-    lpm, success_rate, platforms_active = 0.0, "0%", 0
-else:
-    # total_leads and empire_stats should already be computed above
+is_authed = bool(current_username and st.session_state.get("authenticated", True))
+
+# Only show performance when logged in
+if is_authed:
+    # make sure we have inputs for the perf function
+    safe_empire_stats = (empire_stats or {})
+    # if total_leads isn't defined yet, derive it from empire_stats
+    safe_total_leads = int(locals().get("total_leads", sum(safe_empire_stats.values())) or 0)
+
+    # compute the dynamic performance
     lpm, success_rate, platforms_active = compute_sidebar_performance(
         current_username,
-        int(total_leads or 0),
-        empire_stats or {},
+        safe_total_leads,
+        safe_empire_stats,
     )
-st.sidebar.subheader("⚡ Performance")
-st.sidebar.metric("Leads/Minute", lpm)
-st.sidebar.metric("Success Rate", success_rate)
-st.sidebar.metric("Platforms", f"{platforms_active}/8")
+
+    st.sidebar.subheader("⚡ Performance")
+    st.sidebar.metric("Leads/Minute", lpm)
+    st.sidebar.metric("Success Rate", success_rate)
+    st.sidebar.metric("Platforms", f"{platforms_active}/8")
+# else: render nothing (no extra Performance box when logged out)
+
 
 # ==============================================================
 
