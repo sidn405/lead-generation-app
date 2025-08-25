@@ -233,10 +233,15 @@ def _quick_rehydrate_from_qs():
                 authenticated=True,
                 username=username,
                 user_data=info,
-                plan=info.get("plan", "starter"),
                 credits=info.get("credits", 0),
                 login_time=datetime.now().isoformat(),
             )
+            
+            # Only set plan if it isn't already set; default to demo, not starter
+            plan_from_store = (info or {}).get("plan") or "demo"
+            if st.session_state.get("plan") in (None, ""):
+                st.session_state["plan"] = plan_from_store
+                
             print(f"✅ QUICK REHYDRATE via credit_system: {username}")
             return True
     except Exception as e:
@@ -254,10 +259,13 @@ def _quick_rehydrate_from_qs():
                     authenticated=True,
                     username=username,
                     user_data=ud,
-                    plan=ud.get("plan", "starter"),
                     credits=ud.get("credits", 0),
                     login_time=datetime.now().isoformat(),
                 )
+                plan_from_store = (ud or {}).get("plan") or "demo"
+                if st.session_state.get("plan") in (None, ""):
+                    st.session_state["plan"] = plan_from_store
+
                 print(f"✅ QUICK REHYDRATE via users.json: {username}")
                 return True
     except Exception as e:
@@ -283,9 +291,12 @@ def soft_rehydrate_from_simple_auth():
                 authenticated=True,
                 username=u,
                 user_data=info,
-                plan=info.get("plan", "starter"),
                 credits=info.get("credits", 0),
             )
+            plan_from_store = (info or {}).get("plan") or "demo"
+            if st.session_state.get("plan") in (None, ""):
+                st.session_state["plan"] = plan_from_store
+                
             print(f"✅ Soft rehydrate for {u}")
     except Exception as e:
         print(f"soft rehydrate failed: {e}")
