@@ -5251,43 +5251,39 @@ with tab1:
                                     # Replace the subprocess section in your frontend_app.py with this
 
                                     try:
-                                        # Setup environment with UTF-8 encoding
+                                        # --- build env identical to paid path ---
                                         scraper_env = os.environ.copy()
-                                        user_for_env = username if 'username' in locals() else st.session_state.get("username", "")
+                                        current_dir = os.getcwd()
 
-                                        scraper_env.update({
-                                            'PYTHONIOENCODING': 'utf-8',
-                                            'PYTHONUTF8': '1',
-                                            'PYTHONLEGACYWINDOWSSTDIO': '0',
-                                            'SCRAPER_USERNAME': user_for_env,
-                                            'USER_PLAN': user_plan,
-                                            'FRONTEND_SEARCH_TERM': search_term if 'search_term' in locals() else 'crypto trader',
-                                        })
+                                        # keep Python happy + same behavior as paid launch
+                                        scraper_env["PYTHONIOENCODING"] = "utf-8"
+                                        scraper_env["PYTHONUTF8"] = "1"
+                                        scraper_env["PYTHONLEGACYWINDOWSSTDIO"] = "0"
 
-                                        # --- pass platform selections from the UI ---
-                                        raw_selected = []
-                                        if 'accessible_selected' in locals() and accessible_selected:
-                                            raw_selected = accessible_selected
-                                        elif st.session_state.get('selected_platforms'):
-                                            raw_selected = st.session_state['selected_platforms']
+                                        # pass user/session values
+                                        user_for_env = (username or st.session_state.get("username", "")) if "username" in locals() else st.session_state.get("username", "")
+                                        scraper_env["SCRAPER_USERNAME"] = user_for_env
+                                        scraper_env["USER_PLAN"] = user_plan
+                                        scraper_env["FRONTEND_SEARCH_TERM"] = search_term if "search_term" in locals() else ""
+                                        scraper_env["MAX_SCROLLS"] = str(max_scrolls if "max_scrolls" in locals() else 10)
 
-                                        _alias = {
-                                            "x": "twitter", "tw": "twitter", "twitter.com": "twitter",
-                                            "fb": "facebook", "facebook.com": "facebook",
-                                            "li": "linkedin", "linkedin.com": "linkedin",
-                                            "ig": "instagram", "instagram.com": "instagram",
-                                            "tt": "tiktok", "tiktok.com": "tiktok",
-                                            "yt": "youtube", "youtube.com": "youtube",
-                                            "medium.com": "medium",
-                                            "reddit.com": "reddit",
-                                        }
-                                        seen, selected_final = set(), []
+                                        # selected platforms -> same list you show in UI
+                                        selected_final = []
+                                        raw_selected = accessible_selected if ("accessible_selected" in locals() and accessible_selected) else st.session_state.get("selected_platforms", [])
+                                        _alias = {"x":"twitter","tw":"twitter","twitter.com":"twitter","fb":"facebook","facebook.com":"facebook",
+                                                "li":"linkedin","linkedin.com":"linkedin","ig":"instagram","instagram.com":"instagram",
+                                                "tt":"tiktok","tiktok.com":"tiktok","yt":"youtube","youtube.com":"youtube",
+                                                "medium.com":"medium", "reddit.com":"reddit"}
+                                        seen = set()
                                         for p in (raw_selected or []):
                                             k = _alias.get(str(p).lower().strip(), str(p).lower().strip())
                                             if k and k not in seen:
                                                 seen.add(k); selected_final.append(k)
 
                                         scraper_env["SELECTED_PLATFORMS"] = ",".join(selected_final)
+                                        existing_pp = scraper_env.get("PYTHONPATH", "")
+                                        scraper_env["PYTHONPATH"] = (current_dir if not existing_pp else f"{current_dir}{os.pathsep}{existing_pp}")
+
                                         print("SELECTED_PLATFORMS ->", scraper_env["SELECTED_PLATFORMS"])
 
                                         # Kick off the scraper
@@ -8541,6 +8537,7 @@ with tab6:  # Settings tab
                                 
                                 # Calculate total credits ever owned
                                 plan_starting_credits = {
+                                    #'demo': 5,
                                     'starter': 250,
                                     'pro': 2000,
                                     'ultimate': 9999
@@ -8568,6 +8565,8 @@ with tab6:  # Settings tab
                     # ✅ PLATFORM PERFORMANCE + RECENT ACTIVITY + QUICK STATS
                     # (Drop-in replacement; safe if user_info['transactions'] is missing)
                     # ============================================================
+                    transactions = (user_info or {}).get("transactions", [])
+                    recent_transactions = sorted(transactions, key=lambda x: x.get("timestamp", ""), reverse=True)
 
                     st.markdown("---")
                     st.subheader("🎯 Platform Performance")
