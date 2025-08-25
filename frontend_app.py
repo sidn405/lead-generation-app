@@ -5293,13 +5293,16 @@ with tab1:
                                             text=True,
                                             encoding='utf-8',
                                             errors='replace',
+                                            cwd=current_dir,
                                             env=scraper_env,
-                                            cwd=os.getcwd(),
                                             timeout=300,
-                                        )                                        
-                                
-                                        if result.returncode == 0:
-                                            st.success("✅ Scraping completed successfully!")
+                                        )
+
+                                        # show stderr if it fails (helps when debugging)
+                                        if result.returncode != 0:
+                                            st.error(f"❌ Scraper failed (code {result.returncode})")
+                                            if result.stderr:
+                                                st.code(result.stderr, language="text")
                                             
                                             # Check for results and update demo consumption
                                             try:
