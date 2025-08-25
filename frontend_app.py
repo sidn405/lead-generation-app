@@ -657,6 +657,70 @@ def try_save_user_to_database(username, user_data):
 # CRITICAL: Handle payment authentication recovery FIRST
 is_payment_return = restore_payment_authentication()
 
+# === PLAN BOOTSTRAP (paste after auth restore, before any UI uses plan) ===
+import streamlit as st
+
+def _get_current_username():
+    # Try session, then simple_auth, then query param
+    return (
+        st.session_state.get("username")
+        or getattr(globals().get("simple_auth", object()), "current_user", None)
+        or (st.query_params.get("username") if hasattr(st, "query_params") else None)
+    )
+
+# Try to load user_info from Postgres
+user_info = None
+username = _get_current_username()
+try:
+    from postgres_credit_system import credit_system  # must exist in your app
+    if username:
+        user_info = credit_system.get_user_info(username)
+except Exception as e:
+    print(f"[PLAN] credit_system lookup failed: {e}")
+    user_info = None
+
+def _normalize_plan(ui: dict):
+    ui = ui or {}
+    sp = (ui.get("subscribed_plan") or "").lower()
+    ss = (ui.get("subscription_status") or "").lower()
+    bp = (ui.get("plan") or "").lower()
+
+    # If *anything* says demo → demo
+    if sp == "demo" or bp == "demo":
+        return "demo", "demo"
+
+    # Active subscription wins
+    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
+        return sp, "subscribed_plan(active)"
+
+    # Legacy 'plan' if sane
+    if bp in {"starter", "pro", "ultimate"}:
+        return bp, "plan(legacy)"
+
+    # Not logged in / unknown → demo
+    return "demo", "fallback_demo"
+
+plan_fixed, plan_source = _normalize_plan(user_info)
+
+# Make this the single source of truth
+st.session_state["plan"] = plan_fixed
+st.session_state["plan_source"] = plan_source
+
+# Keep user_info consistent for legacy code that still reads it
+if user_info is None:
+    user_info = {}
+user_info["plan"] = plan_fixed
+user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
+user_info["subscription_status"] = user_info.get("subscription_status") or (
+    "demo" if plan_fixed == "demo" else "inactive"
+)
+
+print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
+      f"raw={{'plan': {user_info.get('plan')}, "
+      f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
+      f"'subscription_status': {user_info.get('subscription_status')}}}")
+# === end PLAN BOOTSTRAP ===
+
 # ---- Persistent CSV folder (Railway volume) ----
 import os
 from pathlib import Path
@@ -8318,7 +8382,9 @@ st.markdown(
 with tab6:  # Settings tab
 
         st.header("⚙️ Account Settings")
-    
+        print("=== ACCOUNT UI DEBUG ===")
+        print(f"Session plan: {st.session_state.get('user_plan')}")
+        print(f"Session credits: {st.session_state.get('credits')}")
         if not user_authenticated:
             st.info("🔐 Sign in to manage your account settings")
             
