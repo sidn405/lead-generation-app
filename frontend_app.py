@@ -5418,6 +5418,7 @@ with tab1:
                                         'credits': st.session_state.get('credits'),
                                         'plan': user_plan
                                     }
+                                    os.environ['USER_PLAN'] = os.environ.get('SCRAPER_USER_PLAN', '')
 
                                     # Set environment variables for scrapers to use
                                     os.environ['SCRAPER_USERNAME'] = user_context['username'] or ''

@@ -456,26 +456,7 @@ class ParallelScraperRunner:
         print(f"✅ Test: search_term = {self.search_term}")
         return True
     
-# --- Local, stable env reader: ALWAYS returns (username:str, plan:str, credits:int)
-def _env_user_triplet():
-    username = os.getenv("SCRAPER_USERNAME") or ""
-    plan = (os.getenv("USER_PLAN")
-            or os.getenv("SCRAPER_USER_PLAN")
-            or "demo")
-    if isinstance(plan, (tuple, list)):
-        plan = plan[0] if plan else "demo"
-    plan = str(plan).strip().lower() or "demo"
-
-    credits_raw = (os.getenv("USER_CREDITS")
-                   or os.getenv("SCRAPER_CREDITS")
-                   or "0")
-    try:
-        credits = int(str(credits_raw).strip())
-    except Exception:
-        credits = 0
-
-    return username, plan, credits
-
+from run_daily_scraper_complete import get_user_from_environment
 
 # Integration with your existing frontend
 def run_parallel_scrapers(platforms, search_term, max_scrolls, username, user_plan):
@@ -484,14 +465,17 @@ def run_parallel_scrapers(platforms, search_term, max_scrolls, username, user_pl
     Call this instead of run_all_platform_scrapers()
     """
     # Use environment-based user info instead of session state
-    env_username, env_plan, env_credits = _env_user_triplet()
+    env_username, env_plan, env_credits = get_user_from_environment()
+    
+    # Use environment values if available, fallback to parameters
     active_username = env_username or username
     active_plan = env_plan or user_plan
+    
     print(f"Scraping as user: {active_username} ({active_plan} plan)")
     
-    runner = ParallelScraperRunner(active_username, active_plan, search_term, max_scrolls)
+    runner = ParallelScraperRunner(username, user_plan, search_term, max_scrolls)
     results = runner.run_parallel(platforms)
- 
+    
     # Convert to format expected by frontend
     frontend_results = {}
     for platform, result in results.items():
