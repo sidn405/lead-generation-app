@@ -264,6 +264,10 @@ def _quick_rehydrate_from_qs():
         print(f"⚠️ quick rehydrate (users.json) failed: {e}")
     return False
 
+current_username = (
+    st.session_state.get("username") or getattr(simple_auth, "current_user", None)
+)
+
 # run early in frontend_app.py, after imports / preflight, before UI
 def soft_rehydrate_from_simple_auth():
     if st.session_state.get("show_login") or st.session_state.get("authenticated"):
@@ -323,6 +327,9 @@ try:
             # st.warning("Your subscription is not active; features are limited until you resume billing.")
 except Exception as e:
     print(f"[billing] freshness check skipped: {e}")
+    
+def get_current_user() -> str | None:
+    return st.session_state.get("username") or getattr(simple_auth, "current_user", None)
 
 qp = st.query_params
 
