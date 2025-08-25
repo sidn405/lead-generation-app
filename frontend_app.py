@@ -1037,59 +1037,40 @@ def _dynamic_perf_signature(username: str):
 
 @st.cache_data(show_spinner=False)
 def compute_sidebar_performance(username: str, total_leads: int, empire_stats: dict):
-    # signature: filenames + mtime + size so it updates when new files land
-    import glob, os
-    
-    pats = [f"*{username}*leads*.csv", f"*leads*{username}*.csv", f"*{username}*.csv"]
-    files = []
-    for p in pats:
-        files += [str(pth) for pth in CSV_DIR.glob(p)]
-    sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in dict.fromkeys(files))
+    """Return leads/min, success rate, platforms_active, attempts."""
+    sig = _dynamic_perf_signature(username)
+    files = [f for f, _, _ in sig]
 
-    successes, mtimes = 0, []
-    for f, m, _ in sig:
+    attempts = 0
+    successes = 0
+    mtimes = []
+
+    for f in files:
+        attempts += 1
         try:
-            import pandas as pd
             n = len(pd.read_csv(f))
             if n > 0:
                 successes += 1
-                mtimes.append(m)
+                mtimes.append(os.path.getmtime(f))
         except Exception:
+            # unreadable file -> still counts as an attempt
             pass
 
-    minutes = (max(mtimes) - min(mtimes))/60 if len(mtimes) >= 2 else 1
-    lpm = round(total_leads / max(minutes, 1), 1) if total_leads else 0.0
-    success = f"{round((successes / max(len(sig), 1))*100)}%"
+    # platforms with >0 leads
     platforms_active = len([c for c in (empire_stats or {}).values() if c > 0])
-    return lpm, success, platforms_active
 
-# Who's logged in?
-current_username = (
-    st.session_state.get("username")
-    or getattr(simple_auth, "current_user", None)
-)
+    # leads per minute across the time window of files that produced leads
+    if mtimes and total_leads > 0:
+        minutes = (max(mtimes) - min(mtimes)) / 60.0
+        minutes = max(minutes, 1.0)  # avoid div/0 + silly spikes
+        leads_per_min = round(total_leads / minutes, 1)
+    else:
+        leads_per_min = 0.0
 
-is_authed = bool(current_username and st.session_state.get("authenticated", True))
+    # success = (#csvs with >0 rows) / (all csvs we attempted to write)
+    success_rate = f"{round((successes / max(attempts, 1)) * 100)}%"
 
-# Only show performance when logged in
-if is_authed:
-    # make sure we have inputs for the perf function
-    safe_empire_stats = (empire_stats or {})
-    # if total_leads isn't defined yet, derive it from empire_stats
-    safe_total_leads = int(locals().get("total_leads", sum(safe_empire_stats.values())) or 0)
-
-    # compute the dynamic performance
-    lpm, success_rate, platforms_active = compute_sidebar_performance(
-        current_username,
-        safe_total_leads,
-        safe_empire_stats,
-    )
-
-    st.sidebar.subheader("⚡ Performance")
-    st.sidebar.metric("Leads/Minute", lpm)
-    st.sidebar.metric("Success Rate", success_rate)
-    st.sidebar.metric("Platforms", f"{platforms_active}/8")
-# else: render nothing (no extra Performance box when logged out)
+    return leads_per_min, success_rate, platforms_active, attempts
 
 
 # ==============================================================
