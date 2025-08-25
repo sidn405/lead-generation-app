@@ -249,16 +249,46 @@ def show_payment_success_message() -> bool:
     
     return False
 
+def _normalize_plan_from_user_data(user_data: dict) -> str:
+    """Return one of {'demo','starter','pro','ultimate'} from DB row."""
+    ud = user_data or {}
+    sp = (ud.get("subscribed_plan") or "").lower()
+    ss = (ud.get("subscription_status") or "").lower()
+    bp = (ud.get("plan") or "").lower()
+
+    if sp == "demo" or bp == "demo":
+        return "demo"
+    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
+        return sp
+    if bp in {"starter", "pro", "ultimate"}:
+        return bp
+    return "demo"
+
 def update_simple_auth_state(simple_auth_instance) -> None:
-    """Update simple_auth state after session restoration"""
-    if st.session_state.get('authenticated', False):
-        username = st.session_state.get('username')
-        user_data = st.session_state.get('user_data')
-        
-        if username and user_data:
-            simple_auth_instance.current_user = username
-            simple_auth_instance.user_data = user_data
-            print(f"✅ Updated simple_auth state for {username}")
+    """Update simple_auth state after session restoration WITHOUT clobbering plan."""
+    if not st.session_state.get('authenticated', False):
+        return
+
+    username  = st.session_state.get('username')
+    user_data = st.session_state.get('user_data') or {}
+    if not username:
+        return
+
+    # Sync simple_auth
+    simple_auth_instance.current_user = username
+    simple_auth_instance.user_data     = user_data
+
+    # Keep credits in sync
+    st.session_state['credits'] = user_data.get('credits', st.session_state.get('credits', 0))
+
+    # Only set plan if it's missing/invalid; NEVER default to 'starter'
+    current_plan = st.session_state.get('plan')
+    if current_plan not in {'demo','starter','pro','ultimate'}:
+        st.session_state['plan'] = _normalize_plan_from_user_data(user_data)
+
+    print(f"✅ Updated simple_auth state for {username} (plan={st.session_state.get('plan')})")
+    print("[PLAN_GUARD] after update_simple_auth_state =>", st.session_state.get("plan"))
+
 
 def create_package_stripe_session(stripe, username: str, package_type: str, amount: float, description: str, industry: str, location: str):
     """Create Stripe session for package purchases (one-time payments)"""

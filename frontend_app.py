@@ -215,10 +215,16 @@ try:
 except Exception:
     pass
 
+
+
 # 0.5) QUICK rehydrate from username in querystring (works even on cancel)
 def _quick_rehydrate_from_qs():
     if st.session_state.get("authenticated"):
         return False
+    
+    if st.session_state.get("suppress_auto_restore"):
+        return False  # or just: return
+    
     qp = st.query_params
     username = qp.get("username") or qp.get("user") or qp.get("u")
     if not username:
@@ -338,6 +344,31 @@ try:
             # st.warning("Your subscription is not active; features are limited until you resume billing.")
 except Exception as e:
     print(f"[billing] freshness check skipped: {e}")
+    
+def hard_logout():
+    """Fully log out and prevent auto-restore on the very next rerun."""
+    try:
+        # clear simple_auth
+        simple_auth.current_user = None
+        simple_auth.user_data = {}
+    except Exception:
+        pass
+
+    # clear session keys that keep you logged in
+    for k in (
+        "authenticated","username","user_data","credits",
+        "plan","plan_source","subscription_status","monthly_credits",
+        "demo_remaining",
+    ):
+        st.session_state.pop(k, None)
+
+    # set a one-shot guard so quick rehydrate doesn't immediately log you back in
+    st.session_state["suppress_auto_restore"] = True
+
+    # wipe any lingering URL params like ?username=...
+    st.query_params.clear()
+    st.rerun()
+
     
 def get_current_user() -> str | None:
     return st.session_state.get("username") or getattr(simple_auth, "current_user", None)
@@ -4105,6 +4136,7 @@ with col2:
             # Logout button on far right
             st.markdown("<div style='text-align: right;'></div>", unsafe_allow_html=True)  # Add spacing
             if st.button("🔒 Logout", help="Sign out of your account", key="header_logout"):
+                hard_logout()
                 # Clear all session state on logout
                 for key in ['authenticated', 'username', 'user_data', 'login_time', 'show_login', 'show_register', 'credits']:
                     if key in st.session_state:
