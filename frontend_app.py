@@ -1039,6 +1039,7 @@ def _dynamic_perf_signature(username: str):
 def compute_sidebar_performance(username: str, total_leads: int, empire_stats: dict):
     # signature: filenames + mtime + size so it updates when new files land
     import glob, os
+    current_username = st.session_state.get('username')
     pats = [f"*{username}*leads*.csv", f"*leads*{username}*.csv", f"*{username}*.csv"]
     files = []
     for p in pats:
