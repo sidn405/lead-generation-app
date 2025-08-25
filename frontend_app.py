@@ -5251,64 +5251,85 @@ with tab1:
                                     # Replace the subprocess section in your frontend_app.py with this
 
                                     try:
-                                        # --- build env identical to paid path ---
-                                        scraper_env = os.environ.copy()
-                                        current_dir = os.getcwd()
+                                        # === DEMO LAUNCH: build environment ===
+                                        plan_str = (
+                                            st.session_state.get("plan")
+                                            or (getattr(simple_auth, "user_data", {}) or {}).get("plan")
+                                            or "demo"
+                                        )
 
-                                        # keep Python happy + same behavior as paid launch
-                                        scraper_env["PYTHONIOENCODING"] = "utf-8"
-                                        scraper_env["PYTHONUTF8"] = "1"
-                                        scraper_env["PYTHONLEGACYWINDOWSSTDIO"] = "0"
-
-                                        # pass user/session values
-                                        user_for_env = (username or st.session_state.get("username", "")) if "username" in locals() else st.session_state.get("username", "")
-                                        scraper_env["SCRAPER_USERNAME"] = user_for_env
-                                        scraper_env["USER_PLAN"] = user_plan
-                                        scraper_env["FRONTEND_SEARCH_TERM"] = search_term if "search_term" in locals() else ""
-                                        scraper_env["MAX_SCROLLS"] = str(max_scrolls if "max_scrolls" in locals() else 10)
-
-                                        # selected platforms -> same list you show in UI
+                                        # Your selected platforms list; keep your existing variable if you already built it
                                         selected_final = []
-                                        raw_selected = accessible_selected if ("accessible_selected" in locals() and accessible_selected) else st.session_state.get("selected_platforms", [])
-                                        _alias = {"x":"twitter","tw":"twitter","twitter.com":"twitter","fb":"facebook","facebook.com":"facebook",
-                                                "li":"linkedin","linkedin.com":"linkedin","ig":"instagram","instagram.com":"instagram",
-                                                "tt":"tiktok","tiktok.com":"tiktok","yt":"youtube","youtube.com":"youtube",
-                                                "medium.com":"medium", "reddit.com":"reddit"}
-                                        seen = set()
-                                        for p in (raw_selected or []):
-                                            k = _alias.get(str(p).lower().strip(), str(p).lower().strip())
-                                            if k and k not in seen:
-                                                seen.add(k); selected_final.append(k)
+                                        _raw = st.session_state.get("selected_platforms", [])  # or use your accessible_selected
+                                        alias = {
+                                            "x":"twitter","tw":"twitter","twitter.com":"twitter",
+                                            "fb":"facebook","facebook.com":"facebook",
+                                            "li":"linkedin","linkedin.com":"linkedin",
+                                            "ig":"instagram","instagram.com":"instagram",
+                                            "tt":"tiktok","tiktok.com":"tiktok",
+                                            "yt":"youtube","youtube.com":"youtube",
+                                            "medium.com":"medium","reddit.com":"reddit",
+                                        }
+                                        _seen=set()
+                                        for p in (_raw or []):
+                                            k = alias.get(str(p).lower().strip(), str(p).lower().strip())
+                                            if k and k not in _seen:
+                                                _seen.add(k); selected_final.append(k)
 
-                                        scraper_env["SELECTED_PLATFORMS"] = ",".join(selected_final)
-                                        existing_pp = scraper_env.get("PYTHONPATH", "")
-                                        scraper_env["PYTHONPATH"] = (current_dir if not existing_pp else f"{current_dir}{os.pathsep}{existing_pp}")
+                                        # Pull your UI inputs; if you already have variables named differently, keep those
+                                        username    = st.session_state.get("username") or "anonymous"
+                                        search_term = (st.session_state.get("search_term") or "").strip()   # use your actual text input key
+                                        max_scrolls = int(st.session_state.get("max_scrolls", 10))
 
-                                        print("SELECTED_PLATFORMS ->", scraper_env["SELECTED_PLATFORMS"])
+                                        scraper_env = os.environ.copy()
+                                        scraper_env.update({
+                                            "SCRAPER_USERNAME": username,
+                                            "USER_PLAN": str(plan_str),
+                                            "FRONTEND_SEARCH_TERM": search_term,
+                                            "SELECTED_PLATFORMS": ",".join(selected_final or []),
+                                            "MAX_SCROLLS": str(max_scrolls),
+                                            "PYTHONIOENCODING": "utf-8",
+                                            "PYTHONUTF8": "1",
+                                            "PYTHONLEGACYWINDOWSSTDIO": "0",
+                                        })
 
-                                        # --- run the scraper ---
+                                        st.info(
+                                            f"🧪 Launching scraper • plan={scraper_env['USER_PLAN']}, "
+                                            f"platforms={scraper_env['SELECTED_PLATFORMS'] or '(none)'}, "
+                                            f"term='{scraper_env['FRONTEND_SEARCH_TERM']}'"
+                                        )
+
+                                        # === RUN ===
                                         result = subprocess.run(
                                             [sys.executable, "run_daily_scraper_complete.py"],
                                             capture_output=True,
                                             text=True,
                                             encoding="utf-8",
                                             errors="replace",
-                                            env=scraper_env,
                                             cwd=os.getcwd(),
+                                            env=scraper_env,
                                             timeout=300,
                                         )
 
-                                        # --- handle return code FIRST (0 = success) ---
+                                        # === HANDLE RESULT ===
                                         if result.returncode != 0:
                                             st.error(f"❌ Scraper failed with return code: {result.returncode}")
-                                            if result.stderr:
-                                                st.code(result.stderr, language="text")
+                                            if result.stderr: st.code(result.stderr, language="text")
                                             if result.stdout:
                                                 with st.expander("📄 Scraper output"):
                                                     st.code(result.stdout, language="text")
                                         else:
                                             st.success("✅ Scraping completed successfully!")
-                                            # Now safely process results
+                                            # Always show a short log tail so you can verify what ran
+                                            tail = (result.stdout or "").splitlines()[-80:]
+                                            if tail:
+                                                with st.expander("📜 Scraper logs (last ~80 lines)"):
+                                                    st.code("\n".join(tail), language="text")
+
+                                            # Then your existing summary/credits file handling...
+                                            # (reads scraping_session_summary.json etc.)
+
+                                        
                                             try:
                                                 results_path = "scraping_session_summary.json"
                                                 if os.path.exists(results_path):
@@ -5328,7 +5349,8 @@ with tab1:
                                                 st.error(f"⚠️ Results processing error: {e}")
                                                 st.code(traceback.format_exc(), language="text")
                                         
-                                        
+                                            else:
+                                                st.error(f"❌ Scraper failed with return code: {result.returncode}")
                                             
                                             # Provide specific error guidance based on return code
                                             if result.returncode == 1:
@@ -8521,6 +8543,7 @@ with tab6:  # Settings tab
                                 
                                 # Calculate total credits ever owned
                                 plan_starting_credits = {
+                                    #'demo': 5,
                                     'starter': 250,
                                     'pro': 2000,
                                     'ultimate': 9999

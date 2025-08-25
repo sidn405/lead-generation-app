@@ -19,6 +19,25 @@ from datetime import datetime
 # ✅ FIXED: Import centralized config properly
 from config_loader import get_platform_config, config_loader
 
+# === ENV HELPERS (add once near top) ===
+def env_username():
+    return os.getenv("SCRAPER_USERNAME") or "anonymous"
+
+def env_plan():
+    p = os.getenv("USER_PLAN") or "demo"
+    if isinstance(p, (tuple, list)):  # just in case
+        p = p[0] if p else "demo"
+    return str(p).strip().lower()
+
+def env_search_term():
+    return (os.getenv("FRONTEND_SEARCH_TERM") or "").strip()
+
+def env_max_scrolls():
+    try:
+        return int(os.getenv("MAX_SCROLLS", "10"))
+    except Exception:
+        return 10
+
 def get_user_from_environment():
     """Get user info from environment instead of session state"""
     username = os.getenv('SCRAPER_USERNAME')
@@ -634,8 +653,9 @@ def run_platform_scraper(platform):
         print(f"\n[ROCKET] Running {platform.title()} scraper...")
 
         # Get user info
-        username = get_user_from_environment()
-        user_plan = get_user_from_environment()
+        username = env_username()
+        user_plan = env_plan()
+
         
         # ✅ FIXED: Get config properly
         search_term = None
@@ -795,18 +815,6 @@ def run_all_platform_scrapers(platforms):
         print(f"  {platform.title()}: {count} leads")
     
     return all_results
-
-def get_user_from_environment():
-    """Get user info from environment instead of session state"""
-    username = os.getenv('SCRAPER_USERNAME')
-    user_plan = os.getenv('SCRAPER_USER_PLAN') 
-    credits = os.getenv('SCRAPER_CREDITS')
-    
-    if not username:
-        print("Warning: No username in environment variables")
-        return None, None, 0
-    
-    return username, user_plan, int(credits) if credits else 0
 
 def get_username_from_env():
     """Get username from environment variables"""
@@ -1159,9 +1167,12 @@ def main():
         print("=" * 60)
         
         # Get user info and search term
-        user_plan = get_user_from_environment()
-        username = get_user_from_environment()
-        search_term = os.environ.get('FRONTEND_SEARCH_TERM', 'business coach')  # Generic default
+        username   = env_username()
+        user_plan  = env_plan()
+        search_term = env_search_term() or 'business coach'
+        
+        print(f"[ENV] user={username!r} plan={user_plan!r} term='{search_term}' selected='{os.getenv('SELECTED_PLATFORMS','')}'")
+
         
         print(f"[USER] User: {username}")
         print(f"[TARGET] Plan: {user_plan}")
