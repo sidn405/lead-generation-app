@@ -331,42 +331,29 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
-# sanity-check subscription when we have a user in session
-try:
-    from postgres_credit_system import credit_system
-    u = st.session_state.get("username")
-    if u:
-        active, status = credit_system.check_subscription_status(u)
-        if not active:
-            st.session_state.user_data["subscription_active"] = False
-            st.session_state.user_data["plan"] = "starter"
-            # You can also show a banner here if you want:
-            # st.warning("Your subscription is not active; features are limited until you resume billing.")
-except Exception as e:
-    print(f"[billing] freshness check skipped: {e}")
-    
-def hard_logout():
-    """Fully log out and prevent auto-restore on the very next rerun."""
+def refresh_subscription_status(username: str, current_plan: str):
     try:
-        # clear simple_auth
+        active, status = credit_system.check_subscription_status(username)
+        # Record for UI/entitlements only; never change plan here.
+        if current_plan == "demo":
+            st.session_state["subscription_active"] = False
+            st.session_state["subscription_status"] = "demo"
+        else:
+            st.session_state["subscription_active"] = bool(active)
+            st.session_state["subscription_status"] = (status or "inactive")
+    except Exception as e:
+        print(f"[billing] freshness check skipped: {e}")
+
+    
+def do_logout():
+    for k in ["authenticated", "username", "user_data", "plan",
+              "subscription_status", "subscription_active", "credits"]:
+        st.session_state.pop(k, None)
+    try:
         simple_auth.current_user = None
         simple_auth.user_data = {}
     except Exception:
         pass
-
-    # clear session keys that keep you logged in
-    for k in (
-        "authenticated","username","user_data","credits",
-        "plan","plan_source","subscription_status","monthly_credits",
-        "demo_remaining",
-    ):
-        st.session_state.pop(k, None)
-
-    # set a one-shot guard so quick rehydrate doesn't immediately log you back in
-    st.session_state["suppress_auto_restore"] = True
-
-    # wipe any lingering URL params like ?username=...
-    st.query_params.clear()
     st.rerun()
 
     
@@ -4136,7 +4123,7 @@ with col2:
             # Logout button on far right
             st.markdown("<div style='text-align: right;'></div>", unsafe_allow_html=True)  # Add spacing
             if st.button("🔒 Logout", help="Sign out of your account", key="header_logout"):
-                hard_logout()
+                
                 # Clear all session state on logout
                 for key in ['authenticated', 'username', 'user_data', 'login_time', 'show_login', 'show_register', 'credits']:
                     if key in st.session_state:
