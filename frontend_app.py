@@ -248,6 +248,30 @@ def _quick_rehydrate_from_qs():
         print(f"⚠️ quick rehydrate (users.json) failed: {e}")
     return False
 
+# run early in frontend_app.py, after imports / preflight, before UI
+def soft_rehydrate_from_simple_auth():
+    if st.session_state.get("show_login") or st.session_state.get("authenticated"):
+        return
+    u = getattr(simple_auth, "current_user", None)
+    if not u:
+        return
+    try:
+        info = credit_system.get_user_info(u)
+        if info:
+            simple_auth.user_data = info
+            st.session_state.update(
+                authenticated=True,
+                username=u,
+                user_data=info,
+                plan=info.get("plan", "starter"),
+                credits=info.get("credits", 0),
+            )
+            print(f"✅ Soft rehydrate for {u}")
+    except Exception as e:
+        print(f"soft rehydrate failed: {e}")
+
+soft_rehydrate_from_simple_auth()
+
 def _is_stripe_return(qp: dict) -> bool:
     return (
         "payment_success" in qp                      # credits/subs success
@@ -758,77 +782,63 @@ def _guess_platform_from_filename(path: str) -> str:
             return p
     return "unknown"
 
-def _files_for_user(username: str, csv_dir: str):
-    # match both orders of username/leads tokens
-    patterns = [
-        os.path.join(csv_dir, f"*{username}*leads*.csv"),
-        os.path.join(csv_dir, f"*leads*{username}*.csv"),
-        os.path.join(csv_dir, f"*{username}*.csv"),
-    ]
+def _files_for_user(u: str, csv_dir: str):
+    pats = [f"*{u}*leads*.csv", f"*leads*{u}*.csv", f"*{u}*.csv"]
     files = []
-    for pat in patterns:
-        files.extend(glob.glob(pat))
-    # de-dupe while preserving order
+    for pat in pats:
+        files += glob.glob(os.path.join(csv_dir, pat))
     seen, uniq = set(), []
     for f in files:
-        if f not in seen:
-            seen.add(f); uniq.append(f)
+        if f not in seen: seen.add(f); uniq.append(f)
     return uniq
 
 @st.cache_data(show_spinner=False)
-def _calc_platforms_cached(files_sig):
-    files = [f for (f, _, _) in files_sig]
-    platform_counts = {}
-    meta = []
+def _calc_platforms(files_sig):
+    files = [f for (f,_,_) in files_sig]
+    counts, meta = {}, []
     for f in files:
         try:
             df = pd.read_csv(f)
-            # normalize platform column
-            plat_col = next((c for c in df.columns if str(c).lower() in ("platform","source","site","network")), None)
+            # count rows; skip empty (see §3)
+            n = int(len(df))
+            if n == 0:
+                continue
+            plat_col = next((c for c in df.columns
+                             if str(c).lower() in ("platform","source","site","network")), None)
             if plat_col:
-                plat_series = df[plat_col].astype(str).str.strip().str.lower().map(lambda s: PLATFORM_MAP.get(s, s or "unknown"))
-                plat = plat_series.mode().iat[0] if not plat_series.empty else "unknown"
+                cand = str(df[plat_col].astype(str).str.lower().mode().iat[0]) if len(df) else "unknown"
+                plat = PLATFORM_MAP.get(cand, cand or "unknown")
             else:
                 plat = _guess_platform_from_filename(f)
-
-            n = len(df)
-            if n:
-                platform_counts[plat] = platform_counts.get(plat, 0) + n
-
-            # meta for “campaigns”
-            mtime = os.path.getmtime(f)
-            meta.append({"file": f, "platform": plat, "leads": n, "date": mtime})
+            counts[plat] = counts.get(plat, 0) + n
+            meta.append({"file": f, "platform": plat, "leads": n, "mtime": os.path.getmtime(f)})
         except Exception as e:
             print(f"[stats] skip {f}: {e}")
-
-    return platform_counts, meta
+    return counts, meta
 
 def calculate_empire_from_csvs(username: str, csv_dir: str = None):
     csv_dir = csv_dir or os.getenv("CSV_DIR", "/app/client_configs")
     files = _files_for_user(username, csv_dir)
-    files_sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
-    platform_counts, _ = _calc_platforms_cached(files_sig)
-    return platform_counts
+    sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
+    counts, _ = _calc_platforms(sig)
+    return counts
 
 def get_user_csv_files(username: str, csv_dir: str = None):
-    import os
     from datetime import datetime
     csv_dir = csv_dir or os.getenv("CSV_DIR", "/app/client_configs")
     files = _files_for_user(username, csv_dir)
-    files_sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
-    _, meta = _calc_platforms_cached(files_sig)
-
+    sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
+    _, meta = _calc_platforms(sig)
     out = []
     for m in meta:
         path = m["file"]
-        size_mb = round(os.path.getsize(path) / (1024 * 1024), 3)
         out.append({
             "file": path,
-            "name": os.path.basename(path),                      # ← add this
+            "name": os.path.basename(path),
             "platform": m["platform"],
-            "leads": m["leads"],
-            "date": datetime.fromtimestamp(m["date"]).strftime("%m/%d %H:%M"),
-            "size_mb": size_mb,
+            "leads": int(m["leads"]),
+            "date": datetime.fromtimestamp(m["mtime"]).strftime("%m/%d %H:%M"),
+            "size_mb": round(os.path.getsize(path)/(1024*1024), 3),
         })
     return out
 
@@ -6204,7 +6214,7 @@ with tab2: # Lead Results
                 current_username = st.session_state.username
 
                 # Use the shared, module-level helper (expects CSV_DIR to be set)
-                user_csv_files = get_user_csv_files(current_username)
+                user_csv_files = [f for f in get_user_csv_files(current_username) if f.get("leads", 0) > 0]
 
                 if user_csv_files:
                     # Summary metrics
@@ -6252,11 +6262,16 @@ with tab2: # Lead Results
                         with c5:
                             # Direct download
                             try:
-                                with open(file['path'], 'rb') as fh:
+                                file_path = f.get("file") or f.get("path")
+                                if not file_path or not os.path.exists(file_path):
+                                    st.error("Download failed: missing file")
+                                    continue
+                                file_name = f.get("name") or os.path.basename(file_path)
+                                with open(file_path, "rb") as fh:
                                     st.download_button(
                                         "⬇️",
                                         data=fh.read(),
-                                        file_name=file['name'],
+                                        file_name=file_name,
                                         mime="text/csv",
                                         key=f"lead_results_download_{file['name']}",
                                         help=f"Download {file['name']}"
@@ -8384,7 +8399,7 @@ with tab6:  # Settings tab
                     total_leads_pp = sum(platform_leads.values())
 
                     # Derive a simple campaign count: number of CSV files with >0 rows for this user
-                    user_csv_files = get_user_csv_files(current_username)
+                    user_csv_files = [f for f in get_user_csv_files(current_username) if f.get("leads", 0) > 0]
                     total_campaigns = sum(1 for f in user_csv_files if f.get("leads", 0) > 0)
 
                     if total_leads_pp > 0:
@@ -8401,7 +8416,7 @@ with tab6:  # Settings tab
 
                         with colA:
                             st.markdown("**📊 Leads by Platform**")
-                            for plat, leads in sorted_platforms[:5]:
+                            for plat, leads in sorted_platforms[:8]:
                                 pct = (leads / total_leads_pp * 100.0) if total_leads_pp else 0.0
                                 st.metric(f"{platform_emojis.get(plat,'📱')} {plat.title()}", leads, delta=f"{pct:.1f}%")
 
@@ -8521,7 +8536,8 @@ with tab6:  # Settings tab
                     
                     # --- Derive days_active based on the earliest and latest CSV timestamps ---
                     days_active = 0
-                    user_csv_files = get_user_csv_files(current_username)
+                    user_csv_files = [f for f in get_user_csv_files(current_username) if f.get("leads", 0) > 0]
+
 
                     if user_csv_files:
                         try:
