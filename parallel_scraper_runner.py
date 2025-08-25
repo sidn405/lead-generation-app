@@ -448,7 +448,96 @@ class ParallelScraperRunner:
         # ✅ ADD THIS LINE - finalize the session
         self.finalize_session()
         
-        return self.results
+        total_leads = sum(r['leads'] for r in self.results.values())
+        
+        # --- DEMO CREDIT CONSUMPTION (so UI shows used 5/5) ---
+        if total_leads > 0 and self.user_plan == 'demo':
+            try:
+                from postgres_credit_system import credit_system
+                consumed = 0
+                for _ in range(total_leads):
+                    if credit_system.consume_demo_lead(self.username):
+                        consumed += 1
+                    else:
+                        break
+                try:
+                    credit_system.save_data()
+                except Exception:
+                    pass
+                print(f"📱 Demo consumption: used {consumed} of {total_leads} generated")
+            except Exception as e:
+                print(f"❌ Demo credit error: {e}")
+                
+        # --- build a stats delta from this run ---
+        from datetime import datetime
+        from pathlib import Path
+        import json, os
+
+        now_iso = datetime.utcnow().isoformat()
+        platform_counts = {p: r.get("leads", 0) for p, r in (self.results or {}).items()}
+
+        run_summary = {
+            "timestamp": now_iso,
+            "plan": self.user_plan,
+            "search_term": self.search_term,
+            "platforms_run": list(platform_counts.keys()),
+            "platform_counts": platform_counts,
+            "total_leads": int(total_leads),
+            "duration_sec": int(self.total_duration_sec or 0),
+            "success_count": sum(1 for r in (self.results or {}).values() if r.get("leads", 0) > 0),
+            "attempted_count": len(self.results or {}),
+        }
+
+        def _default_stats():
+            return {
+                "totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
+                "platforms": {},          # e.g., "twitter": {"leads": 0, "last_run": "..."}
+                "last_session": {},       # copy of run_summary
+            }
+
+        # --- merge into user record via credit_system ---
+        try:
+            from postgres_credit_system import credit_system
+            info = credit_system.get_user_info(self.username) or {}
+            stats = info.get("stats") or _default_stats()
+
+            # totals
+            stats["totals"]["leads"]     = int(stats["totals"].get("leads", 0)) + int(total_leads)
+            stats["totals"]["campaigns"] = int(stats["totals"].get("campaigns", 0)) + 1
+
+            # if you debit credits elsewhere, keep this as a display-only mirror
+            stats["totals"]["credits_used"] = int(stats["totals"].get("credits_used", 0))
+
+            # per-platform
+            platforms_node = stats.setdefault("platforms", {})
+            for p, c in platform_counts.items():
+                node = platforms_node.setdefault(p, {"leads": 0, "last_run": None})
+                node["leads"] = int(node.get("leads", 0)) + int(c)
+                node["last_run"] = now_iso
+
+            # last session snapshot
+            stats["last_session"] = run_summary
+
+            info["stats"] = stats
+            credit_system.save_user_info(self.username, info)
+
+            # file fallback (handy for Lead Results / refresh w/o DB hit)
+            try:
+                out = Path(f"client_configs/{self.username}_stats.json")
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(json.dumps(stats, ensure_ascii=False, indent=2))
+            except Exception as e:
+                print(f"[stats file] write failed: {e}")
+
+            print(f"[stats] updated for {self.username}: leads+={total_leads}, campaigns+1")
+        except Exception as e:
+            print(f"[stats] update failed: {e}")
+
+
+
+            return self.results
+    
+    
     
     def test_method(self):  # ← Same indentation as other methods
         """Test method to verify class structure"""

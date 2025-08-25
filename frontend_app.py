@@ -667,6 +667,32 @@ def enforce_platform_access(user_plan: str, requested: list[str]) -> tuple[list[
     return accessible, locked, allowed
 # --- end helpers ---
 
+# === STATS LOADER (add near top-level utils) ===
+def load_empire_stats(username: str):
+    """Try user record first; fall back to cached JSON; else defaults."""
+    def _default():
+        return {"totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
+                "platforms": {}, "last_session": {}}
+
+    stats = None
+    try:
+        from postgres_credit_system import credit_system
+        info = credit_system.get_user_info(username) or {}
+        stats = info.get("stats")
+    except Exception:
+        pass
+
+    if not stats:
+        import json, os
+        path = f"client_configs/{username}_stats.json"
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    stats = json.load(f)
+            except Exception:
+                stats = None
+
+    return stats or _default()
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -749,6 +775,9 @@ print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
       f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
       f"'subscription_status': {user_info.get('subscription_status')}}}")
 # === end PLAN BOOTSTRAP ===
+
+username = st.session_state.get("username") or "anonymous"
+st.session_state["stats"] = load_empire_stats(username)
 
 # ---- Persistent CSV folder (Railway volume) ----
 import os
@@ -5320,6 +5349,105 @@ with tab1:
                                                     st.code(result.stdout, language="text")
                                         else:
                                             st.success("✅ Scraping completed successfully!")
+                                            # refresh stats from backend/file so UI updates immediately
+                                            st.session_state["stats"] = load_empire_stats(st.session_state.get("username") or "anonymous")
+
+                                        # --- READ SUMMARY + SHOW TOP-5 DEMO LEADS ---
+                                        import os, json, glob, csv
+                                        from datetime import datetime
+
+                                        username    = st.session_state.get("username") or "anonymous"
+                                        plan_str    = (st.session_state.get("plan") or "demo").lower()
+                                        demo_cap    = 5
+
+                                        # 1) load session summaries (optional, drives stats boxes)
+                                        summary = {}
+                                        latest  = {}
+                                        try:
+                                            if os.path.exists("scraping_session_summary.json"):
+                                                with open("scraping_session_summary.json", "r", encoding="utf-8") as f:
+                                                    summary = json.load(f)
+                                            if os.path.exists("latest_session.json"):
+                                                with open("latest_session.json", "r", encoding="utf-8") as f:
+                                                    latest = json.load(f)
+                                            # cache for other tabs
+                                            st.session_state["last_total_leads"] = latest.get("total_leads", summary.get("total_leads", 0))
+                                            st.session_state["last_platform_counts"] = latest.get("platforms", summary.get("results_by_platform", {}))
+                                        except Exception as e:
+                                            st.warning(f"Could not read session summaries: {e}")
+
+                                        # 2) find the newest CSV per platform and aggregate rows
+                                        def _latest_csv_for(platform: str):
+                                            pats = [f"*{platform}*leads*.csv", f"{platform}_leads_*.csv", f"{platform}_unified_leads_*.csv"]
+                                            files = []
+                                            for p in pats:
+                                                files.extend(glob.glob(p))
+                                            files = sorted(files, key=lambda f: os.path.getmtime(f), reverse=True)
+                                            return files[0] if files else None
+
+                                        selected_for_run = (st.session_state.get("selected_platforms") or ["twitter"])
+                                        seen = set()
+                                        selected_canon = []
+                                        _alias = {"x":"twitter","tw":"twitter","twitter.com":"twitter",
+                                                "fb":"facebook","facebook.com":"facebook","li":"linkedin","linkedin.com":"linkedin",
+                                                "ig":"instagram","instagram.com":"instagram","tt":"tiktok","tiktok.com":"tiktok",
+                                                "yt":"youtube","youtube.com":"youtube","medium.com":"medium","reddit.com":"reddit"}
+                                        for p in selected_for_run:
+                                            k = _alias.get(str(p).lower().strip(), str(p).lower().strip())
+                                            if k and k not in seen:
+                                                seen.add(k); selected_canon.append(k)
+
+                                        rows = []
+                                        for p in (selected_canon or ["twitter"]):
+                                            fpath = _latest_csv_for(p)
+                                            if not fpath:
+                                                continue
+                                            # Try pandas, fall back to csv module
+                                            try:
+                                                import pandas as pd
+                                                df = pd.read_csv(fpath)
+                                                rows.extend(df.to_dict("records"))
+                                            except Exception:
+                                                try:
+                                                    with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                                                        rdr = csv.DictReader(f)
+                                                        rows.extend(list(rdr))
+                                                except Exception:
+                                                    pass
+
+                                        # 3) clip to demo cap and persist for Lead Results tab
+                                        rows = rows[:demo_cap]
+                                        demo_payload = {
+                                            "username": username,
+                                            "plan": plan_str,
+                                            "cap": demo_cap,
+                                            "generated": len(rows),
+                                            "platforms": selected_canon,
+                                            "timestamp": datetime.now().isoformat(),
+                                            "leads": rows,
+                                        }
+                                        demo_file = f"demo_leads_{username}.json"
+                                        with open(demo_file, "w", encoding="utf-8") as f:
+                                            json.dump(demo_payload, f, ensure_ascii=False, indent=2)
+
+                                        st.info(f"Showing {len(rows)} of {st.session_state.get('last_total_leads', 0)} leads (demo cap {demo_cap}).")
+                                        if rows:
+                                            try:
+                                                import pandas as pd
+                                                st.dataframe(pd.DataFrame(rows))
+                                            except Exception:
+                                                st.json(demo_payload)
+
+                                        # 4) refresh user info so “Demo leads left” updates immediately
+                                        try:
+                                            from postgres_credit_system import credit_system
+                                            info = credit_system.get_user_info(username) or {}
+                                            st.session_state["user_data"] = info
+                                            st.session_state["credits"]   = info.get("credits", 0)
+                                            st.session_state["demo_leads_remaining"] = info.get("demo_leads_remaining", 0)
+                                        except Exception:
+                                            pass
+
                                             # Always show a short log tail so you can verify what ran
                                             tail = (result.stdout or "").splitlines()[-80:]
                                             if tail:
@@ -5327,9 +5455,7 @@ with tab1:
                                                     st.code("\n".join(tail), language="text")
 
                                             # Then your existing summary/credits file handling...
-                                            # (reads scraping_session_summary.json etc.)
-
-                                        
+                                            # (reads scraping_session_summary.json etc.)                                      
                                             try:
                                                 results_path = "scraping_session_summary.json"
                                                 if os.path.exists(results_path):
@@ -8513,10 +8639,12 @@ with tab6:  # Settings tab
                         if user_plan == "demo":
                             # For demo users, calculate total from demo leads used
                             try:
+                                stats = st.session_state.get("stats", {})
+                                totals = stats.get("totals", {})
                                 can_demo, remaining = credit_system.can_use_demo(username)
                                 demo_used = 5 - remaining  # Calculate used demo leads
                                 total_leads = demo_used     # ✅ FIX: Use demo leads as total
-                                st.metric("Total Leads Generated", total_leads)
+                                st.metric("Total Leads Generated", totals.get("leads", 0))
                             except:
                                 total_leads = user_info.get('total_leads_downloaded', 0)
                                 st.metric("Total Leads Generated", total_leads)
@@ -8527,7 +8655,7 @@ with tab6:  # Settings tab
                     
                     with usage_col2:
                         total_campaigns = len(user_info.get('transactions', []))
-                        st.metric("Campaigns Run", total_campaigns)
+                        st.metric("Campaigns Run", totals.get("campaigns", 0))
                     
                     with usage_col3:
                         if user_plan == "demo":
@@ -8544,7 +8672,7 @@ with tab6:  # Settings tab
                                 
                                 # Calculate total credits ever owned
                                 plan_starting_credits = {
-                                    #'demo': 5,
+                                    'demo': 5,
                                     'starter': 250,
                                     'pro': 2000,
                                     'ultimate': 9999
