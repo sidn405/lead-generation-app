@@ -58,9 +58,6 @@ class CreditSystem:
                 total_leads_downloaded INTEGER DEFAULT 0,
                 subscription_active BOOLEAN DEFAULT FALSE,
                 stripe_customer_id TEXT,
-                stripe_subscription_id TEXT,
-                billing_status TEXT,
-                billing_current_period_end BIGINT;
                 monthly_credits INTEGER DEFAULT 0,
                 agreed_to_terms BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
