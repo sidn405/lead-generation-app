@@ -57,6 +57,10 @@ class CreditSystem:
                 demo_limit INTEGER DEFAULT 5,
                 total_leads_downloaded INTEGER DEFAULT 0,
                 subscription_active BOOLEAN DEFAULT FALSE,
+                stripe_customer_id TEXT,
+                stripe_subscription_id TEXT,
+                billing_status TEXT,
+                billing_current_period_end BIGINT;
                 monthly_credits INTEGER DEFAULT 0,
                 agreed_to_terms BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -593,6 +597,89 @@ class CreditSystem:
             self.save_data()
 
         return True
+    
+    def set_stripe_billing(self, username: str, customer_id: str | None,
+                       subscription_id: str | None, current_period_end_epoch: int = 0) -> bool:
+        """Persist Stripe identifiers and (optionally) the current period end."""
+        try:
+            if self.use_postgres:
+                self._execute_query("""
+                    UPDATE users
+                    SET stripe_customer_id = COALESCE(%s, stripe_customer_id),
+                        stripe_subscription_id = COALESCE(%s, stripe_subscription_id),
+                        billing_current_period_end = CASE WHEN %s > 0 THEN %s ELSE billing_current_period_end END
+                    WHERE username = %s
+                """, (customer_id, subscription_id, current_period_end_epoch, current_period_end_epoch, username))
+            else:
+                u = self._users.get(username, {})
+                if customer_id:            u["stripe_customer_id"] = customer_id
+                if subscription_id:        u["stripe_subscription_id"] = subscription_id
+                if current_period_end_epoch:
+                    u["billing_current_period_end"] = int(current_period_end_epoch)
+                self._users[username] = u
+                self.save_data()
+            return True
+        except Exception as e:
+            print(f"[billing] set_stripe_billing error: {e}")
+            return False
+
+
+    def check_subscription_status(self, username: str) -> tuple[bool, str]:
+        """
+        Return (active, status_string). If Stripe says the sub is canceled/past_due,
+        we flip subscription_active=false and optionally downgrade plan.
+        """
+        try:
+            # 1) read what we have
+            if self.use_postgres:
+                row = self._execute_query("""
+                    SELECT stripe_subscription_id, plan, monthly_credits
+                    , subscription_active
+                    FROM users WHERE username=%s
+                """, (username,), fetch=True)
+                if not row:
+                    return False, "missing_user"
+                r = dict(row[0])
+                sub_id = r.get("stripe_subscription_id")
+            else:
+                r = self._users.get(username, {})
+                sub_id = r.get("stripe_subscription_id")
+
+            if not sub_id:
+                return bool(r.get("subscription_active")), "no_subscription_id"
+
+            # 2) ask Stripe
+            import stripe
+            sub = stripe.Subscription.retrieve(sub_id)
+            status = getattr(sub, "status", "unknown") or "unknown"
+            active = status in ("active", "trialing")
+
+            # 3) persist status + take action
+            if self.use_postgres:
+                self._execute_query("""
+                    UPDATE users
+                    SET billing_status=%s,
+                        subscription_active=%s
+                    WHERE username=%s
+                """, (status, active, username))
+            else:
+                r["billing_status"] = status
+                r["subscription_active"] = active
+                self._users[username] = r
+                self.save_data()
+
+            # Optional: downgrade on cancel
+            if not active:
+                try:
+                    self.update_user_plan(username, "starter")
+                except Exception:
+                    pass
+
+            return active, status
+        except Exception as e:
+            print(f"[billing] check_subscription_status error: {e}")
+            return False, "error"
+
 
     def get_user_stats(self, username: str) -> Dict:
         """Get user statistics"""

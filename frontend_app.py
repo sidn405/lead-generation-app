@@ -309,6 +309,20 @@ try:
     restore_payment_authentication()
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
+    
+# sanity-check subscription when we have a user in session
+try:
+    from postgres_credit_system import credit_system
+    u = st.session_state.get("username")
+    if u:
+        active, status = credit_system.check_subscription_status(u)
+        if not active:
+            st.session_state.user_data["subscription_active"] = False
+            st.session_state.user_data["plan"] = "starter"
+            # You can also show a banner here if you want:
+            # st.warning("Your subscription is not active; features are limited until you resume billing.")
+except Exception as e:
+    print(f"[billing] freshness check skipped: {e}")
 
 qp = st.query_params
 

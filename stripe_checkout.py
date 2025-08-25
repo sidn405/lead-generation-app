@@ -103,13 +103,31 @@ def handle_payment_success_url():
 
     # Pull params
     qp = st.query_params
-    print(f"DEBUG: All query params: {dict(qp)}")
-    
-    # Print specific checks
-    print(f"payment_success: {qp.get('payment_success')}")
-    print(f"success: {qp.get('success')}")
-    print(f"package: {qp.get('package')}")
-    print(f"username: {qp.get('username')}")
+
+    def _v(key, default=None):
+        v = qp.get(key, default)
+        # st.query_params can return list-like; normalize to scalar
+        if isinstance(v, (list, tuple)):
+            return v[0] if v else default
+        return v
+
+    username         = (_v("username", "") or "").strip()
+    payment_type     = (_v("type", "") or "").strip()
+    tier_name        = (_v("tier", "") or "").strip()
+    credits          = int(_v("credits", 0) or 0)
+    amount           = int(float(_v("amount", 0) or 0))
+    monthly_credits  = int(_v("monthly_credits", 0) or 0)
+
+    # ✅ the checkout session id that we appended in success_url as {CHECKOUT_SESSION_ID}
+    session_id = (
+        _v("session_id")
+        or _v("checkout_session_id")
+        or _v("cs")
+        or None
+    )
+
+    print(f"[stripe return] user={username} type={payment_type} tier={tier_name} "
+        f"credits={credits} monthly_credits={monthly_credits} session_id={session_id}")
     
     is_credit_success = bool(qp.get("payment_success"))
     is_package_success = bool(qp.get("success") and qp.get("package"))
@@ -175,12 +193,73 @@ def handle_payment_success_url():
     if not username:
         st.error("You're not signed in. Please log in and try again.")
         return True
+    
+    subscription_id = None
+    customer_id = None
+    current_period_end = None
+
+    if session_id:
+        try:
+            sess = stripe.checkout.Session.retrieve(
+                session_id,
+                expand=["subscription", "customer"]
+            )
+            if getattr(sess, "subscription", None):
+                subscription_id = (
+                    sess.subscription.id
+                    if hasattr(sess.subscription, "id") else str(sess.subscription)
+                )
+                if hasattr(sess.subscription, "current_period_end"):
+                    current_period_end = int(sess.subscription.current_period_end or 0)
+
+            if getattr(sess, "customer", None):
+                customer_id = (
+                    sess.customer.id
+                    if hasattr(sess.customer, "id") else str(sess.customer)
+                )
+        except Exception as e:
+            print(f"[stripe ids] capture failed: {e}")
 
     from postgres_credit_system import credit_system
     from datetime import datetime
     
     # Process payment
     is_subscription = (payment_type == "subscription") or (monthly_credits > 0)
+    
+    # --- expand checkout session to capture billing IDs (subscription/customer) ---
+    try:
+        if session_id:
+            sess = stripe.checkout.Session.retrieve(
+                session_id,
+                expand=["subscription", "customer"]
+            )
+            subscription_id = None
+            customer_id = None
+            current_period_end = None
+
+            if getattr(sess, "subscription", None):
+                subscription_id = (
+                    sess.subscription.id
+                    if hasattr(sess.subscription, "id") else str(sess.subscription)
+                )
+                if hasattr(sess.subscription, "current_period_end"):
+                    current_period_end = int(sess.subscription.current_period_end or 0)
+
+            if getattr(sess, "customer", None):
+                customer_id = sess.customer.id if hasattr(sess.customer, "id") else str(sess.customer)
+
+            if subscription_id or customer_id:
+                from postgres_credit_system import credit_system
+                credit_system.set_stripe_billing(
+                    username=username,
+                    customer_id=customer_id,
+                    subscription_id=subscription_id,
+                    current_period_end_epoch=current_period_end or 0,
+                )
+    except Exception as e:
+        print(f"[stripe ids] capture failed: {e}")
+    # ----------------------------------------------------------------------------- 
+
     credit_amount = monthly_credits if is_subscription else credits
     is_package = bool(package_type)
 
