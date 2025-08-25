@@ -427,6 +427,61 @@ if sys.platform == "win32":
     os.environ['PYTHONUTF8'] = '1'
     os.environ['PYTHONLEGACYWINDOWSSTDIO'] = '0'
 
+# --- PLAN RESOLUTION (single source of truth) ---
+DEMO_LIMIT = 5
+
+def resolve_effective_plan(user_info: dict) -> tuple[str, dict]:
+    """
+    Returns (plan, extras)
+    plan ∈ {'demo','starter','pro','ultimate'}
+    extras contains 'demo_remaining', 'credits', 'monthly_credits', 'subscription_status'
+    """
+    ui = user_info or {}
+    sub_status = (ui.get("subscription_status") or "").lower()  # e.g. 'active', 'past_due', 'canceled'
+    sub_plan   = (ui.get("subscribed_plan") or "").lower()
+    base_plan  = (ui.get("plan") or "").lower()  # legacy field
+    credits    = int(ui.get("credits", 0) or 0)
+
+    # Demo detection (explicit “demo” plan OR flagged by your DB)
+    if base_plan == "demo" or sub_plan == "demo":
+        used = int(ui.get("demo_leads_used", 0) or 0)
+        remaining = max(0, DEMO_LIMIT - used)
+        return "demo", {
+            "demo_remaining": remaining,
+            "credits": 0,
+            "monthly_credits": 0,
+            "subscription_status": "demo"
+        }
+
+    # Active subscription wins
+    if sub_status == "active" and sub_plan in {"starter","pro","ultimate"}:
+        # Starter users sometimes have 0 credits at moment of signup; still show Starter.
+        return sub_plan, {
+            "demo_remaining": 0,
+            "credits": credits,
+            "monthly_credits": int(ui.get("monthly_credits", 0) or 0),
+            "subscription_status": sub_status
+        }
+
+    # Fallback to stored base plan if present
+    if base_plan in {"starter","pro","ultimate"}:
+        return base_plan, {
+            "demo_remaining": 0,
+            "credits": credits,
+            "monthly_credits": int(ui.get("monthly_credits", 0) or 0),
+            "subscription_status": sub_status or "unknown"
+        }
+
+    # Ultimate fallback: treat as demo (never “Starter”)
+    used = int(ui.get("demo_leads_used", 0) or 0)
+    remaining = max(0, DEMO_LIMIT - used)
+    return "demo", {
+        "demo_remaining": remaining,
+        "credits": 0,
+        "monthly_credits": 0,
+        "subscription_status": "demo"
+    }
+
 # 1) Absolute dm_library folder next to this script
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 LIBRARY_DIR = os.path.join(BASE_DIR, "dm_library")
@@ -1194,6 +1249,49 @@ def automatic_session_restore(username):
     except Exception as e:
         print(f"❌ Automatic restoration error: {str(e)}")
         return False
+    
+# --- PLAN NORMALIZER + DEBUG (paste right after you get user_info) ---
+def _normalize_plan(ui: dict):
+    ui = ui or {}
+    sp = (ui.get("subscribed_plan") or "").lower()
+    ss = (ui.get("subscription_status") or "").lower()
+    bp = (ui.get("plan") or "").lower()
+
+    # If anything says demo => demo
+    if sp == "demo" or bp == "demo":
+        return "demo", "demo"
+
+    # Active subscription wins
+    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
+        return sp, "subscribed_plan(active)"
+
+    # Fallback to legacy plan if sane
+    if bp in {"starter", "pro", "ultimate"}:
+        return bp, "plan(legacy)"
+
+    # Final fallback is demo (never pretend Starter)
+    return "demo", "fallback_demo"
+
+plan_fixed, source = _normalize_plan(user_info)
+
+# Make this the single truth everywhere
+st.session_state["plan"] = plan_fixed
+st.session_state["plan_source"] = source
+
+# Optional: keep downstream code that reads user_info consistent too
+if user_info is None:
+    user_info = {}
+user_info["plan"] = plan_fixed
+user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
+if plan_fixed == "demo":
+    user_info["subscription_status"] = "demo"
+
+print(f"[PLAN] normalized -> {plan_fixed} (source={source}) "
+      f"raw={{'plan': {user_info.get('plan')}, "
+      f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
+      f"'subscription_status': {user_info.get('subscription_status')}}}")
+# --- end normalizer ---
+
 
 def create_automatic_recovery_account(username):
     """Create a minimal account so the success handler can apply credits."""
@@ -3900,7 +3998,8 @@ with col2:
             try:
                 from postgres_credit_system import credit_system
                 user_info = credit_system.get_user_info(current_user)
-                
+                print("[PLAN_PROBE] header:", st.session_state.get("plan"), st.session_state.get("plan_source"))
+
                 if user_plan == 'demo' and user_info:
                     is_demo, used, remaining = credit_system.get_demo_status(current_user)
                     display_credits = f"{remaining} demo leads"
@@ -4475,7 +4574,8 @@ with tab1:
         }
         
         available_platforms = plan_access.get(user_plan, ['twitter'])
-        
+        print("[PLAN_PROBE] platform-banner:", st.session_state.get("plan"), st.session_state.get("plan_source"))
+
         # Show plan status
         if user_plan == 'demo':
             st.warning("📱 Demo Mode: Twitter only • 5 demo leads total")
@@ -8270,7 +8370,8 @@ with tab6:  # Settings tab
             
             # Account info cards
             overview_col1, overview_col2, overview_col3 = st.columns(3)
-            
+            print("[PLAN_PROBE] settings:", st.session_state.get("plan"), st.session_state.get("plan_source"))
+
             with overview_col1:
                 plan_emoji = "📱" if user_plan == "demo" else "🎯" if user_plan == "starter" else "💎" if user_plan == "pro" else "👑"
                 st.metric("Plan", f"{plan_emoji} {user_plan.title()}")
