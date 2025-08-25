@@ -6801,93 +6801,104 @@ if MULTILINGUAL_AVAILABLE:
                     key="dm_source_selection"
                 )
 
-                contacts_for_dm = []
-
                 if dm_source == "Existing Empire Leads":
-                    # Get current user for user-specific leads
-                    current_username = st.session_state.username
-                    
-                    # Use existing scraped leads - USER SPECIFIC ONLY
-                    available_files = {}
-                    
-                    # Look for user-specific files only
-                    import glob
-                    
-                    platform_patterns = {
-                        "🐦 Twitter": ["twitter_leads_*.csv"],
-                        "💼 LinkedIn": ["linkedin_leads_*.csv"],
-                        "📘 Facebook": ["facebook_leads_*.csv"],
-                        "🎵 TikTok": ["tiktok_leads_*.csv"],
-                        "📸 Instagram": ["instagram_leads_*.csv"],
-                        "🎥 YouTube": ["youtube_leads_*.csv"],
-                        "📝 Medium": ["medium_leads_*.csv"],
-                        "🗨️ Reddit": ["reddit_leads_*.csv"]
+                    # who is the user?
+                    current_username = (
+                        st.session_state.get("username")
+                        or getattr(simple_auth, "current_user", None)
+                    )
+                    if not current_username:
+                        st.info("Please log in to load your leads.")
+                        st.stop()
+
+                    # Use your existing helper so paths are correct (CSV_DIR) and files are deduped
+                    # make sure this is imported/defined: get_user_csv_files(username)
+                    files_meta = get_user_csv_files(current_username)  # [{'file','name','platform','leads','date','size_mb'}, ...]
+
+                    # keep only non-empty files and pick the latest per platform
+                    latest_by_platform = {}
+                    for m in files_meta:
+                        if m.get("leads", 0) <= 0:
+                            continue
+                        plat = m.get("platform", "unknown")
+                        # keep the most recent for each platform
+                        if plat not in latest_by_platform:
+                            latest_by_platform[plat] = m
+                        else:
+                            # compare by date/mtime via size/name fallback
+                            if os.path.getmtime(m["file"]) > os.path.getmtime(latest_by_platform[plat]["file"]):
+                                latest_by_platform[plat] = m
+
+                    PLAT_LABEL = {
+                        "twitter": "🐦 Twitter",
+                        "linkedin": "💼 LinkedIn",
+                        "facebook": "📘 Facebook",
+                        "tiktok": "🎵 TikTok",
+                        "instagram": "📸 Instagram",
+                        "youtube": "🎥 YouTube",
+                        "medium": "📝 Medium",
+                        "reddit": "🗨️ Reddit",
+                        "unknown": "📁 Unknown",
                     }
-                    
-                    for platform_name, patterns in platform_patterns.items():
-                        user_files = []
-                        
-                        # Check each pattern for user-specific files
-                        for pattern in patterns:
-                            # Look for files with username in filename
-                            user_pattern = pattern.replace("*.csv", f"*{current_username}*.csv")
-                            files_with_user = glob.glob(user_pattern)
-                            
-                            # Also check for files with username at different positions
-                            alt_pattern = pattern.replace("*.csv", f"{current_username}_*.csv")
-                            files_alt = glob.glob(alt_pattern)
-                            
-                            user_files.extend(files_with_user)
-                            user_files.extend(files_alt)
-                        
-                        if user_files:
-                            # Get the most recent file for this user
-                            latest_file = max(user_files, key=os.path.getctime)
-                            try:
-                                df = pd.read_csv(latest_file)
-                                if not df.empty:
-                                    available_files[platform_name] = latest_file
-                            except:
-                                pass
-                    
-                    if available_files:
-                        selected_platform = st.selectbox(
-                            "Select Platform Leads:",
-                            list(available_files.keys()),
-                            key="platform_dm_selection"
-                        )
-                        
-                        if selected_platform:
-                            try:
-                                df = pd.read_csv(available_files[selected_platform])
-                                st.success(f"✅ Loaded {len(df)} of YOUR leads from {selected_platform}")
-                                
-                                # Show which file is being used for transparency
-                                filename = os.path.basename(available_files[selected_platform])
-                                st.caption(f"📄 Using file: {filename}")
-                                
-                                # Show preview
+
+                    if latest_by_platform:
+                        # build select options as nice labels but keep the platform key
+                        options = [(PLAT_LABEL.get(p, p.title()), p) for p in latest_by_platform.keys()]
+                        label_list = [lbl for (lbl, _) in options]
+                        label = st.selectbox("Select Platform Leads:", label_list, key="platform_dm_selection")
+
+                        # resolve back to platform key
+                        selected_platform = dict(options)[label]
+                        chosen = latest_by_platform[selected_platform]
+                        file_path = chosen["file"]
+
+                        try:
+                            df = pd.read_csv(file_path)
+                            if df.empty:
+                                st.warning("Selected file is empty.")
+                                contacts_for_dm = []
+                            else:
+                                st.success(f"✅ Loaded {len(df)} of YOUR leads from {PLAT_LABEL.get(selected_platform, selected_platform.title())}")
+                                st.caption(f"📄 Using file: {os.path.basename(file_path)}")
                                 st.dataframe(df.head(), use_container_width=True)
-                                
-                                # Convert to contacts format
-                                contacts_for_dm = [
-                                    {"name": row.get("name", ""), "bio": row.get("bio", "")}
-                                    for _, row in df.iterrows()
-                                ]
-                                
-                            except Exception as e:
-                                st.error(f"❌ Error loading your leads: {str(e)}")
+
+                                # normalize columns -> minimal fields for DM
+                                def pick(series_dict, *cands):
+                                    for c in cands:
+                                        if c in series_dict: return series_dict[c]
+                                    return ""
+
+                                cols = {c.lower(): c for c in df.columns}
+                                name_col   = cols.get("name") or cols.get("title") or cols.get("full_name") or cols.get("account") or cols.get("handle") or ""
+                                bio_col    = cols.get("bio")  or cols.get("description") or cols.get("about") or ""
+                                handle_col = cols.get("handle") or cols.get("username") or cols.get("user") or ""
+                                url_col    = cols.get("url") or cols.get("profile_url") or cols.get("link") or ""
+
+                                contacts_for_dm = []
+                                for _, row in df.iterrows():
+                                    contacts_for_dm.append({
+                                        "name":   str(row[name_col])   if name_col   else "",
+                                        "bio":    str(row[bio_col])    if bio_col    else "",
+                                        "handle": str(row[handle_col]) if handle_col else "",
+                                        "url":    str(row[url_col])    if url_col    else "",
+                                        "platform": selected_platform,
+                                    })
+                        except Exception as e:
+                            st.error(f"❌ Error loading your leads: {e}")
+                            contacts_for_dm = []
                     else:
                         st.info(f"📭 No leads found for user: {current_username}")
-                        st.markdown(f"""
+                        st.markdown("""
                         **To generate your own leads:**
-                        1. 🔍 Go to **Empire Scraper** tab above
+                        1. 🔍 Go to **Empire Scraper** tab above  
                         2. 📝 Enter your target keywords  
-                        3. 🚀 Select platforms and run search
+                        3. 🚀 Select platforms and run search  
                         4. 💬 Your leads will appear here for DM generation
-                        
+
                         **Note:** You can only see leads you've generated, not other users' leads.
                         """)
+                        contacts_for_dm = []
+
                 
                 elif dm_source == "Upload New CSV":
                     uploaded_file = st.file_uploader(
@@ -8538,86 +8549,142 @@ with tab6:  # Settings tab
                     else:
                         st.info("📊 No platform performance data yet. Generate some leads to see your stats!")
 
-                    # 5) Recent Activity (always shows something if we had any transactions)
+                    # 5) Recent Activity (DB + CSV fallback)
                     # ----------------------------------------------------------------
                     st.markdown("---")
 
-                    if transactions:
-                        recent_transactions = sorted(
-                            [t for t in transactions if t],
-                            key=lambda x: x.get('timestamp', ''),
-                            reverse=True,
+                    from datetime import datetime
+                    import os
+
+                    # 1) Start with DB transactions if present
+                    combined_tx = list(transactions or [])
+
+                    # 2) Fallback: synthesize "lead_download" events from user's CSV files
+                    try:
+                        csv_meta = get_user_csv_files(current_username)  # [{'file','name','platform','leads','date','size_mb'}, ...]
+                        csv_tx = []
+                        for m in csv_meta:
+                            leads = int(m.get("leads", 0) or 0)
+                            if leads <= 0:
+                                continue
+                            fp = m.get("file")
+                            ts = None
+                            try:
+                                ts = datetime.fromtimestamp(os.path.getmtime(fp)).isoformat()
+                            except Exception:
+                                # fall back to the display date (less precise)
+                                ts = datetime.now().isoformat()
+                            csv_tx.append({
+                                "type": "lead_download",
+                                "timestamp": ts,
+                                "platform": m.get("platform", "unknown"),
+                                "leads_downloaded": leads,
+                            })
+                        combined_tx += csv_tx
+                    except Exception as e:
+                        print(f"[activity] CSV fallback failed: {e}")
+
+                    # 3) De-duplicate + sort (by timestamp desc)
+                    def _key(tx):
+                        return (
+                            tx.get("type", ""),
+                            tx.get("platform", ""),
+                            tx.get("timestamp", ""),
+                            int(tx.get("leads_downloaded", tx.get("credits_added", 0) or 0)),
                         )
+
+                    seen, merged = set(), []
+                    for tx in combined_tx:
+                        k = _key(tx)
+                        if k not in seen:
+                            seen.add(k)
+                            merged.append(tx)
+
+                    # parse timestamps safely for sorting
+                    def _parse_ts(s):
+                        try:
+                            return datetime.fromisoformat(s)
+                        except Exception:
+                            return datetime.min
+
+                    recent_transactions = sorted(merged, key=lambda x: _parse_ts(x.get("timestamp", "")), reverse=True)
+
+                    if recent_transactions:
                         recent_count = len(recent_transactions)
 
-                        activity_summary_col1, activity_summary_col2, activity_summary_col3 = st.columns(3)
-                        with activity_summary_col1:
+                        c1, c2, c3 = st.columns(3)
+                        with c1:
                             st.metric("📋 Total Activities", recent_count)
-                        with activity_summary_col2:
+
+                        with c2:
                             latest = recent_transactions[0]
-                            latest_type = latest.get('type', 'unknown')
-                            if latest_type == 'lead_download':
-                                summary = f"Generated {int(latest.get('leads_downloaded', latest.get('credits_used', 0) or 0))} leads"
-                            elif latest_type == 'credit_purchase':
-                                summary = f"Purchased {int(latest.get('credits_added', 0))} credits"
+                            latest_type = latest.get("type", "unknown")
+                            if latest_type == "lead_download":
+                                n = int(latest.get("leads_downloaded", latest.get("credits_added", 0) or 0))
+                                summary = f"Generated {n} leads"
+                            elif latest_type == "credit_purchase":
+                                n = int(latest.get("credits_added", 0) or 0)
+                                summary = f"Purchased {n} credits"
                             else:
-                                summary = latest_type.replace('_', ' ').title()
+                                summary = latest_type.replace("_", " ").title()
                             st.metric("🕒 Latest Activity", summary)
-                        with activity_summary_col3:
-                            ts = []
-                            for t in recent_transactions:
-                                s = t.get("timestamp")
-                                if not s:
-                                    continue
-                                try:
-                                    ts.append(datetime.fromisoformat(s))
-                                except Exception:
-                                    pass
-                            if len(ts) >= 2:
-                                span_days = (max(ts) - min(ts)).days
+
+                        with c3:
+                            ts_list = [_parse_ts(t.get("timestamp", "")) for t in recent_transactions if t.get("timestamp")]
+                            ts_list = [t for t in ts_list if t != datetime.min]
+                            if len(ts_list) >= 2:
+                                span_days = (max(ts_list) - min(ts_list)).days
                                 st.metric("📅 Activity Span", f"{span_days} days")
                             else:
                                 st.metric("📅 Status", "Active")
 
                         with st.expander(f"📋 View Detailed Activity History ({recent_count} entries)", expanded=False):
                             st.markdown("**Recent Activity Timeline:**")
+                            # emoji map (reuse whatever you already have if defined)
+                            platform_emojis = {
+                                "twitter": "🐦", "facebook": "📘", "linkedin": "💼",
+                                "tiktok": "🎵", "instagram": "📸", "youtube": "🎥",
+                                "medium": "📝", "reddit": "🗨️", "unknown": "📱"
+                            }
                             for tx in recent_transactions[:15]:
-                                tx_type = tx.get('type', 'unknown')
-                                ts = tx.get('timestamp', '')
+                                tx_type = tx.get("type", "unknown")
+                                ts_raw = tx.get("timestamp", "")
                                 try:
-                                    tx_date = datetime.fromisoformat(ts).strftime("%m/%d %H:%M") if ts else "Unknown"
+                                    tx_date = datetime.fromisoformat(ts_raw).strftime("%m/%d %H:%M") if ts_raw else "Unknown"
                                 except Exception:
-                                    tx_date = ts or "Unknown"
+                                    tx_date = ts_raw or "Unknown"
 
-                                if tx_type == 'lead_download':
-                                    n = int(tx.get('leads_downloaded', tx.get('credits_used', 0) or 0))
-                                    p = platform(tx.get('platform', 'unknown'))
-                                    st.success(f"{platform_emojis.get(p,'📱')} **{tx_date}**: Generated **{n}** leads from {p}")
-                                elif tx_type == 'credit_purchase':
-                                    n = int(tx.get('credits_added', 0) or 0)
+                                if tx_type == "lead_download":
+                                    n = int(tx.get("leads_downloaded", tx.get("credits_added", 0) or 0))
+                                    plat = (tx.get("platform", "unknown") or "unknown").lower()  # ✅ no function call
+                                    emoji = platform_emojis.get(plat, "📱")
+                                    st.success(f"{emoji} **{tx_date}**: Generated **{n}** leads from {plat.title()}")
+                                elif tx_type == "credit_purchase":
+                                    n = int(tx.get("credits_added", 0) or 0)
                                     st.info(f"💳 **{tx_date}**: Purchased **{n}** credits")
                                 else:
                                     st.caption(f"📋 **{tx_date}**: {tx_type.replace('_',' ').title()}")
 
                             if len(recent_transactions) > 15:
                                 st.caption(f"... and {len(recent_transactions) - 15} more activities")
-                                if st.button("📄 Export Full Activity History"):
-                                    import pandas as pd
-                                    export_data = [{
-                                        'Date': tx.get('timestamp', ''),
-                                        'Type': tx.get('type', ''),
-                                        'Platform': tx.get('platform', ''),
-                                        'Leads': int(tx.get('leads_downloaded', tx.get('credits_used', 0) or 0)),
-                                        'Credits': int(tx.get('credits_added', 0) or 0),
-                                    } for tx in transactions]
-                                    st.download_button(
-                                        label="📥 Download Activity History",
-                                        data=pd.DataFrame(export_data).to_csv(index=False),
-                                        file_name=f"activity_history_{username}_{datetime.now().strftime('%Y%m%d')}.csv",
-                                        mime="text/csv"
-                                    )
+                            if st.button("📄 Export Full Activity History"):
+                                import pandas as pd
+                                export_data = [{
+                                    "Date": tx.get("timestamp", ""),
+                                    "Type": tx.get("type", ""),
+                                    "Platform": tx.get("platform", ""),
+                                    "Leads": int(tx.get("leads_downloaded", tx.get("credits_added", 0) or 0)),
+                                    "Credits": int(tx.get("credits_added", 0) or 0),
+                                } for tx in recent_transactions]
+                                st.download_button(
+                                    label="📥 Download Activity History",
+                                    data=pd.DataFrame(export_data).to_csv(index=False),
+                                    file_name=f"activity_history_{current_username}_{datetime.now().strftime('%Y%m%d')}.csv",
+                                    mime="text/csv",
+                                )
                     else:
                         st.info("📋 No activity yet - start generating leads to see your history!")
+
 
                     # 6) Quick Stats (now safe because totals exist)
                     # ----------------------------------------------------------------
