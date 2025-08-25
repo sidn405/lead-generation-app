@@ -549,202 +549,40 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ✅ ADD THESE FUNCTIONS RIGHT AFTER YOUR IMPORTS
-def get_demo_status_with_refresh():
-    """Get demo status with auto-refresh capability"""
-    try:
-        from postgres_credit_system import credit_system
-        
-        can_demo, remaining = credit_system.can_use_demo('daveyd')
-        user_info = credit_system.get_user_info('daveyd')
-        demo_used = user_info.get('demo_leads_used', 0) if user_info else 0
-        
-        return {
-            'can_use_demo': can_demo,
-            'remaining': remaining,
-            'used': demo_used,
-            'total': 5,
-            'exhausted': remaining <= 0
-        }
-    except Exception as e:
-        print(f"Error getting demo status: {e}")
-        return {'can_use_demo': False, 'remaining': 0, 'used': 5, 'total': 5, 'exhausted': True}
+# --- Put these helpers near your other module-level helpers once ---
+PLAN_PLATFORMS = {
+    "demo":      ["twitter"],                                              # demo: twitter only
+    "starter":   ["twitter", "facebook"],                                  # 2
+    "pro":       ["twitter", "facebook", "linkedin", "tiktok", "instagram", "youtube"],  # 6
+    "ultimate":  ["twitter", "facebook", "linkedin", "tiktok", "instagram", "youtube", "medium", "reddit"],  # 8
+}
+_ALIAS = {
+    "x": "twitter", "tw": "twitter", "twitter.com": "twitter",
+    "fb": "facebook", "facebook.com": "facebook",
+    "li": "linkedin", "linkedin.com": "linkedin",
+}
 
-def refresh_demo_status():
-    """Refresh demo status after scraping"""
-    try:
-        if 'demo_status' in st.session_state:
-            del st.session_state['demo_status']
-        st.rerun()
-    except Exception as e:
-        print(f"Error refreshing demo status: {e}")
+def _norm_platforms(plats):
+    seen, out = set(), []
+    for p in (plats or []):
+        k = _ALIAS.get(p.lower(), p.lower())
+        if k not in seen:
+            seen.add(k); out.append(k)
+    return out
 
-def update_demo_consumption(leads_generated):
-    """Update demo consumption and refresh dashboard"""
-    try:
-        from postgres_credit_system import credit_system
-        
-        username = 'daveyd'
-        leads_count = len(leads_generated) if leads_generated else 0
-        
-        if leads_count > 0:
-            print(f"🔄 Updating demo consumption for {leads_count} leads")
-            
-            consumed = 0
-            for i in range(leads_count):
-                success = credit_system.consume_demo_lead(username)
-                if success:
-                    consumed += 1
-                else:
-                    break
-            
-            credit_system.save_data()
-            print(f"✅ Consumed {consumed} demo leads")
-            refresh_demo_status()
-            return consumed
-        
-        return 0
-    except Exception as e:
-        print(f"Error updating demo consumption: {e}")
-        return 0
+def enforce_platform_access(user_plan: str, requested: list[str]) -> tuple[list[str], list[str], list[str]]:
+    allowed = PLAN_PLATFORMS.get((user_plan or "").lower(), ["twitter"])
+    requested = _norm_platforms(requested)
+    accessible = [p for p in requested if p in allowed]
+    locked = [p for p in requested if p not in allowed]
 
-def reset_demo_for_testing():
-    """Reset demo for testing purposes"""
-    try:
-        from postgres_credit_system import credit_system
-        
-        user_info = credit_system.get_user_info('daveyd')
-        if user_info:
-            user_info['demo_leads_used'] = 0
-            credit_system.save_data()
-            
-            st.success("✅ Demo reset! 5 leads available again.")
-            st.rerun()
-        
-    except Exception as e:
-        st.error(f"Reset failed: {e}")
+    # Sensible defaults if nothing accessible was selected
+    if not accessible:
+        # for demo force twitter; for others pre-select a small, valid subset
+        accessible = allowed[:1] if user_plan == "demo" else allowed[: min(2, len(allowed))]
+    return accessible, locked, allowed
+# --- end helpers ---
 
-def display_demo_status():
-    """Display current demo status in sidebar"""
-    
-    demo_status = get_demo_status_with_refresh()
-    
-    st.sidebar.markdown("### 🎯 Demo Status")
-    
-    if demo_status['exhausted']:
-        st.sidebar.error("Demo Exhausted")
-        st.sidebar.info("Upgrade for unlimited access!")
-    else:
-        remaining = demo_status['remaining']
-        used = demo_status['used']
-        
-        progress = used / 5
-        st.sidebar.progress(progress)
-        
-        st.sidebar.info(f"**{remaining}** leads remaining")
-        st.sidebar.caption(f"Used {used}/5 demo leads")
-
-def launch_scraper_with_demo_check():
-    """Launch scraper with proper demo status checking"""
-    
-    demo_status = get_demo_status_with_refresh()
-    
-    if demo_status['exhausted']:
-        st.error("🎯 Demo Exhausted!")
-        st.warning("You've used all 5 demo leads. Upgrade to continue with unlimited scraping!")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.info("💎 Pro Plan: 2,000 leads/month")
-        with col2:
-            st.info("🚀 Ultimate Plan: Unlimited leads")
-        
-        if st.button("🔄 Reset Demo (For Testing)", help="Admin only - resets demo for testing"):
-            reset_demo_for_testing()
-        
-        return False
-    
-    st.info(f"🎯 Demo Status: {demo_status['remaining']} leads remaining")
-    
-    try:
-        st.success("🚀 Empire Launch Initiated...")
-        
-        result = subprocess.run(
-            ['python', 'run_daily_scraper_complete.py'],
-            capture_output=True,
-            text=True,
-            env=os.environ.copy()
-        )
-        
-        # ✅ WITH THIS IMPROVED DETECTION:
-        if result.returncode == 0:
-            st.success("✅ Scraping completed successfully!")
-            
-            # Check for actual results (more reliable than return code)
-            try:
-                # Look for recent CSV files 
-                import glob
-                recent_files = glob.glob("*twitter_leads*.csv")
-                
-                if recent_files:
-                    # Check if files have data
-                    latest_file = max(recent_files, key=os.path.getmtime)
-                    df = pd.read_csv(latest_file)
-                    
-                    if len(df) > 0:
-                        st.success(f"📊 SUCCESS: Generated {len(df)} quality leads!")
-                        scraper_actually_succeeded = True
-                    else:
-                        st.warning("⚠️ Scraper completed but no leads found")
-                        scraper_actually_succeeded = False
-                else:
-                    st.warning("⚠️ No output files found")
-                    scraper_actually_succeeded = False
-                    
-            except Exception as e:
-                st.warning(f"⚠️ Could not verify results: {e}")
-                scraper_actually_succeeded = False
-
-        else:
-            st.error("❌ Scraper encountered an issue")
-            scraper_actually_succeeded = False
-        
-    except Exception as e:
-        st.error(f"❌ Launch error: {e}")
-        return False   
-
-# Load user database from users.json
-def load_user_database():
-    try:
-        if os.path.exists("users.json"):
-            with open("users.json", "r") as f:
-                return json.load(f)
-    except Exception as e:
-        print(f"⚠️ Failed to load users.json: {e}")
-    return {}
-
-user_db = load_user_database()
-
-# Initialize user database into session
-if "user_db" not in st.session_state:
-    st.session_state.user_db = load_user_database()
-
-# Client Demo Override - Add at the very top
-try:
-    from client_demo_simulator import get_client_demo_status
-    
-    def get_demo_display():
-        status = get_client_demo_status()
-        return f"Demo Mode: {status['remaining']} real demo leads remaining (used {status['used']}/{status['total']})"
-    
-    print("✅ Using reliable client demo simulator")
-    
-except ImportError:
-    if not st.session_state.get("suppress_demo"):
-    # show demo fallback
-        def get_demo_display():
-            return "Demo Mode: 5 real demo leads remaining (used 0/5)"
-        print("⚠️ Fallback demo display")
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -4890,31 +4728,34 @@ with tab1:
                 'ultimate': ['twitter', 'facebook', 'linkedin', 'tiktok', 'instagram', 'youtube', 'medium', 'reddit']
             }
             
-            available_platforms = plan_access.get(user_plan, ['twitter'])
-            
-            # Filter selected platforms to only include available ones
-            accessible_selected = [p for p in selected_platforms if p.lower() in available_platforms]
-            
+            # Whatever the user toggled/selected earlier
+            selected_platforms = _norm_platforms(selected_platforms)
+
+            accessible_selected, locked_platforms, allowed = enforce_platform_access(user_plan, selected_platforms)
+
+            # Keep state consistent everywhere (scraper, stats, etc.)
+            st.session_state["selected_platforms"] = accessible_selected
+
             # Show platform selection status
             if accessible_selected:
-                platform_text = ", ".join(accessible_selected[:2])
+                label = ", ".join(p.title() for p in accessible_selected[:2])
                 if len(accessible_selected) > 2:
-                    platform_text += f" +{len(accessible_selected)-2} more"
-                
-                # Color code based on plan
-                if user_plan == 'ultimate':
-                    st.success(f"👑 **Selected:** {platform_text}")
-                elif user_plan == 'pro':
-                    st.info(f"💎 **Selected:** {platform_text}")
-                elif user_plan == 'starter':
-                    st.info(f"🎯 **Selected:** {platform_text}")
+                    label += f" +{len(accessible_selected) - 2} more"
+
+                if user_plan == "ultimate":
+                    st.success(f"👑 **Selected:** {label}")
+                elif user_plan == "pro":
+                    st.info(f"💎 **Selected:** {label}")
+                elif user_plan == "starter":
+                    st.info(f"🎯 **Selected:** {label}")
                 else:
-                    st.warning(f"📱 **Selected:** {platform_text}")
-                
-                # Show locked platforms if any were selected but not accessible
-                locked_platforms = [p for p in selected_platforms if p.lower() not in available_platforms]
+                    st.warning(f"📱 **Selected:** {label}  (Demo: Twitter only)")
+
                 if locked_platforms:
-                    st.warning(f"🔒 **Requires upgrade:** {', '.join(locked_platforms)}")
+                    st.warning("🔒 **Requires upgrade:** " + ", ".join(lp.title() for lp in locked_platforms))
+                    next_tier = {"demo": "starter", "starter": "pro", "pro": "ultimate"}.get(user_plan)
+                    if next_tier:
+                        st.caption(f"Upgrade to **{next_tier.title()}** to unlock: {', '.join(locked_platforms)}")
             else:
                 st.warning("⚠️ No accessible platforms selected")
 
@@ -5206,8 +5047,7 @@ with tab1:
                                             st.error(f"Reset failed: {e}")
                                     
                                     # Don't proceed with scraping for exhausted demo users
-                                    
-                                
+                                                                    
                                 else:
                                     # Demo available - proceed with demo scraping
                                     st.session_state.last_launch_time = current_time
@@ -5217,34 +5057,56 @@ with tab1:
                                     # Replace the subprocess section in your frontend_app.py with this
 
                                     try:
-                                        
-                                        
                                         # Setup environment with UTF-8 encoding
                                         scraper_env = os.environ.copy()
+                                        user_for_env = username if 'username' in locals() else st.session_state.get("username", "")
+
                                         scraper_env.update({
                                             'PYTHONIOENCODING': 'utf-8',
                                             'PYTHONUTF8': '1',
                                             'PYTHONLEGACYWINDOWSSTDIO': '0',
-                                            'SCRAPER_USERNAME': username,
+                                            'SCRAPER_USERNAME': user_for_env,
                                             'USER_PLAN': user_plan,
-                                            'FRONTEND_SEARCH_TERM': search_term if 'search_term' in locals() else 'crypto trader'
+                                            'FRONTEND_SEARCH_TERM': search_term if 'search_term' in locals() else 'crypto trader',
                                         })
 
-                                        # Also check if there are any other environment modifications
-                                        current_os_env = os.environ.get('SCRAPER_USERNAME', 'NOT_SET_IN_OS')
-                                        #st.code(f"Current OS environment SCRAPER_USERNAME: {current_os_env}")
-                                        
+                                        # --- pass platform selections from the UI ---
+                                        raw_selected = []
+                                        if 'accessible_selected' in locals() and accessible_selected:
+                                            raw_selected = accessible_selected
+                                        elif st.session_state.get('selected_platforms'):
+                                            raw_selected = st.session_state['selected_platforms']
+
+                                        _alias = {
+                                            "x": "twitter", "tw": "twitter", "twitter.com": "twitter",
+                                            "fb": "facebook", "facebook.com": "facebook",
+                                            "li": "linkedin", "linkedin.com": "linkedin",
+                                            "ig": "instagram", "instagram.com": "instagram",
+                                            "tt": "tiktok", "tiktok.com": "tiktok",
+                                            "yt": "youtube", "youtube.com": "youtube",
+                                            "medium.com": "medium",
+                                            "reddit.com": "reddit",
+                                        }
+                                        seen, selected_final = set(), []
+                                        for p in (raw_selected or []):
+                                            k = _alias.get(str(p).lower().strip(), str(p).lower().strip())
+                                            if k and k not in seen:
+                                                seen.add(k); selected_final.append(k)
+
+                                        scraper_env["SELECTED_PLATFORMS"] = ",".join(selected_final)
+                                        print("SELECTED_PLATFORMS ->", scraper_env["SELECTED_PLATFORMS"])
+
+                                        # Kick off the scraper
                                         result = subprocess.run(
-                                            [sys.executable, 'run_daily_scraper_complete.py'],  # Use sys.executable instead of 'python'
+                                            [sys.executable, 'run_daily_scraper_complete.py'],
                                             capture_output=True,
                                             text=True,
-                                            encoding='utf-8',  # Force UTF-8 encoding
-                                            errors='replace',  # Replace problematic characters
+                                            encoding='utf-8',
+                                            errors='replace',
                                             env=scraper_env,
-                                            cwd=os.getcwd(),  # Ensure correct working directory
-                                            timeout=300  # 5 minute timeout
-                                        )
-                                        
+                                            cwd=os.getcwd(),
+                                            timeout=300,
+                                        )                                        
                                 
                                         if result.returncode == 0:
                                             st.success("✅ Scraping completed successfully!")

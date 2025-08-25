@@ -812,67 +812,31 @@ def get_username_from_env():
     """Get username from environment variables"""
     return os.environ.get('SCRAPER_USERNAME', 'anonymous')
 
-def determine_platforms_to_run(user_plan: str) -> list[str]:
-    """
-    Decide which platforms to run based on an env var provided by the frontend
-    (SELECTED_PLATFORMS) and the user's plan limits.
-
-    Guarantees a non-empty return:
-      - demo  -> ['twitter']
-      - other -> first 1–2 allowed platforms if nothing valid was selected
-    """
-    import os
-
-    # Central source of truth for allowed platforms
-    allowed = [p.lower() for p in get_available_platforms_by_plan(user_plan or "demo")]
-
-    # Common aliases/users’ toggles
-    alias = {
-        "x": "twitter", "tw": "twitter", "twitter.com": "twitter",
-        "fb": "facebook", "facebook.com": "facebook",
-        "li": "linkedin", "linkedin.com": "linkedin",
-        "ig": "instagram", "instagram.com": "instagram",
-        "tt": "tiktok", "tiktok.com": "tiktok",
-        "yt": "youtube", "youtube.com": "youtube",
-        "medium.com": "medium",
-        "reddit.com": "reddit",
-    }
-
-    def canonize(items):
-        seen, out = set(), []
-        for raw in (items or []):
-            k = alias.get(raw.lower().strip(), raw.lower().strip())
-            if k and k not in seen:
-                seen.add(k); out.append(k)
-        return out
-
-    # Read frontend selection from env (comma separated)
-    raw = os.environ.get("SELECTED_PLATFORMS", "").strip()
-    requested = canonize([p for p in raw.split(",") if p.strip()]) if raw else []
-
-    # Intersect with plan allowance
-    final = [p for p in requested if p in allowed]
-
-    print(f"🎯 Frontend requested: {', '.join(requested) or '(none)'}")
-    print(f"✅ Plan allows: {', '.join(allowed) or '(none)'}")
-
-    # Safety nets so we never run with an empty set
-    plan_lc = (user_plan or "demo").lower()
-    if not final:
-        if plan_lc == "demo":
-            final = ["twitter"] if "twitter" in allowed else (allowed[:1] or [])
-            print("ℹ️  No valid selection for demo; forcing: "
-                  f"{', '.join(final) or '(none)'}")
-        else:
-            # give them a small, sensible subset to run
-            fallback_n = 2 if len(allowed) >= 2 else 1
-            final = allowed[:fallback_n]
-            print("ℹ️  No valid selection; falling back to: "
-                  f"{', '.join(final) or '(none)'}")
-
-    print(f"🚀 Will run: {', '.join(final) or '(none)'}")
-    return final
-
+def determine_platforms_to_run(user_plan):
+    """Determine which platforms to run based on frontend selections and user plan"""
+    
+    # Get available platforms for this plan from centralized config
+    available_platforms = get_available_platforms_by_plan(user_plan)
+    
+    # Get selected platforms from environment variable (passed by frontend)
+    selected_platforms_env = os.environ.get('SELECTED_PLATFORMS', '')
+    
+    if selected_platforms_env:
+        # Parse the selected platforms from frontend
+        requested_platforms = [p.strip().lower() for p in selected_platforms_env.split(',') if p.strip()]
+        
+        # Only run platforms that are both selected AND available for the user's plan
+        final_platforms = [p for p in requested_platforms if p in available_platforms]
+        
+        print(f"🎯 Frontend requested: {', '.join(requested_platforms)}")
+        print(f"✅ Plan allows: {', '.join(available_platforms)}")
+        print(f"🚀 Will run: {', '.join(final_platforms)}")
+        
+        return final_platforms
+    else:
+        # Fallback: run all available platforms if no selection provided
+        print(f"⚠️ No platform selection provided, running all available for {user_plan} plan")
+        return available_platforms
 
 def update_search_term_if_provided():
     """Update global search term if provided by frontend"""
