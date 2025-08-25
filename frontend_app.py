@@ -360,28 +360,6 @@ def do_logout():
 def get_current_user() -> str | None:
     return st.session_state.get("username") or getattr(simple_auth, "current_user", None)
 
-VALID_PLANS = {"demo", "starter", "pro", "ultimate"}
-
-def _normalize_store_plan(info):
-    p = (info or {}).get("plan") or (info or {}).get("subscribed_plan") or "demo"
-    if isinstance(p, (tuple, list)):
-        p = p[0] if p else "demo"
-    p = (str(p).strip().lower() or "demo")
-    return p if p in VALID_PLANS else "demo"
-
-# Initialize the session plan once per login
-if st.session_state.get("_plan_inited_for") != st.session_state.get("username"):
-    plan_from_store = _normalize_store_plan(info)
-    st.session_state["plan"] = plan_from_store
-    st.session_state["_plan_inited_for"] = st.session_state.get("username")
-
-    # keep simple_auth in sync (no-throw)
-    try:
-        if hasattr(simple_auth, "user_data") and isinstance(simple_auth.user_data, dict):
-            simple_auth.user_data["plan"] = plan_from_store
-    except Exception:
-        pass
-
 qp = st.query_params
 
 # 2) Credits / Subscription success (?payment_success=1)
@@ -771,6 +749,28 @@ print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
       f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
       f"'subscription_status': {user_info.get('subscription_status')}}}")
 # === end PLAN BOOTSTRAP ===
+
+VALID_PLANS = {"demo", "starter", "pro", "ultimate"}
+
+def _normalize_store_plan(info):
+    p = (info or {}).get("plan") or (info or {}).get("subscribed_plan") or "demo"
+    if isinstance(p, (tuple, list)):
+        p = p[0] if p else "demo"
+    p = (str(p).strip().lower() or "demo")
+    return p if p in VALID_PLANS else "demo"
+
+# Initialize the session plan once per login
+if st.session_state.get("_plan_inited_for") != st.session_state.get("username"):
+    plan_from_store = _normalize_store_plan(info)
+    st.session_state["plan"] = plan_from_store
+    st.session_state["_plan_inited_for"] = st.session_state.get("username")
+
+    # keep simple_auth in sync (no-throw)
+    try:
+        if hasattr(simple_auth, "user_data") and isinstance(simple_auth.user_data, dict):
+            simple_auth.user_data["plan"] = plan_from_store
+    except Exception:
+        pass
 
 # ---- Persistent CSV folder (Railway volume) ----
 import os
@@ -8562,7 +8562,6 @@ with tab6:  # Settings tab
                                 
                                 # Calculate total credits ever owned
                                 plan_starting_credits = {
-                                    #'demo': 5,
                                     'starter': 250,
                                     'pro': 2000,
                                     'ultimate': 9999
