@@ -1002,6 +1002,69 @@ def clean_old_csv_files(username):
 
     return cleaned_count
 
+import os, glob, pandas as pd
+from datetime import datetime
+import streamlit as st
+
+CSV_DIR = os.getenv("CSV_DIR", "/app/client_configs")
+
+@st.cache_data(show_spinner=False)
+def _dynamic_perf_signature(username: str):
+    """Return a cache-busting signature (files + mtimes + sizes)."""
+    pats = [
+        os.path.join(CSV_DIR, f"*{username}*leads*.csv"),
+        os.path.join(CSV_DIR, f"*leads*{username}*.csv"),
+        os.path.join(CSV_DIR, f"*{username}*.csv"),
+    ]
+    files = []
+    for p in pats:
+        files.extend(glob.glob(p))
+    # de-dupe and build signature
+    seen, uniq = set(), []
+    for f in files:
+        if f not in seen:
+            seen.add(f); uniq.append(f)
+    sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in uniq)
+    return sig
+
+@st.cache_data(show_spinner=False)
+def compute_sidebar_performance(username: str, total_leads: int, empire_stats: dict):
+    """Return leads/min, success rate, platforms_active, attempts."""
+    sig = _dynamic_perf_signature(username)
+    files = [f for f, _, _ in sig]
+
+    attempts = 0
+    successes = 0
+    mtimes = []
+
+    for f in files:
+        attempts += 1
+        try:
+            n = len(pd.read_csv(f))
+            if n > 0:
+                successes += 1
+                mtimes.append(os.path.getmtime(f))
+        except Exception:
+            # unreadable file -> still counts as an attempt
+            pass
+
+    # platforms with >0 leads
+    platforms_active = len([c for c in (empire_stats or {}).values() if c > 0])
+
+    # leads per minute across the time window of files that produced leads
+    if mtimes and total_leads > 0:
+        minutes = (max(mtimes) - min(mtimes)) / 60.0
+        minutes = max(minutes, 1.0)  # avoid div/0 + silly spikes
+        leads_per_min = round(total_leads / minutes, 1)
+    else:
+        leads_per_min = 0.0
+
+    # success = (#csvs with >0 rows) / (all csvs we attempted to write)
+    success_rate = f"{round((successes / max(attempts, 1)) * 100)}%"
+
+    return leads_per_min, success_rate, platforms_active, attempts
+
+
 # ==============================================================
 
 import streamlit as st
@@ -4193,7 +4256,7 @@ with st.sidebar:
 
             st.sidebar.header("🏆 Empire Statistics")
 
-            # 3) Render per‐platform metrics dynamically
+            # 3) Render per-platform metrics dynamically
             if empire_stats:
                 for platform_key, count in empire_stats.items():
                     label = DISPLAY_MAP.get(platform_key.lower(), platform_key.title())
@@ -4201,30 +4264,34 @@ with st.sidebar:
             else:
                 st.sidebar.info("💡 No leads found—run the scraper!")
 
-            # 4) Total Empire
+            # 4) Total Empire + dynamic performance
             if total_leads > 0:
                 st.sidebar.markdown("---")
                 st.sidebar.metric("🎯 Total Empire", total_leads)
 
-                # 5) Empire Value calculator
+                # value calculator
                 lead_value  = st.sidebar.slider("Value per lead ($)", 1, 100, 25, key="sidebar_value_slider")
                 total_value = total_leads * lead_value
                 st.sidebar.success(f"Empire Value: **${total_value:,}**")
 
-                # 6) Other performance metrics
+                # 🔥 dynamic performance
+                leads_per_min, success_rate, platforms_active, attempts = compute_sidebar_performance(
+                    current_username, total_leads, empire_stats
+                )
+
                 st.sidebar.subheader("⚡ Performance")
-                st.sidebar.metric("Leads/Minute", "21.3")        # you can make these dynamic too
-                st.sidebar.metric("Success Rate", "100%")
-                st.sidebar.metric("Platforms", f"{len([c for c in empire_stats.values() if c>0])}/8")
+                st.sidebar.metric("Leads/Minute", leads_per_min)
+                st.sidebar.metric("Success Rate", success_rate)
+                st.sidebar.metric("Platforms", f"{platforms_active}/8")
 
             else:
-                # Fallback UI when no leads yet
                 st.sidebar.info("💡 Run the empire scraper to generate your stats")
                 if st.sidebar.button("🚀 Start Conquest", key="sidebar_conquest"):
                     st.query_params(tab="scraper")
                     st.rerun()
-                  
-    st.markdown("---")
+
+            st.markdown("---")
+
     st.caption(" Lead Generator Empire")
     st.caption(f"Powered by 8 platforms")
 
@@ -6108,7 +6175,11 @@ with tab2: # Lead Results
             # ✅ ADD USER VERIFICATION MESSAGE
             st.markdown(f"### 👤 {username}'s Empire Intelligence")
 
-            if total_leads > 0:
+            # right before the banner
+            csv_files = get_user_csv_files(current_username)
+            csv_total_leads = sum(max(0, f.get("leads", 0)) for f in csv_files)
+
+            if csv_total_leads > 0:
                 st.success(f"✅ Found {total_leads} leads belonging to you")
             else:
                 st.warning(f"📡 No leads found for {username} yet")
@@ -6220,10 +6291,10 @@ with tab2: # Lead Results
                     # Summary metrics
                     total_files = len(user_csv_files)
                     import os
-                    total_size_mb = sum(
-                        f.get("size_mb", os.path.getsize(f["file"]) / (1024 * 1024))
-                        for f in user_csv_files
-                    )
+                    total_size_mb = round(sum(
+                        row.get("size_mb", os.path.getsize(row.get("file",""))/(1024*1024))
+                        for row in csv_files if row.get("file") and os.path.exists(row["file"])
+                    ), 2)
                     newest_date = user_csv_files[0]['date']
 
                     col1, col2, col3 = st.columns(3)
@@ -6261,23 +6332,27 @@ with tab2: # Lead Results
 
                         with c5:
                             # Direct download
-                            try:
-                                file_path = f.get("file") or f.get("path")
-                                if not file_path or not os.path.exists(file_path):
-                                    st.error("Download failed: missing file")
-                                    continue
-                                file_name = f.get("name") or os.path.basename(file_path)
-                                with open(file_path, "rb") as fh:
-                                    st.download_button(
-                                        "⬇️",
-                                        data=fh.read(),
-                                        file_name=file_name,
-                                        mime="text/csv",
-                                        key=f"lead_results_download_{file['name']}",
-                                        help=f"Download {file['name']}"
-                                    )
-                            except Exception as e:
-                                st.error(f"Download failed: {e}")
+                            for i, row in enumerate(user_csv_files):
+                                try:
+                                    file_path = row.get("file") or row.get("path")
+                                    if not file_path or not os.path.exists(file_path):
+                                        st.error("Download failed: missing file")
+                                        continue
+
+                                    file_name = row.get("name") or os.path.basename(file_path)
+
+                                    with open(file_path, "rb") as fh:
+                                        st.download_button(
+                                            label="⬇️",
+                                            data=fh.read(),
+                                            file_name=file_name,
+                                            mime="text/csv",
+                                            key=f"lead_results_download_{i}",   # stable unique key
+                                            help=f"Download {file_name}",
+                                        )
+                                except Exception as e:
+                                    st.error(f"Download failed: {e}")
+
 
                 else:
                     st.info("📁 No CSV files found. Run scrapers to generate lead files.")
