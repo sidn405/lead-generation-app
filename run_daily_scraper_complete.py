@@ -812,21 +812,29 @@ def get_username_from_env():
     """Get username from environment variables"""
     return os.environ.get('SCRAPER_USERNAME', 'anonymous')
 
-def determine_platforms_to_run(user_plan: str) -> list[str]:
+def determine_platforms_to_run(user_plan) -> list[str]:
     """
-    Decide which platforms to run based on an env var provided by the frontend
-    (SELECTED_PLATFORMS) and the user's plan limits.
-
-    Guarantees a non-empty return:
-      - demo  -> ['twitter']
-      - other -> first 1–2 allowed platforms if nothing valid was selected
+    Decide which platforms to run based on SELECTED_PLATFORMS (env)
+    and the user's plan. Accepts str or accidental (plan, status) tuple.
+    Guarantees a non-empty return.
     """
     import os
 
-    # Central source of truth for allowed platforms
-    allowed = [p.lower() for p in get_available_platforms_by_plan(user_plan or "demo")]
+    # --- normalize plan to a clean lowercase string ---
+    if isinstance(user_plan, (tuple, list)):
+        user_plan = user_plan[0] if user_plan else "demo"
+    if not isinstance(user_plan, str):
+        user_plan = str(user_plan or "demo")
+    plan_lc = user_plan.lower().strip()
 
-    # Common aliases/users’ toggles
+    # Allowed platforms for this plan
+    try:
+        allowed = [p.lower() for p in get_available_platforms_by_plan(plan_lc)]
+    except Exception as e:
+        print(f"[determine_platforms_to_run] get_available_platforms_by_plan failed: {e}")
+        allowed = []
+
+    # Canonicalize requested platforms from env
     alias = {
         "x": "twitter", "tw": "twitter", "twitter.com": "twitter",
         "fb": "facebook", "facebook.com": "facebook",
@@ -834,44 +842,35 @@ def determine_platforms_to_run(user_plan: str) -> list[str]:
         "ig": "instagram", "instagram.com": "instagram",
         "tt": "tiktok", "tiktok.com": "tiktok",
         "yt": "youtube", "youtube.com": "youtube",
-        "medium.com": "medium",
-        "reddit.com": "reddit",
+        "medium.com": "medium", "reddit.com": "reddit",
     }
-
     def canonize(items):
         seen, out = set(), []
         for raw in (items or []):
-            k = alias.get(raw.lower().strip(), raw.lower().strip())
+            k = alias.get(str(raw).lower().strip(), str(raw).lower().strip())
             if k and k not in seen:
                 seen.add(k); out.append(k)
         return out
 
-    # Read frontend selection from env (comma separated)
     raw = os.environ.get("SELECTED_PLATFORMS", "").strip()
     requested = canonize([p for p in raw.split(",") if p.strip()]) if raw else []
-
-    # Intersect with plan allowance
     final = [p for p in requested if p in allowed]
 
     print(f"🎯 Frontend requested: {', '.join(requested) or '(none)'}")
     print(f"✅ Plan allows: {', '.join(allowed) or '(none)'}")
 
     # Safety nets so we never run with an empty set
-    plan_lc = (user_plan or "demo").lower()
     if not final:
         if plan_lc == "demo":
-            final = ["twitter"] if "twitter" in allowed else (allowed[:1] or [])
-            print("ℹ️  No valid selection for demo; forcing: "
-                  f"{', '.join(final) or '(none)'}")
+            final = ["twitter"] if "twitter" in allowed else (allowed[:1] or ["twitter"])
+            print(f"ℹ️  No valid selection for demo; forcing: {', '.join(final)}")
         else:
-            # give them a small, sensible subset to run
-            fallback_n = 2 if len(allowed) >= 2 else 1
-            final = allowed[:fallback_n]
-            print("ℹ️  No valid selection; falling back to: "
-                  f"{', '.join(final) or '(none)'}")
+            final = allowed[:2] or ["twitter"]
+            print(f"ℹ️  No valid selection; falling back to: {', '.join(final)}")
 
-    print(f"🚀 Will run: {', '.join(final) or '(none)'}")
+    print(f"🚀 Will run: {', '.join(final)} (plan={plan_lc})")
     return final
+
 
 
 def update_search_term_if_provided():
