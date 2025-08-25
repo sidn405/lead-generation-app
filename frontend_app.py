@@ -173,6 +173,14 @@ import os
 CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
 CSV_DIR.mkdir(parents=True, exist_ok=True)
 
+def get_latest_csv(pattern: str):
+    files = sorted(
+        CSV_DIR.glob(pattern),                     # yields Path objects
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
+    return str(files[0]) if files else None
+
 # Where we keep the per-user cached json (same volume so it survives deploys)
 EMPIRE_CACHE_DIR = CSV_DIR
 APP_BASE_URL = (
@@ -1029,41 +1037,38 @@ def _dynamic_perf_signature(username: str):
 
 @st.cache_data(show_spinner=False)
 def compute_sidebar_performance(username: str, total_leads: int, empire_stats: dict):
-    """Return leads/min, success rate, platforms_active, attempts."""
-    sig = _dynamic_perf_signature(username)
-    files = [f for f, _, _ in sig]
+    # signature: filenames + mtime + size so it updates when new files land
+    import glob, os
+    pats = [f"*{username}*leads*.csv", f"*leads*{username}*.csv", f"*{username}*.csv"]
+    files = []
+    for p in pats:
+        files += [str(pth) for pth in CSV_DIR.glob(p)]
+    sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in dict.fromkeys(files))
 
-    attempts = 0
-    successes = 0
-    mtimes = []
-
-    for f in files:
-        attempts += 1
+    successes, mtimes = 0, []
+    for f, m, _ in sig:
         try:
+            import pandas as pd
             n = len(pd.read_csv(f))
             if n > 0:
                 successes += 1
-                mtimes.append(os.path.getmtime(f))
+                mtimes.append(m)
         except Exception:
-            # unreadable file -> still counts as an attempt
             pass
 
-    # platforms with >0 leads
+    minutes = (max(mtimes) - min(mtimes))/60 if len(mtimes) >= 2 else 1
+    lpm = round(total_leads / max(minutes, 1), 1) if total_leads else 0.0
+    success = f"{round((successes / max(len(sig), 1))*100)}%"
     platforms_active = len([c for c in (empire_stats or {}).values() if c > 0])
+    return lpm, success, platforms_active
 
-    # leads per minute across the time window of files that produced leads
-    if mtimes and total_leads > 0:
-        minutes = (max(mtimes) - min(mtimes)) / 60.0
-        minutes = max(minutes, 1.0)  # avoid div/0 + silly spikes
-        leads_per_min = round(total_leads / minutes, 1)
-    else:
-        leads_per_min = 0.0
-
-    # success = (#csvs with >0 rows) / (all csvs we attempted to write)
-    success_rate = f"{round((successes / max(attempts, 1)) * 100)}%"
-
-    return leads_per_min, success_rate, platforms_active, attempts
-
+lpm, success_rate, platforms_active = compute_sidebar_performance(
+    current_username, total_leads, empire_stats
+)
+st.sidebar.subheader("⚡ Performance")
+st.sidebar.metric("Leads/Minute", lpm)
+st.sidebar.metric("Success Rate", success_rate)
+st.sidebar.metric("Platforms", f"{platforms_active}/8")
 
 # ==============================================================
 
@@ -6175,14 +6180,24 @@ with tab2: # Lead Results
             # ✅ ADD USER VERIFICATION MESSAGE
             st.markdown(f"### 👤 {username}'s Empire Intelligence")
 
-            # right before the banner
-            csv_files = get_user_csv_files(current_username)
-            csv_total_leads = sum(max(0, f.get("leads", 0)) for f in csv_files)
+            # Build the file list once
+            files_all = get_user_csv_files(current_username)
+            files_to_show = [f for f in files_all if f.get("leads", 0) > 0]  # hide 0-lead CSVs
 
+            csv_total_leads = sum(f.get("leads", 0) for f in files_to_show)
             if csv_total_leads > 0:
-                st.success(f"✅ Found {total_leads} leads belonging to you")
+                st.success(f"✅ Found {csv_total_leads} leads belonging to you")
             else:
-                st.warning(f"📡 No leads found for {username} yet")
+                st.warning(f"📡 No leads found for {current_username} yet")
+
+            # Total size (robust to old cached rows without size_mb)
+            import os
+            total_size_mb = round(sum(
+                f.get("size_mb", os.path.getsize(f.get("file",""))/(1024*1024))
+                for f in files_to_show
+                if f.get("file") and os.path.exists(f["file"])
+            ), 2)
+            st.metric("🧾 Total Size", f"{total_size_mb:.1f} MB")
             
             # Empire command center
             col1, col2, col3 = st.columns([1, 1, 1])
@@ -6293,7 +6308,7 @@ with tab2: # Lead Results
                     import os
                     total_size_mb = round(sum(
                         row.get("size_mb", os.path.getsize(row.get("file",""))/(1024*1024))
-                        for row in csv_files if row.get("file") and os.path.exists(row["file"])
+                        for row in user_csv_files if row.get("file") and os.path.exists(row["file"])
                     ), 2)
                     newest_date = user_csv_files[0]['date']
 
@@ -6306,52 +6321,64 @@ with tab2: # Lead Results
                         st.metric("🕒 Newest File", newest_date)
 
                     st.markdown("---")
+                    import os, hashlib
+
                     st.markdown("#### 📋 Available Files")
 
-                    # List files
-                    for file in user_csv_files:
+                    # Show only non-empty CSVs
+                    files_to_show = [f for f in user_csv_files if f.get("leads", 0) > 0]
+
+                    for row in files_to_show:
                         c1, c2, c3, c4, c5 = st.columns([3, 1, 1, 1, 1])
 
-                        with c1:
-                            # get_platform_emoji and extract_* are assumed to be defined at module-level
-                            emoji = get_platform_emoji(file.get('platform', 'unknown'))
-                            import os
-                            file_name = file.get("name") or os.path.basename(file.get("file", ""))
-                            st.write(f"{emoji} **{file_name}**")
+                        file_path = row.get("file") or row.get("path") or ""
+                        file_name = row.get("name") or os.path.basename(file_path)
+                        leads     = int(row.get("leads", 0))
+                        size_mb   = row.get("size_mb")
+                        if size_mb is None:
+                            try:
+                                size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                            except Exception:
+                                size_mb = 0.0
+                        date_str  = row.get("date", "")
+                        emoji     = get_platform_emoji(row.get("platform", "unknown"))
 
-                            st.caption(f"🔍 Search: {file.get('search_term', 'Unknown')}")
+                        with c1:
+                            st.write(f"{emoji} **{file_name}**")
+                            st.caption(f"🔍 Search: {row.get('search_term', 'Unknown')}")
 
                         with c2:
-                            st.write(f"**{file['leads']}** leads")
+                            st.write(f"**{leads}** leads")
 
                         with c3:
-                            st.write(f"**{file['size_mb']:.1f}** MB")
+                            st.write(f"**{size_mb:.1f}** MB")
 
                         with c4:
-                            st.write(f"**{file['date']}**")
+                            st.write(f"**{date_str}**")
 
                         with c5:
-                            # Direct download
-                            for i, row in enumerate(user_csv_files):
-                                try:
-                                    file_path = row.get("file") or row.get("path")
-                                    if not file_path or not os.path.exists(file_path):
-                                        st.error("Download failed: missing file")
-                                        continue
-
-                                    file_name = row.get("name") or os.path.basename(file_path)
-
+                            try:
+                                if not file_path or not os.path.exists(file_path):
+                                    st.error("Download failed: missing file")
+                                else:
+                                    # unique + stable key for this row/button
+                                    uniq = hashlib.md5(file_path.encode()).hexdigest()[:8]
                                     with open(file_path, "rb") as fh:
                                         st.download_button(
                                             label="⬇️",
                                             data=fh.read(),
                                             file_name=file_name,
                                             mime="text/csv",
-                                            key=f"lead_results_download_{i}",   # stable unique key
+                                            key=f"dl_{uniq}",
                                             help=f"Download {file_name}",
                                         )
-                                except Exception as e:
-                                    st.error(f"Download failed: {e}")
+                            except Exception as e:
+                                st.error(f"Download failed: {e}")
+
+                    # If nothing to show:
+                    if not files_to_show:
+                        st.info("📁 No CSV files found. Run scrapers to generate lead files.")
+
 
 
                 else:

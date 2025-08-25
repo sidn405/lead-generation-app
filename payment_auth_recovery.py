@@ -426,9 +426,8 @@ def show_payment_success_message() -> bool:
             st.markdown("""
             1. **📂 Instant Access**: Your lead package is immediately available for download
             2. **💾 Go to Downloads**: Click "My Downloads" in the sidebar to access your files  
-            3. **📊 Multiple Formats**: Available as CSV, Excel, and JSON formats
-            4. **🔄 Re-download Anytime**: Access your purchased leads whenever needed
-            5. **📧 Email Backup**: Download link also sent to your registered email
+            3. **🔄 Re-download Anytime**: Access your purchased leads whenever needed
+            4. **📧 Email Backup**: Download link also sent to your registered email
             """)
             
             if st.button("🏠 Back to Dashboard", type="primary"):
