@@ -16,6 +16,7 @@ class ParallelScraperRunner:
         self.max_scrolls = max_scrolls
         self.results = {}
         self.start_time = None
+        self.total_duration_sec = 0
         
     def setup_environment(self):
         """Setup environment variables for all scrapers"""
@@ -450,12 +451,15 @@ class ParallelScraperRunner:
         
         total_leads = sum(r['leads'] for r in self.results.values())
         
-        # --- DEMO CREDIT CONSUMPTION (so UI shows used 5/5) ---
-        if total_leads > 0 and self.user_plan == 'demo':
+        # --- DEMO CREDIT CONSUMPTION + count for stats ---
+        consumed = 0
+        if self.user_plan == "demo" and total_leads > 0:
             try:
                 from postgres_credit_system import credit_system
-                consumed = 0
-                for _ in range(total_leads):
+                # consume up to remaining demo credits
+                remaining = credit_system.get_demo_leads_remaining(self.username)
+                to_consume = min(total_leads, remaining)
+                for _ in range(to_consume):
                     if credit_system.consume_demo_lead(self.username):
                         consumed += 1
                     else:
@@ -464,80 +468,103 @@ class ParallelScraperRunner:
                     credit_system.save_data()
                 except Exception:
                     pass
-                print(f"📱 Demo consumption: used {consumed} of {total_leads} generated")
+                print(f"📱 Demo consumption: used {consumed}/{total_leads}")
             except Exception as e:
                 print(f"❌ Demo credit error: {e}")
+
+        count_for_stats = consumed if self.user_plan == "demo" else total_leads
+
                 
-        # --- build a stats delta from this run ---
+    def finalize_session(self):
         from datetime import datetime
         from pathlib import Path
-        import json, os
+        import json
 
+        # total leads produced by all platform scrapers
+        total_leads = sum(r.get("leads", 0) for r in (self.results or {}).values())
         now_iso = datetime.utcnow().isoformat()
+
+        # --- DEMO CREDIT CONSUMPTION ---
+        consumed = 0
+        plan_lc = (self.user_plan or "demo").lower()
+        if plan_lc == "demo" and total_leads > 0:
+            try:
+                from postgres_credit_system import credit_system
+                remaining = credit_system.get_demo_leads_remaining(self.username)
+                to_consume = min(total_leads, int(remaining or 0))
+                for _ in range(to_consume):
+                    if credit_system.consume_demo_lead(self.username):
+                        consumed += 1
+                    else:
+                        break
+                try:
+                    credit_system.save_data()
+                except Exception:
+                    pass
+                print(f"📱 Demo consumption: used {consumed}/{total_leads}")
+            except Exception as e:
+                print(f"❌ Demo credit error: {e}")
+
+        # how many leads we will COUNT in stats
+        counted = consumed if plan_lc == "demo" else total_leads
+
+        # per-platform counts from this run
         platform_counts = {p: r.get("leads", 0) for p, r in (self.results or {}).items()}
 
-        run_summary = {
+        # ---- define run_summary (the thing that was missing) ----
+        self.session_summary = run_summary = {
             "timestamp": now_iso,
-            "plan": self.user_plan,
+            "plan": plan_lc,
             "search_term": self.search_term,
             "platforms_run": list(platform_counts.keys()),
             "platform_counts": platform_counts,
             "total_leads": int(total_leads),
-            "duration_sec": int(self.total_duration_sec or 0),
+            "counted_leads": int(counted),
+            "duration_sec": int(getattr(self, "total_duration_sec", 0)),
             "success_count": sum(1 for r in (self.results or {}).values() if r.get("leads", 0) > 0),
             "attempted_count": len(self.results or {}),
         }
+        # ---------------------------------------------------------
 
-        def _default_stats():
-            return {
-                "totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
-                "platforms": {},          # e.g., "twitter": {"leads": 0, "last_run": "..."}
-                "last_session": {},       # copy of run_summary
-            }
-
-        # --- merge into user record via credit_system ---
+        # --- merge into persistent stats + write file cache ---
         try:
             from postgres_credit_system import credit_system
             info = credit_system.get_user_info(self.username) or {}
-            stats = info.get("stats") or _default_stats()
+
+            stats = (info.get("stats") or
+                    {"totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
+                    "platforms": {}, "last_session": {}})
 
             # totals
-            stats["totals"]["leads"]     = int(stats["totals"].get("leads", 0)) + int(total_leads)
+            stats["totals"]["leads"] = int(stats["totals"].get("leads", 0)) + int(counted)
             stats["totals"]["campaigns"] = int(stats["totals"].get("campaigns", 0)) + 1
 
-            # if you debit credits elsewhere, keep this as a display-only mirror
-            stats["totals"]["credits_used"] = int(stats["totals"].get("credits_used", 0))
-
-            # per-platform
-            platforms_node = stats.setdefault("platforms", {})
+            # attribute counted leads across platforms (in order)
+            remaining = counted
             for p, c in platform_counts.items():
-                node = platforms_node.setdefault(p, {"leads": 0, "last_run": None})
-                node["leads"] = int(node.get("leads", 0)) + int(c)
+                if remaining <= 0:
+                    break
+                take = min(int(c), int(remaining))
+                node = stats["platforms"].setdefault(p, {"leads": 0, "last_run": None})
+                node["leads"] = int(node["leads"]) + take
                 node["last_run"] = now_iso
+                remaining -= take
 
-            # last session snapshot
             stats["last_session"] = run_summary
-
             info["stats"] = stats
             credit_system.save_user_info(self.username, info)
 
-            # file fallback (handy for Lead Results / refresh w/o DB hit)
-            try:
-                out = Path(f"client_configs/{self.username}_stats.json")
-                out.parent.mkdir(parents=True, exist_ok=True)
-                out.write_text(json.dumps(stats, ensure_ascii=False, indent=2))
-            except Exception as e:
-                print(f"[stats file] write failed: {e}")
-
-            print(f"[stats] updated for {self.username}: leads+={total_leads}, campaigns+1")
+            # file cache (frontend fallback)
+            Path("client_configs").mkdir(parents=True, exist_ok=True)
+            Path(f"client_configs/{self.username}_stats.json").write_text(
+                json.dumps(stats, ensure_ascii=False, indent=2)
+            )
+            print(f"[stats] updated for {self.username}: +{counted} leads, +1 campaign")
         except Exception as e:
             print(f"[stats] update failed: {e}")
 
-
-
-            return self.results
-    
-    
+        finally:
+            self.total_duration_sec = time.time() - 10 
     
     def test_method(self):  # ← Same indentation as other methods
         """Test method to verify class structure"""

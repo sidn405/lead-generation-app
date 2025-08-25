@@ -344,6 +344,7 @@ def refresh_subscription_status(username: str, current_plan: str):
     except Exception as e:
         print(f"[billing] freshness check skipped: {e}")
 
+
     
 def do_logout():
     for k in ["authenticated", "username", "user_data", "plan",
@@ -473,8 +474,8 @@ def resolve_effective_plan(user_info: dict) -> tuple[str, dict]:
 
     # Demo detection (explicit “demo” plan OR flagged by your DB)
     if base_plan == "demo" or sub_plan == "demo":
-        used = int(ui.get("demo_leads_used", 0) or 0)
-        remaining = max(0, DEMO_LIMIT - used)
+        used = st.session_state.get("demo_used", 0)
+        remaining = st.session_state.get("demo_remaining", DEMO_CAP)
         return "demo", {
             "demo_remaining": remaining,
             "credits": 0,
@@ -510,6 +511,42 @@ def resolve_effective_plan(user_info: dict) -> tuple[str, dict]:
         "monthly_credits": 0,
         "subscription_status": "demo"
     }
+DEMO_CAP = 5
+
+def load_empire_stats(username: str):
+    """user->stats from DB, else file fallback."""
+    try:
+        from postgres_credit_system import credit_system
+        info = credit_system.get_user_info(username) or {}
+        st.session_state["user_data"] = info
+        stats = info.get("stats")
+        if stats:
+            return stats
+    except Exception:
+        pass
+    # file cache
+    import os, json
+    path = f"client_configs/{username}_stats.json"
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
+            "platforms": {}, "last_session": {}}
+
+def refresh_demo_status(username: str):
+    """Update demo remaining/used in session from DB."""
+    remaining = DEMO_CAP
+    try:
+        from postgres_credit_system import credit_system
+        info = credit_system.get_user_info(username) or {}
+        remaining = int(info.get("demo_leads_remaining", DEMO_CAP))
+    except Exception:
+        pass
+    st.session_state["demo_remaining"] = remaining
+    st.session_state["demo_used"] = DEMO_CAP - remaining
 
 # 1) Absolute dm_library folder next to this script
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
@@ -667,37 +704,16 @@ def enforce_platform_access(user_plan: str, requested: list[str]) -> tuple[list[
     return accessible, locked, allowed
 # --- end helpers ---
 
-# === STATS LOADER (add near top-level utils) ===
-def load_empire_stats(username: str):
-    """Try user record first; fall back to cached JSON; else defaults."""
-    def _default():
-        return {"totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
-                "platforms": {}, "last_session": {}}
-
-    stats = None
-    try:
-        from postgres_credit_system import credit_system
-        info = credit_system.get_user_info(username) or {}
-        stats = info.get("stats")
-    except Exception:
-        pass
-
-    if not stats:
-        import json, os
-        path = f"client_configs/{username}_stats.json"
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    stats = json.load(f)
-            except Exception:
-                stats = None
-
-    return stats or _default()
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'current_user' not in st.session_state:
     st.session_state.current_user = None
+
+username = st.session_state.get("username") or "anonymous"
+st.session_state["stats"] = load_empire_stats(username)
+refresh_demo_status(username)
+
 
 def try_save_user_to_database(username, user_data):
     try:
@@ -1694,6 +1710,9 @@ def show_auth_required_dashboard():
 # Simple Credit System - No complex auth needed
 AUTH_AVAILABLE = True  # Always available with simple system
 USAGE_TRACKING_AVAILABLE = False  # Not needed with credit system
+
+
+
 
 # 🌍 NEW: Import multilingual capabilities
 try:
@@ -5350,7 +5369,8 @@ with tab1:
                                         else:
                                             st.success("✅ Scraping completed successfully!")
                                             # refresh stats from backend/file so UI updates immediately
-                                            st.session_state["stats"] = load_empire_stats(st.session_state.get("username") or "anonymous")
+                                            st.session_state["stats"] = load_empire_stats(username)
+                                            refresh_demo_status(username)
 
                                         # --- READ SUMMARY + SHOW TOP-5 DEMO LEADS ---
                                         import os, json, glob, csv
