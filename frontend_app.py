@@ -4273,7 +4273,7 @@ with st.sidebar:
                 lead_value  = st.sidebar.slider("Value per lead ($)", 1, 100, 25, key="sidebar_value_slider")
                 total_value = total_leads * lead_value
                 st.sidebar.success(f"Empire Value: **${total_value:,}**")
-
+                current_username = st.session_state.get('username')
                 # 🔥 dynamic performance
                 leads_per_min, success_rate, platforms_active, attempts = compute_sidebar_performance(
                     current_username, total_leads, empire_stats
