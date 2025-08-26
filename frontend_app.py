@@ -215,20 +215,22 @@ try:
 except Exception:
     pass
 
-
-
 # 0.5) QUICK rehydrate from username in querystring (works even on cancel)
 def _quick_rehydrate_from_qs():
+    # Already logged in? bail.
     if st.session_state.get("authenticated"):
         return False
-    
+
+    # Respect one-shot suppression after logout
     if st.session_state.get("suppress_auto_restore"):
-        return False  # or just: return
-    
+        print("⛔ quick rehydrate suppressed (logout)")
+        return False
+
     qp = st.query_params
     username = qp.get("username") or qp.get("user") or qp.get("u")
     if not username:
         return False
+
     try:
         info = credit_system.get_user_info(username)
         if info:
@@ -242,12 +244,10 @@ def _quick_rehydrate_from_qs():
                 credits=info.get("credits", 0),
                 login_time=datetime.now().isoformat(),
             )
-            
-            # Only set plan if it isn't already set; default to demo, not starter
+            # plan: only set if empty; default demo
             plan_from_store = (info or {}).get("plan") or "demo"
             if st.session_state.get("plan") in (None, ""):
                 st.session_state["plan"] = plan_from_store
-                
             print(f"✅ QUICK REHYDRATE via credit_system: {username}")
             return True
     except Exception as e:
@@ -271,24 +271,32 @@ def _quick_rehydrate_from_qs():
                 plan_from_store = (ud or {}).get("plan") or "demo"
                 if st.session_state.get("plan") in (None, ""):
                     st.session_state["plan"] = plan_from_store
-
                 print(f"✅ QUICK REHYDRATE via users.json: {username}")
                 return True
     except Exception as e:
         print(f"⚠️ quick rehydrate (users.json) failed: {e}")
+
     return False
 
-current_username = (
-    st.session_state.get("username") or getattr(simple_auth, "current_user", None)
-)
 
-# run early in frontend_app.py, after imports / preflight, before UI
 def soft_rehydrate_from_simple_auth():
+    # Don’t rehydrate if already authed or login form is up
     if st.session_state.get("show_login") or st.session_state.get("authenticated"):
         return
+
+    # Respect one-shot suppression after logout
+    if st.session_state.get("suppress_auto_restore"):
+        print("⛔ soft rehydrate suppressed (logout)")
+        return
+
+    # Prevent multiple soft rehydrates on the same run
+    if st.session_state.get("_soft_rehydrated"):
+        return
+
     u = getattr(simple_auth, "current_user", None)
     if not u:
         return
+
     try:
         info = credit_system.get_user_info(u)
         if info:
@@ -302,10 +310,12 @@ def soft_rehydrate_from_simple_auth():
             plan_from_store = (info or {}).get("plan") or "demo"
             if st.session_state.get("plan") in (None, ""):
                 st.session_state["plan"] = plan_from_store
-                
+
+            st.session_state["_soft_rehydrated"] = True
             print(f"✅ Soft rehydrate for {u}")
     except Exception as e:
         print(f"soft rehydrate failed: {e}")
+
 
 soft_rehydrate_from_simple_auth()
 
@@ -346,17 +356,34 @@ def refresh_subscription_status(username: str, current_plan: str):
 
 
     
-def do_logout():
-    for k in ["authenticated", "username", "user_data", "plan",
-              "subscription_status", "subscription_active", "credits"]:
-        st.session_state.pop(k, None)
+def hard_logout():
     try:
         simple_auth.current_user = None
         simple_auth.user_data = {}
     except Exception:
         pass
-    st.rerun()
 
+    # nuke session auth + common caches
+    for k in (
+        "authenticated","username","user_data","credits",
+        "plan","plan_source","subscription_status","subscription_active",
+        "login_time","_soft_rehydrated",
+        "generated_leads","generated_dms","dm_messages","dm_results",
+        "custom_dm_message","dm_tone","dm_style",
+        "last_dm_user","last_dm_plan","demo_leads_cache",
+    ):
+        st.session_state.pop(k, None)
+
+    # one-shot suppression so next render won’t auto-restore
+    st.session_state["suppress_auto_restore"] = True
+
+    # clear URL params like ?username=jane
+    try:
+        st.query_params.clear()
+    except Exception:
+        st.experimental_set_query_params()
+
+    st.rerun()
     
 def get_current_user() -> str | None:
     return st.session_state.get("username") or getattr(simple_auth, "current_user", None)
@@ -4280,7 +4307,7 @@ with col2:
             # Logout button on far right
             st.markdown("<div style='text-align: right;'></div>", unsafe_allow_html=True)  # Add spacing
             if st.button("🔒 Logout", help="Sign out of your account", key="header_logout"):
-                
+                hard_logout()
                 # Clear all session state on logout
                 for key in ['authenticated', 'username', 'user_data', 'login_time', 'show_login', 'show_register', 'credits']:
                     if key in st.session_state:
@@ -4486,11 +4513,7 @@ with st.sidebar:
                 st.sidebar.metric("Success Rate", success_rate)
                 st.sidebar.metric("Platforms", f"{platforms_active}/8")
 
-            else:
-                st.sidebar.info("💡 Run the empire scraper to generate your stats")
-                if st.sidebar.button("🚀 Start Conquest", key="sidebar_conquest"):
-                    st.query_params(tab="scraper")
-                    st.rerun()
+            
 
             st.markdown("---")
 
@@ -9717,7 +9740,7 @@ with tab6:  # Settings tab
             
             with action_col3:
                 if st.button("🔒 Logout", use_container_width=True):
-                    simple_auth.logout_user()
+                    hard_logout()
                     st.success("✅ Successfully logged out")
                     st.rerun()
                 
