@@ -354,6 +354,9 @@ def refresh_subscription_status(username: str, current_plan: str):
     except Exception as e:
         print(f"[billing] freshness check skipped: {e}")
 
+username = st.session_state.get("username") or "anonymous"
+ensure_stats_in_store(username)
+
 
     
 def hard_logout():
@@ -1565,6 +1568,55 @@ print(f"[PLAN] normalized -> {plan_fixed} (source={source}) "
       f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
       f"'subscription_status': {user_info.get('subscription_status')}}}")
 # --- end normalizer ---
+# ---- Stats defaults & helpers ----
+def _default_stats():
+    return {
+        "totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
+        "platforms": {},
+        "last_session": {},
+    }
+
+def load_empire_stats(username: str):
+    """Get stats from DB or cached file; always return a complete shape."""
+    stats = None
+    try:
+        from postgres_credit_system import credit_system
+        info = credit_system.get_user_info(username) or {}
+        stats = info.get("stats")
+    except Exception:
+        pass
+
+    if not isinstance(stats, dict):
+        # file fallback
+        import os, json
+        path = f"client_configs/{username}_stats.json"
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    stats = json.load(f)
+            except Exception:
+                stats = None
+
+    # Guarantee shape
+    if not isinstance(stats, dict):
+        stats = _default_stats()
+    stats.setdefault("totals", {}).setdefault("leads", 0)
+    stats["totals"].setdefault("campaigns", 0)
+    stats["totals"].setdefault("credits_used", 0)
+    stats.setdefault("platforms", {})
+    stats.setdefault("last_session", {})
+    return stats
+
+def ensure_stats_in_store(username: str):
+    """If the user has no stats at all, seed an empty structure so UI never crashes."""
+    try:
+        from postgres_credit_system import credit_system
+        info = credit_system.get_user_info(username) or {}
+        if not isinstance(info.get("stats"), dict):
+            info["stats"] = _default_stats()
+            credit_system.save_user_info(username, info)
+    except Exception:
+        pass
 
 
 def create_automatic_recovery_account(username):
@@ -9115,20 +9167,26 @@ with tab6:  # Settings tab
                     
             except Exception as e:
                 st.error(f"❌ Error loading usage data: {str(e)}")
-                
-                # ✅ DEBUG INFO FOR TROUBLESHOOTING
-                with st.expander("🔍 Debug Information", expanded=False):
-                    st.code(f"""
-                    Error: {str(e)}
-                    Username: {username if 'username' in locals() else 'Not set'}
-                    User Plan: {user_plan if 'user_plan' in locals() else 'Not set'}
-                    Session Credits: {st.session_state.get('credits', 'Not set')}
-                    """)
 
             # now, conditionally render the Detailed Usage panel
             #if st.session_state.show_usage_details:
                 st.markdown("---")
                 st.subheader("📊 Detailed Usage Statistics")
+                
+                # --- Detailed Usage Statistics (safe) ---
+                username = st.session_state.get("username") or "anonymous"
+
+                # make sure store has a basic stats doc (no-op if present)
+                ensure_stats_in_store(username)
+
+                # load (or reload) stats into session
+                st.session_state["stats"] = load_empire_stats(username)
+                stats = st.session_state["stats"]
+
+                # GUARANTEED variables
+                totals      = stats.get("totals", {})
+                platforms   = stats.get("platforms", {})
+                last_session= stats.get("last_session", {})
                 
                 try:
                     user_info = credit_system.get_user_info(username)

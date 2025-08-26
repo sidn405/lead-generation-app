@@ -115,399 +115,137 @@ def is_relevant_to_search_term(name, bio, location=""):
     return relevance_score >= 2, relevance_score
 
 def extract_instagram_profiles(page):
-    """Extract profiles from Instagram search results using Facebook's successful approach"""
-    print("📋 Extracting Instagram profiles...")
+    """Extract ONLY verified Instagram profile links"""
+    print("Extracting Instagram profiles with strict validation...")
     
     results = []
-    excluded_count = 0  # ✅ ADD THIS
     
-    # Wait for content to load
-    time.sleep(DELAY_MIN)
-    
-    # Check page status first
     try:
-        current_url = page.url
-        print(f"🔍 Current URL: {current_url}")
+        # Only target actual profile links with this very specific selector
+        profile_links = page.query_selector_all('a[href^="/"][href$="/"], a[href^="/"][href*="/"][href*="instagram.com/"]')
         
-        # Check if we're blocked or redirected
-        if any(indicator in current_url.lower() for indicator in ['login', 'challenge', 'help', 'error', 'accounts/login']):
-            print("🚨 Instagram is blocking access or redirected to login")
-            print("💡 Please refresh your instagram_auth.json by logging in again")
-            return []
-            
-        # Try to get page title
-        try:
-            page_title = page.title()
-            print(f"📄 Page title: {page_title}")
-            if any(indicator in page_title.lower() for indicator in ['login', 'error', 'help']):
-                print("🚨 Page title suggests we're not on search results")
-                return []
-        except:
-            print("⚠️ Could not get page title")
-            
-    except Exception as e:
-        print(f"⚠️ Error checking page status: {e}")
-        return []
-    
-    # Take screenshot with better error handling
-    try:
-        print("📸 Taking debug screenshot...")
-        page.screenshot(path="instagram_extraction_debug.png", timeout=5000)
-        print("📸 Debug screenshot saved: instagram_extraction_debug.png")
-    except Exception as e:
-        print(f"⚠️ Screenshot failed (continuing anyway): {str(e)[:100]}...")
-    
-    # Check if page has content
-    try:
-        page_text = page.inner_text('body')
-        print(f"📄 Page content length: {len(page_text)} characters")
+        valid_usernames = set()
         
-        if len(page_text) < 100:
-            print("⚠️ Very little content on page")
-            print(f"Content preview: {page_text[:200]}")
-        
-        # Look for Instagram-specific indicators
-        try:
-            page_title = page.title()
-            print(f"📄 Page title: {page_title}")
-            if "Instagram" not in page_title:
-                print("⚠️ Title doesn't contain 'Instagram'")
-        except:
-            print("⚠️ Unable to get page title")
-
-        # Only warn, don't block extraction
-        if 'instagram' not in page_text.lower() and 'meta' not in page_text.lower():
-            print("⚠️ Warning: Page content does not include common Instagram indicators")        
-            
-    except Exception as e:
-        print(f"⚠️ Error reading page content: {e}")
-        return []
-    
-    # Try multiple extraction approaches - COPIED FROM SUCCESSFUL FACEBOOK SCRAPER
-    approaches = [
-        {
-            'name': 'Profile Links',
-            'selector': 'a[href*="/"][href*="instagram.com"], a[href^="/"]',
-            'description': 'Instagram profile links'
-        },
-        {
-            'name': 'Profile Cards',
-            'selector': 'div[role="button"], article, div[tabindex="0"]',
-            'description': 'Instagram profile containers'
-        },
-        {
-            'name': 'User Links',
-            'selector': 'a[href*="/"]',
-            'description': 'Any user links'
-        },
-        {
-            'name': 'Content Containers',
-            'selector': 'div[style*="flex"], div[class*="user"], div[class*="profile"]',
-            'description': 'Content containers'
-        },
-        {
-            'name': 'All Clickable Elements',
-            'selector': 'div[role="button"], span[role="button"], a',
-            'description': 'All clickable elements (fallback)'
-        }
-    ]
-    
-    for approach in approaches:
-        print(f"\n🔍 Trying approach: {approach['name']}")
-        
-        try:
-            elements = page.query_selector_all(approach['selector'])
-            print(f"  Found {len(elements)} elements")
-            
-            if len(elements) == 0:
-                continue
-            
-            approach_results = []
-            processed = 0
-            
-            # 🚀 OPTIMIZED: Increased limits for high volume extraction
-            max_elements = min(500, len(elements))
-            max_results_per_approach = 200
-            
-            for i, element in enumerate(elements[:max_elements]):
-                if processed >= max_results_per_approach:
-                    break
-                    
-                try:
-                    # Get text content with timeout protection
-                    try:
-                        text_content = element.inner_text()
-                        if not text_content or len(text_content.strip()) < 3:
-                            continue
-                    except:
-                        continue
-                    
-                    processed += 1
-                    text_content = text_content.strip()
-                    
-                    # Skip if too short
-                    if len(text_content) < 3:
-                        continue
-                    
-                    # Extract username and handle
-                    username = ""
-                    handle = ""
-                    profile_url = ""
-                    
-                    # Try to get href first
-                    try:
-                        href = element.get_attribute('href')
-                        if href:
-                            # Extract username from URL
-                            if href.startswith('/'):
-                                href = 'https://instagram.com' + href
-                            
-                            # Match Instagram username patterns
-                            username_patterns = [
-                                r'instagram\.com/([a-zA-Z0-9_.]{1,30})/?$',
-                                r'/([a-zA-Z0-9_.]{1,30})/?$'
-                            ]
-                            
-                            for pattern in username_patterns:
-                                match = re.search(pattern, href)
-                                if match:
-                                    potential_username = match.group(1)
-                                    # Validate username
-                                    if (len(potential_username) >= 1 and 
-                                        len(potential_username) <= 30 and
-                                        not potential_username in ['explore', 'reels', 'tv', 'p', 'stories', 'accounts']):
-                                        username = potential_username
-                                        handle = f"@{username}"
-                                        profile_url = href
-                                        break
-                    except:
-                        pass
-                    
-                    # If no username from URL, try to extract from text
-                    if not username:
-                        lines = [line.strip() for line in text_content.split('\n') if line.strip()]
-                        if not lines:
-                            continue
-                        
-                        # Look for potential usernames/names in text
-                        for line in lines[:3]:
-                            # Skip UI elements
-                            if any(skip in line.lower() for skip in ['follow', 'following', 'followers', 'posts', 'see all', 'suggested']):
-                                continue
-                            
-                            # Look for @ handles
-                            handle_match = re.search(r'@([a-zA-Z0-9_.]{1,30})', line)
-                            if handle_match:
-                                username = handle_match.group(1)
-                                handle = f"@{username}"
-                                profile_url = f"https://instagram.com/{username}"
-                                break
-                            
-                            # Or treat line as display name
-                            if (len(line) >= 2 and len(line) <= 50 and  
-                                not line.isdigit() and
-                                not line.startswith('http')):
-                                username = line.replace(' ', '_').lower()
-                                handle = f"@{username}"
-                                profile_url = f"https://instagram.com/{username}"
-                                break
-                    
-                    if not username:
-                        continue
-
-                    # ✅ ADD EXCLUSION CHECK
-                    if should_exclude_account(username, PLATFORM_NAME, config_loader):
-                        excluded_count += 1
-                        continue
-                    
-                    # Create display name
-                    name = username.replace('_', ' ').replace('.', ' ').title()
-                    if len(name) < 2:
-                        name = username
-                    
-                    # Create bio based on available text and search term
-                    bio_lines = [line.strip() for line in text_content.split('\n') if line.strip()]
-                    bio = ""
-                    for line in bio_lines[1:4]:  # Skip first line (usually name)
-                        if (len(line) > 10 and 
-                            not any(skip in line.lower() for skip in ['follow', 'posts', 'followers', 'following'])):
-                            bio = line
-                            break
-                    
-                    if not bio:
-                        bio = f"Instagram creator interested in {SEARCH_TERM}"
-                    
-                    # Check relevance to search term
-                    is_relevant, relevance_score = is_relevant_to_search_term(name, bio, "")
-                    
-                    # 🚀 OPTIMIZED: Accept lower relevance scores for volume
-                    if relevance_score < 1:
-                        continue
-                    
-                    # Create lead
-                    lead = {
-                        "name": name,
-                        "handle": handle,
-                        "bio": bio[:200],
-                        "url": profile_url
-                    }
-                    
-                    # Add platform and DM
-                    lead["platform"] = "instagram"
-                    lead["dm"] = generate_dm_with_fallback(
-                        name=lead["name"],
-                        bio=lead["bio"],
-                        platform=lead["platform"]
-                    )
-                    
-                    # Add Instagram-specific fields
-                    lead.update({
-                        'title': f'Instagram creator interested in {SEARCH_TERM}',
-                        'location': 'Location not specified',
-                        'followers': 'Followers not shown',
-                        'profile_url': profile_url,
-                        'contact_info': 'Contact not available',
-                        'search_term': SEARCH_TERM,
-                        'extraction_method': approach['name'],
-                        'relevance_score': relevance_score
-                    })
-                    
-                    approach_results.append(lead)
-                    print(f"  ✅ {name[:30]}... | {handle} | Score: {relevance_score}")
-                    
-                except Exception as e:
+        for link in profile_links:
+            try:
+                href = link.get_attribute('href')
+                if not href:
                     continue
-            
-            if approach_results:
-                print(f"✅ {approach['name']} found {len(approach_results)} leads")
-                results.extend(approach_results)
-                # Don't break early - let all approaches run for maximum extraction
-            else:
-                print(f"❌ No leads from {approach['name']}")
                 
-        except Exception as e:
-            print(f"⚠️ Error with {approach['name']}: {str(e)[:100]}...")
-            continue
-    
-    # 🚀 OPTIMIZED: More lenient duplicate filtering
-    if results:
-        unique_results = []
-        seen_handles = set()
-        for result in results:
-            handle_key = result['handle'].lower().strip()
-            # More lenient duplicate check
-            if handle_key not in seen_handles and len(handle_key) > 2:
-                unique_results.append(result)
-                seen_handles.add(handle_key)
+                # Extract username with VERY strict validation
+                username = extract_validated_username(href)
+                if not username or username in valid_usernames:
+                    continue
+                
+                # Double-check this is a real profile link
+                if not is_real_profile_link(link, username):
+                    continue
+                
+                # Skip excluded accounts
+                if should_exclude_account(username, PLATFORM_NAME, config_loader):
+                    continue
+                
+                valid_usernames.add(username)
+                
+                lead = {
+                    "name": username.replace('_', ' ').replace('.', ' ').title(),
+                    "handle": f"@{username}",
+                    "bio": f"Instagram user interested in {SEARCH_TERM}",
+                    "url": f"https://instagram.com/{username}",
+                    "platform": "instagram",
+                    "dm": generate_dm_with_fallback(username, f"Instagram user interested in {SEARCH_TERM}", "instagram"),
+                    "title": f"Instagram user interested in {SEARCH_TERM}",
+                    "location": "Location not specified",
+                    "followers": "Followers not shown", 
+                    "profile_url": f"https://instagram.com/{username}",
+                    "contact_info": "Contact not available",
+                    "search_term": SEARCH_TERM,
+                    "extraction_method": "Validated Profile Link",
+                    "relevance_score": 2
+                }
+                
+                results.append(lead)
+                print(f"Valid profile: @{username}")
+                
+            except Exception as e:
+                continue
         
-        print(f"\n📊 Total unique profiles extracted: {len(unique_results)}")
-        print(f"🎯 Performance target: 50+ leads")
-        return unique_results
-    else:
-        print(f"\n❌ No profiles extracted")
-        print(f"💡 Try these solutions:")
-        print(f"   1. Run Instagram auth script to refresh login")
-        print(f"   2. Wait 30+ minutes before trying again")
-        print(f"   3. Try a different search term")
-        print(f"   4. Check if you're logged into Instagram in the browser")
-        return []
-    
-# IMMEDIATE FIX 1: Add this debugging right after page loading
-def quick_debug_page_content(page):
-    """Quick debug to see what's actually on the page"""
-    print("\n🔍 QUICK DEBUG:")
-    try:
-        page_title = page.title()
-        current_url = page.url
-        print(f"  📄 Page title: {page_title}")
-        print(f"  🌐 Current URL: {current_url}")
+        print(f"Extracted {len(results)} validated profiles")
+        return results
         
-        # Check for actual Instagram content
-        body_text = page.inner_text('body')
-        print(f"  📝 Page content length: {len(body_text)} characters")
-        
-        # Look for profile indicators
-        profile_links = page.query_selector_all('a[href^="/"]')
-        print(f"  👤 Profile-like links found: {len(profile_links)}")
-        
-        # Sample some usernames
-        for i, link in enumerate(profile_links[:5]):
-            href = link.get_attribute('href')
-            if href and re.match(r'^/[a-zA-Z0-9_.]+/?$', href):
-                username = href.strip('/').split('/')[0]
-                print(f"    {i+1}. @{username}")
-        
-        return len(profile_links) > 0
     except Exception as e:
-        print(f"  ❌ Debug error: {e}")
-        return False
+        print(f"Error extracting profiles: {e}")
+        return []
 
-# IMMEDIATE FIX 2: Better username extraction
-def extract_username_from_element(element):
-    """Extract username with better validation"""
-    try:
-        href = element.get_attribute('href')
-        if not href:
-            return None
-        
-        # Clean href
-        href = href.strip()
-        if not href.startswith('/'):
-            return None
-        
-        # Extract username
-        match = re.match(r'^/([a-zA-Z0-9_.]{1,30})/?$', href)
-        if not match:
-            return None
-        
-        username = match.group(1)
-        
-        # Validate username
-        excluded = ['explore', 'reels', 'p', 'tv', 'stories', 'accounts', 'direct']
-        if username in excluded:
-            return None
-        
-        # Check if it looks like a real username
-        if not re.match(r'^[a-zA-Z0-9_.]+$', username):
-            return None
-        
-        return username
-    except:
+def extract_validated_username(href):
+    """Extract username only if it matches exact Instagram patterns"""
+    if not href or not isinstance(href, str):
         return None
+    
+    # Remove any domain if present
+    if 'instagram.com' in href:
+        href = href.split('instagram.com')[-1]
+    
+    # Must start with / and contain only valid characters
+    if not href.startswith('/'):
+        return None
+    
+    # Extract the username part (first segment after /)
+    parts = href.strip('/').split('/')
+    if not parts or len(parts) == 0:
+        return None
+    
+    potential_username = parts[0]
+    
+    # Validate username format
+    if not re.match(r'^[a-zA-Z0-9_.]{1,30}$', potential_username):
+        return None
+    
+    # Block known UI elements and system pages
+    blocked_names = {
+        'explore', 'reels', 'tv', 'stories', 'accounts', 'direct', 'p',
+        'help', 'about', 'privacy', 'terms', 'support', 'press', 'api',
+        'jobs', 'blog', 'developer', 'legal', 'more', 'also_from_meta',
+        'meta', 'facebook', 'whatsapp', 'download', 'app', 'store'
+    }
+    
+    if potential_username.lower() in blocked_names:
+        return None
+    
+    # Must contain at least one letter
+    if not re.search(r'[a-zA-Z]', potential_username):
+        return None
+    
+    return potential_username
 
-# IMMEDIATE FIX 3: Better bio/caption extraction
-def extract_bio_from_context(page, username):
-    """Extract bio/caption with better selectors"""
-    bio_candidates = []
-    
-    # Try multiple selectors for bio/caption content
-    bio_selectors = [
-        'article span[style*="line-height"]',
-        'div[role="button"] span',
-        'article div span',
-        'span[dir="auto"]',
-        'div h1 + div span'
-    ]
-    
-    for selector in bio_selectors:
-        try:
-            elements = page.query_selector_all(selector)
-            for element in elements:
-                text = element.inner_text()
-                if (text and len(text) > 15 and len(text) < 500 and
-                    username.lower() not in text.lower() and
-                    not any(skip in text.lower() for skip in ['like', 'comment', 'follow', 'view'])):
-                    bio_candidates.append(text)
-        except:
-            continue
-    
-    # Return the best bio candidate
-    if bio_candidates:
-        # Prefer longer, more descriptive text
-        best_bio = max(bio_candidates, key=len)
-        return best_bio[:300]
-    
-    return f"Instagram user @{username}"
+def is_real_profile_link(link_element, username):
+    """Verify this is actually a profile link, not UI navigation"""
+    try:
+        # Get the text content of the link
+        link_text = link_element.inner_text().strip().lower()
+        
+        # If link text contains the username, it's probably real
+        if username.lower() in link_text:
+            return True
+        
+        # If link text is a common UI element, skip it
+        ui_phrases = [
+            'also from meta', 'more', 'see all', 'suggested', 
+            'people you may know', 'follow', 'download'
+        ]
+        
+        for phrase in ui_phrases:
+            if phrase in link_text:
+                return False
+        
+        # If link text is very short or just symbols, skip
+        if len(link_text) < 2 or link_text.isdigit():
+            return False
+        
+        return True
+        
+    except:
+        return True  # If we can't check, assume it's valid
 
 
 # IMMEDIATE FIX 5: Better CSV validation

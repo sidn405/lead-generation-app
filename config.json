@@ -59,8 +59,8 @@
         "auto_deliver_leads": true
     },
     "global": {
-        "search_term": "cake decorator",
-        "max_scrolls": 10,
+        "search_term": "chef",
+        "max_scrolls": 20,
         "enable_multilingual": true,
         "default_dm": "Hi there! I love your content and would be excited to connect. Let's chat!",
         "fallback_dm": "Hey! Just came across your profile and really impressed by your work. Would love to connect!",
@@ -86,7 +86,7 @@
             "lead_output_file": "facebook_leads.csv",
             "backup_output_file": "facebook_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 10,
+            "max_scrolls": 40,
             "excluded_accounts": [
                 "Sidney Muhammad"
             ]
