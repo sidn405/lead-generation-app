@@ -435,8 +435,6 @@ if st.session_state.get("show_login", False):
 # AFTER the fast-path above
 show_auth_section_if_needed()  # it can handle forgot/reset flows etc.
 
-username = st.session_state.get("username") or "anonymous"
-ensure_stats_in_store(username)
 
 # right after the preflight block:
 if st.query_params.get("cancel") or st.query_params.get("success") == "0":
@@ -9176,6 +9174,7 @@ with tab6:  # Settings tab
                 username = st.session_state.get("username") or "anonymous"
 
                 # make sure store has a basic stats doc (no-op if present)
+                username = st.session_state.get("username") or "anonymous"
                 ensure_stats_in_store(username)
 
                 # load (or reload) stats into session
