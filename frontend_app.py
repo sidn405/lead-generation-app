@@ -1049,6 +1049,115 @@ def clean_old_csv_files(username):
                 print(f"Error deleting {p}: {e}")
     return cleaned
 
+DEMO_CAP = 5
+
+def effective_plan():
+    return (st.session_state.get("plan") or "demo").strip().lower()
+
+def _demo_leads_file(username: str) -> str:
+    return f"demo_leads_{username}.json"
+
+def _demo_dm_queue_file(username: str) -> str:
+    return f"demo_dm_queue_{username}.json"
+
+def load_demo_leads(username: str):
+    """Return up to DEMO_CAP leads previously saved by the demo run."""
+    import os, json
+    path = _demo_leads_file(username)
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f) or {}
+        leads = payload.get("leads", [])[:DEMO_CAP]
+        # normalize some fields we’ll use for DMs
+        out = []
+        for r in leads:
+            out.append({
+                "name": r.get("name") or r.get("full_name") or "",
+                "handle": r.get("handle") or r.get("username") or "",
+                "bio": r.get("bio") or "",
+                "url": r.get("url") or r.get("profile_url") or "",
+                "platform": r.get("platform") or "twitter",
+                # keep original row if you want to show extra fields later
+                "_row": r,
+            })
+        return out
+    except Exception:
+        return []
+
+def build_demo_dm_text(lead: dict, keyword: str = "") -> str:
+    """Tiny, safe template for demo previews (no sending)."""
+    handle = lead.get("handle") or lead.get("name") or "there"
+    niche = (keyword or st.session_state.get("search_term") or "").strip()
+    opener = f"Hey @{handle}!" if handle.startswith("@") else f"Hey {handle}!"
+    niche_bit = f" fellow {niche}" if niche else ""
+    return (
+        f"{opener} 👋 I loved your profile{niche_bit}. "
+        f"I’m building a small network of {niche or 'pros'} to share opportunities and tips. "
+        f"Would you be open to connecting?"
+    )
+
+def render_demo_dms_tab():
+    import pandas as pd
+    username = st.session_state.get("username") or "anonymous"
+    leads = load_demo_leads(username)
+
+    st.info(f"Demo DM queue: {len(leads)} lead(s) (cap {DEMO_CAP}). "
+            "Upgrade to message larger batches and more platforms.")
+
+    if not leads:
+        st.warning("No demo leads found yet. Run the scraper in Demo Mode first.")
+        return
+
+    # Optional: keep a tiny queue file so a refresh doesn’t lose edits
+    try:
+        import json, os
+        path = _demo_dm_queue_file(username)
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                saved = json.load(f) or {}
+            # merge any saved custom messages back onto leads
+            msg_map = {m.get("url") or m.get("handle"): m.get("message") for m in saved.get("queue", [])}
+        else:
+            msg_map = {}
+    except Exception:
+        msg_map = {}
+
+    # Build DataFrame for display/edit
+    keyword = st.session_state.get("search_term") or ""
+    rows = []
+    for ld in leads:
+        key = ld.get("url") or ld.get("handle")
+        msg = msg_map.get(key) or build_demo_dm_text(ld, keyword)
+        rows.append({
+            "name": ld["name"],
+            "handle": ld["handle"],
+            "platform": ld["platform"],
+            "url": ld["url"],
+            "message": msg,
+        })
+
+    df = pd.DataFrame(rows, columns=["name","handle","platform","url","message"])
+    st.caption("Preview (editable messages won’t be sent in Demo).")
+    edited = st.data_editor(
+        df, hide_index=True, use_container_width=True,
+        column_config={"message": st.column_config.TextColumn(max_chars=300)}
+    )
+
+    # Persist the demo queue without touching paid queues
+    if st.button("💾 Save Demo DM Queue"):
+        try:
+            import json
+            payload = {"username": username, "plan": "demo", "queue": edited.to_dict("records")}
+            with open(_demo_dm_queue_file(username), "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+            st.success("Saved demo DM queue.")
+        except Exception as e:
+            st.error(f"Could not save demo queue: {e}")
+
+    st.info("Sending is disabled in Demo. Upgrade to unlock bulk sending, throttling controls, and logs.")
+
 import os, glob, pandas as pd
 from datetime import datetime
 import streamlit as st
