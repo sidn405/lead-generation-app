@@ -17,6 +17,7 @@ class ParallelScraperRunner:
         self.results = {}
         self.start_time = None
         self.total_duration_sec = 0
+        print(f"[PLAN_PROBE] runner.init user={self.username} plan={self.user_plan}")
         
     def setup_environment(self):
         """Setup environment variables for all scrapers"""
@@ -202,6 +203,8 @@ class ParallelScraperRunner:
             
         except Exception as e:
             print(f"⚠️ Could not save session summary: {e}")
+            
+            print(f"[PLAN_PROBE] finalize user={self.username} plan={self.user_plan}")
 
     def finalize_session(self):
         """Finalize session - consume credits and update dashboard"""

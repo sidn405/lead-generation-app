@@ -5726,7 +5726,7 @@ with tab1:
                                                 st.error("❌ Main scraper file 'run_daily_scraper_complete.py' not found!")
                                             
                                             # Check Python version
-                                            st.info(f"🐍 Python version: {sys.version}")
+                                            #st.info(f"🐍 Python version: {sys.version}")
                                             
                                     except subprocess.TimeoutExpired:
                                         st.error("❌ Scraper timed out after 5 minutes")
@@ -5742,6 +5742,8 @@ with tab1:
                                         st.code(traceback.format_exc(), language="text")
                             
                             else:
+                                print(f"[PLAN_PROBE] session={st.session_state.get('user_plan')} env={os.environ.get('ENV_PLAN')} args_user_plan={user_plan}")
+
                                 # ✅ PAID USER - PARALLEL EXECUTION (replaces the entire subprocess section)
                                 st.session_state.last_launch_time = current_time
                                 st.success(f"🚀 {user_plan.title()} Empire Launch Initiated...")
