@@ -5863,6 +5863,12 @@ with tab1:
                                 except Exception as e:
                                     with status_placeholder:
                                         st.error(f"❌ Parallel execution error: {str(e)}")
+                                        import traceback, pprint, os
+                                        print("[LAUNCH DEBUG] SELECTED_PLATFORMS_MAP =", os.environ.get("SELECTED_PLATFORMS_MAP"))
+                                        print("[LAUNCH DEBUG] PLATFORM_PARAMS      =", os.environ.get("PLATFORM_PARAMS"))
+                                        print("[LAUNCH DEBUG] EXTRA_ENV            =", st.session_state.get("scraper_env"))
+                                        traceback.print_exc()
+
                                     
                                     with progress_placeholder:
                                         st.empty()
@@ -8838,7 +8844,7 @@ with tab6:  # Settings tab
 
             # View statistics
             st.markdown("---")
-            st.subheader("📊 Detailed Usage Statistics")
+            st.subheader("📊 Detailed Usage Statistics1")
 
             try:
                 user_info = credit_system.get_user_info(username)
@@ -9110,54 +9116,67 @@ with tab6:  # Settings tab
                     else:
                         st.info("📋 No activity yet - start generating leads to see your history!")
 
-                    totals      = stats.get("totals", {})
-                    platforms   = stats.get("platforms", {})
-                    last_session= stats.get("last_session", {})
+                    username = (
+                        st.session_state.get("username")
+                        or getattr(simple_auth, "current_user", None)
+                        or "anonymous"
+                    )
+
+                    # Ensure a stats doc exists for brand-new accounts
+                    ensure_stats_in_store(username)
+
+                    # Load stats (always returns a complete shape)
+                    stats = st.session_state.get("stats") or load_empire_stats(username)
+                    if not isinstance(stats, dict):
+                        stats = _default_stats()
+
+                    # Guaranteed objects
+                    totals       = stats.get("totals") or {}
+                    platforms    = stats.get("platforms") or {}
+                    last_session = stats.get("last_session") or {}
+
+                    # Guaranteed numbers
+                    total_leads      = int(totals.get("leads") or 0)
+                    total_campaigns  = int(totals.get("campaigns") or 0)
+                    credits_used     = int(totals.get("credits_used") or 0)
+                    platform_leads   = {k: int((v or {}).get("leads") or 0) for k, v in platforms.items()}
+
+                    # --- Top metrics
+                    st.subheader("📊 Detailed Usage Statistics2")
+                    m1, m2, m3, m4 = st.columns(4)
+                    with m1: st.metric("Total Leads Generated", total_leads)
+                    with m2: st.metric("Campaigns Run", total_campaigns)
+                    with m3: st.metric("Credits Used", credits_used)
+                    with m4: st.metric("Status", (st.session_state.get("subscription_status") or "Active").title())
                     # 6) Quick Stats (now safe because totals exist)
                     # ----------------------------------------------------------------
                     st.markdown("---")
                     st.subheader("⚡ Quick Stats Summary")
                     
                     # --- Derive days_active based on the earliest and latest CSV timestamps ---
-                    days_active = 0
-                    user_csv_files = [f for f in get_user_csv_files(current_username) if f.get("leads", 0) > 0]
-
-
-                    if user_csv_files:
+                    # Days active based on your CSV file metadata (robust to missing files)
+                    from datetime import datetime
+                    files_meta = get_user_csv_files(username) if 'get_user_csv_files' in globals() else []
+                    dates = []
+                    for f in files_meta:
+                        d = f.get("date")
                         try:
-                            from datetime import datetime
-                            dates = [
-                                datetime.strptime(f['date'], "%m/%d %H:%M")
-                                for f in user_csv_files if f.get('date')
-                            ]
-                            if dates:
-                                days_active = max((max(dates) - min(dates)).days, 1)
-                        except Exception as e:
-                            print(f"[DEBUG] Could not calculate days_active: {e}")
-                            days_active = 1
-                    else:
-                        days_active = 1
+                            if d:
+                                dates.append(datetime.strptime(d, "%m/%d %H:%M"))
+                        except Exception:
+                            pass
+                    days_active = max(((max(dates) - min(dates)).days if dates else 0), 1)
+
+                    leads_per_day     = total_leads / days_active if days_active else 0
+                    avg_campaign_size = (total_leads / total_campaigns) if total_campaigns else 0
+                    best_platform     = max(platform_leads, key=platform_leads.get) if platform_leads else None
 
 
-                    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
-                    with summary_col1:
-                        leads_per_day = total_leads / max(days_active, 1)
-                        st.metric("📈 Leads/Day", f"{leads_per_day:.1f}")
-
-                    with summary_col2:
-                        if platform_leads:
-                            best_platform_name = max(platform_leads, key=platform_leads.get)
-                            st.metric("🏆 Best Platform", best_platform_name.title())
-                        else:
-                            st.metric("🏆 Best Platform", "None yet")
-
-                    with summary_col3:
-                        avg_campaign_size = (total_leads / total_campaigns) if total_campaigns > 0 else 0
-                        st.metric("🎯 Avg Campaign", f"{avg_campaign_size:.1f} leads")
-
-                    with summary_col4:
-                        efficiency = total_leads / max(days_active, 1)
-                        st.metric("⚡ Efficiency", f"{efficiency:.1f}/day")
+                    s1, s2, s3, s4 = st.columns(4)
+                    with s1: st.metric("📈 Leads/Day", f"{leads_per_day:.1f}")
+                    with s2: st.metric("🏆 Best Platform", best_platform.title() if best_platform else "None yet")
+                    with s3: st.metric("🎯 Avg Campaign", f"{avg_campaign_size:.1f} leads")
+                    with s4: st.metric("⚡ Efficiency", f"{leads_per_day:.1f}/day")
                     # ============================================================
 
 
@@ -9170,7 +9189,7 @@ with tab6:  # Settings tab
             # now, conditionally render the Detailed Usage panel
             #if st.session_state.show_usage_details:
                 st.markdown("---")
-                st.subheader("📊 Detailed Usage Statistics")
+                st.subheader("📊 Detailed Usage Statistics3")
                 
                 # --- Detailed Usage Statistics (safe) ---
                 username = st.session_state.get("username") or "anonymous"
