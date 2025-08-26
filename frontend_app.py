@@ -6490,6 +6490,16 @@ with tab2: # Lead Results
                 except Exception as e:
                     empire_totals[platform_name] = 0
                     print(f"❌ {platform_name} error: {e}")
+                    
+            # Ensure we have a username before loading user CSVs
+            current_username = (
+                st.session_state.get("username")
+                or getattr(simple_auth, "current_user", None)
+            )
+
+            if not current_username:
+                st.info("Please log in to load your leads.")
+                st.stop()
 
             # ✅ SECURITY VERIFICATION
             total_loaded_files = len(all_empire_data)

@@ -1,104 +1,84 @@
-import os, stripe, json
-from flask import Flask, request, abort
+# stripe_webhook.py
+import os, json, stripe
+from flask import Flask, request, Response
+from postgres_credit_system import credit_system
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
+
+PLAN_CREDITS = {"starter": 250, "pro": 2000, "ultimate": 5000}
 
 app = Flask(__name__)
 
-# you need to import your DB layer here
-from postgres_credit_system import postgres_credit_system as credit_system
+def _activate_user_plan(username: str, plan: str, customer_id: str, subscription_id: str):
+    info = credit_system.get_user_info(username) or {}
+    # set plan + subscription markers
+    info.update({
+        "plan": plan,
+        "subscribed_plan": plan,
+        "subscription_status": "active",
+        "stripe_customer_id": customer_id,
+        "stripe_subscription_id": subscription_id,
+    })
+    # grant monthly credits on first activation
+    monthly = PLAN_CREDITS.get(plan, 0)
+    info["credits"] = int(info.get("credits", 0)) + monthly
+    credit_system.save_user_info(username, info)
 
 @app.post("/stripe/webhook")
 def stripe_webhook():
     payload = request.data
     sig = request.headers.get("Stripe-Signature", "")
-
     try:
         event = stripe.Webhook.construct_event(payload, sig, WEBHOOK_SECRET)
     except Exception as e:
-        print(f"[webhook] signature error: {e}")
-        abort(400)
+        return Response(f"Invalid signature: {e}", 400)
 
-    t = event["type"]
+    etype = event["type"]
     data = event["data"]["object"]
 
-    # 1) Checkout completed (capture customer/subscription on first purchase)
-    if t == "checkout.session.completed":
-        try:
-            sess = stripe.checkout.Session.retrieve(
-                data["id"], expand=["subscription", "customer"]
+    # 1) New signup / first payment
+    if etype == "checkout.session.completed":
+        md = data.get("metadata") or {}
+        username = md.get("username")
+        plan = (md.get("plan") or "").lower()
+        if username and plan:
+            _activate_user_plan(
+                username=username,
+                plan=plan,
+                customer_id=data.get("customer"),
+                subscription_id=data.get("subscription"),
             )
-            username = (sess.get("metadata") or {}).get("username")  # set metadata at session creation if you can
-            if username:
-                sub  = sess.subscription
-                cust = sess.customer
-                credit_system.set_stripe_billing(
-                    username=username,
-                    customer_id=(cust.id if cust else None),
-                    subscription_id=(sub.id if sub else None),
-                    status=(sub.status if sub else None),
-                    current_period_end=(sub.current_period_end if sub else None),
-                )
-        except Exception as e:
-            print(f"[webhook] checkout.session.completed failed: {e}")
 
-    # 2) Monthly charge success -> add monthly credits
-    elif t == "invoice.payment_succeeded":
-        try:
-            sub_id = data.get("subscription")
-            if not sub_id:
-                return ("", 200)
-            username = credit_system.find_user_by_subscription(sub_id)
-            if not username:
-                return ("", 200)
-
-            # retrieve user's monthly_credits (saved at plan activation)
+    # 2) Subscription status changes (renewal, cancel, pause)
+    elif etype in ("customer.subscription.updated", "customer.subscription.created"):
+        sub = data
+        status = sub.get("status")  # active, past_due, canceled, unpaid
+        plan = (sub.get("items", {}).get("data", [{}])[0]
+                    .get("price", {}).get("nickname", "")).lower()  # or map from price.id
+        customer_id = sub.get("customer")
+        # If you stored username on customer metadata, prefer that; otherwise map by customer id.
+        username = (sub.get("metadata") or {}).get("username") or credit_system.lookup_username_by_customer(customer_id)
+        if username:
             info = credit_system.get_user_info(username) or {}
-            monthly = int(info.get("monthly_credits", 0) or 0)
-            if monthly > 0:
-                credit_system.add_credits(
-                    username,
-                    monthly,
-                    plan="subscription_monthly",
-                    stripe_invoice_id=data.get("id"),
-                )
-            # keep status/dates fresh
-            period = data.get("lines", {}).get("data", [{}])[0].get("period", {})
-            credit_system.update_subscription_status(
-                username,
-                status="active",
-                current_period_end=period.get("end"),
-            )
-        except Exception as e:
-            print(f"[webhook] invoice.payment_succeeded failed: {e}")
+            info.update({
+                "subscription_status": status,
+                "stripe_customer_id": customer_id,
+                "stripe_subscription_id": sub.get("id"),
+            })
+            if plan:
+                info["plan"] = info["subscribed_plan"] = plan
+            credit_system.save_user_info(username, info)
 
-    # 3) Payment failed / subscription updated / canceled
-    elif t in ("invoice.payment_failed", "customer.subscription.updated", "customer.subscription.deleted"):
-        try:
-            if t == "invoice.payment_failed":
-                sub_id = data.get("subscription")
-                status = "past_due"
-                period_end = None
-            else:
-                sub_id = data.get("id") if "subscription" in data else data.get("subscription")
-                status = data.get("status", "canceled")
-                period_end = data.get("current_period_end")
+    elif etype in ("customer.subscription.deleted", "invoice.payment_failed"):
+        sub = data
+        customer_id = sub.get("customer") if etype.startswith("customer.subscription") else sub.get("customer")
+        username = credit_system.lookup_username_by_customer(customer_id)
+        if username:
+            info = credit_system.get_user_info(username) or {}
+            info["subscription_status"] = "canceled"
+            # Optional: downgrade plan on cancel
+            info["plan"] = "starter" if info.get("starter_grace") else "demo"
+            credit_system.save_user_info(username, info)
 
-            if not sub_id:
-                return ("", 200)
-
-            username = credit_system.find_user_by_subscription(sub_id)
-            if username:
-                credit_system.update_subscription_status(
-                    username,
-                    status=status,
-                    current_period_end=period_end,
-                )
-        except Exception as e:
-            print(f"[webhook] {t} failed: {e}")
-
-    return ("", 200)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8080")))
+    return Response("OK", 200)
