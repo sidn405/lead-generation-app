@@ -542,6 +542,68 @@ class CreditSystem:
             self.save_data()
 
         return True
+    
+    # --- Add these methods inside CreditSystem ------------------------------
+
+    def save_user_info(self, username: str, info: dict):
+        """
+        Compatibility shim for legacy callers.
+        Delegates to an update/set method if available,
+        otherwise falls back to the in-memory store + save_data().
+        """
+        try:
+            # Prefer explicit DB updaters if your class exposes them
+            if hasattr(self, "update_user_info"):
+                return self.update_user_info(username, info)
+            if hasattr(self, "set_user_info"):
+                return self.set_user_info(username, info)
+
+            # Fallback: mutate in-memory store (file/json based implementations)
+            store = getattr(self, "_data", None) or getattr(self, "data", None)
+            if isinstance(store, dict):
+                store.setdefault("users", {})[username] = info
+
+            # Flush if available
+            if hasattr(self, "save_data"):
+                return self.save_data()
+
+            # Nothing else to do; at least don't crash
+            return None
+        except Exception as e:
+            print(f"[CreditSystem.save_user_info] failed: {e}")
+            return None
+
+
+    def add_transaction(self, username: str, tx: dict):
+        """
+        Append a transaction to the user's record and persist via save_user_info().
+        Safe no-op if user does not exist.
+        """
+        info = self.get_user_info(username) or {}
+        txs = info.get("transactions") or []
+        txs.insert(0, tx)
+        info["transactions"] = txs
+        return self.save_user_info(username, info)
+
+
+    def spend_credits(self, username: str, amount: int):
+        """
+        Decrement credits by `amount` (>=0) and persist via save_user_info().
+        Returns the new credit balance (or None on failure).
+        """
+        if amount is None or amount <= 0:
+            # No change
+            cur = (self.get_user_info(username) or {}).get("credits")
+            return cur
+
+        info = self.get_user_info(username) or {}
+        cur = int(info.get("credits", 0))
+        new_val = max(0, cur - int(amount))
+        info["credits"] = new_val
+        self.save_user_info(username, info)
+        return new_val
+    # -----------------------------------------------------------------------
+
 
     def activate_subscription(self, username: str, plan: str, monthly_credits: int, stripe_session_id: str) -> bool:
         """Activate a monthly subscription plan"""

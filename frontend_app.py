@@ -3155,7 +3155,7 @@ def run_empire_scraper_fixed(selected_platforms, search_term, max_scrolls, usern
                     success = result.returncode == 0
                     print(f"✅ Scraper completed (bytes mode) with return code: {result.returncode}")
                     return success
-                
+ 
             except FileNotFoundError:
                 print(f"❌ {python_exe} not found, trying next...")
                 continue
@@ -6478,114 +6478,125 @@ with tab2: # Lead Results
     
         else:
             
-            # ✅ AFTER (SECURE - loads only current user's data):
+            # --- constants / guards ---
+            import os, glob, re, pandas as pd
+            CSV_DIR = os.environ.get("CSV_DIR", "client_configs") or "client_configs"
+            CSV_USER_DEBUG_AVAILABLE = 'CSV_USER_DEBUG_AVAILABLE' in globals() and bool(CSV_USER_DEBUG_AVAILABLE)
+            MULTILINGUAL_AVAILABLE = 'MULTILINGUAL_AVAILABLE' in globals() and bool(MULTILINGUAL_AVAILABLE)
+
+            print(f"[CSV DEBUG] CSV_DIR={os.path.abspath(CSV_DIR)} cwd={os.getcwd()}")
+
+            PLAT_LABEL_TO_KEY = {
+                "🐦 Twitter": "twitter",
+                "💼 LinkedIn": "linkedin",
+                "📘 Facebook": "facebook",
+                "🎵 TikTok": "tiktok",
+                "📸 Instagram": "instagram",
+                "🎥 YouTube": "youtube",
+                "📝 Medium": "medium",
+                "🗨️ Reddit": "reddit",
+            }
+
             def get_user_empire_patterns(username: str) -> dict:
-                """Get platform patterns that only match current user's files"""
+                """Get platform patterns that only match current user's files (under CSV_DIR)."""
                 if not username:
                     return {}
-                
                 return {
-                    "🐦 Twitter": f"twitter_leads_*{username}_*.csv",
-                    "💼 LinkedIn": f"linkedin_leads_*{username}_*.csv", 
+                    "🐦 Twitter":  f"twitter_leads_*{username}_*.csv",
+                    "💼 LinkedIn": f"linkedin_leads_*{username}_*.csv",
                     "📘 Facebook": f"facebook_leads_*{username}_*.csv",
-                    "🎵 TikTok": f"tiktok_leads_*{username}_*.csv",
-                    "📸 Instagram": f"instagram_leads_*{username}_*.csv",
-                    "🎥 YouTube": f"youtube_leads_*{username}_*.csv",
-                    "📝 Medium": f"medium_leads_*{username}_*.csv",
-                    "🗨️ Reddit": f"reddit_leads_*{username}_*.csv"
+                    "🎵 TikTok":   f"tiktok_leads_*{username}_*.csv",
+                    "📸 Instagram":f"instagram_leads_*{username}_*.csv",
+                    "🎥 YouTube":  f"youtube_leads_*{username}_*.csv",
+                    "📝 Medium":   f"medium_leads_*{username}_*.csv",
+                    "🗨️ Reddit":   f"reddit_leads_*{username}_*.csv",
                 }
 
             # ✅ USE USER-SPECIFIC PATTERNS
             empire_platforms = get_user_empire_patterns(username)
 
             print(f"🔐 SECURE: Loading empire data ONLY for user: {username}")
-            print(f"🔍 Using patterns: {list(empire_platforms.values())}")
+            print(f"🔍 Using patterns (under {CSV_DIR}): {list(empire_platforms.values())}")
 
-            # Load and combine ONLY USER'S empire data
-            all_empire_data = []
-            empire_totals = {}
-            language_stats = {}
+            all_empire_data, empire_totals, language_stats = [], {}, {}
 
-            for platform_name, user_pattern in empire_platforms.items():
+            for platform_label, user_pattern in empire_platforms.items():
                 print(f"🔍 Checking user pattern: {user_pattern}")
-                
                 try:
-                    # ✅ METHOD 1: Use the working CSV debug logic
                     if CSV_USER_DEBUG_AVAILABLE:
                         from csv_user_debug import get_user_csv_file
                         latest_user_file = get_user_csv_file(user_pattern, username)
                     else:
-                        # ✅ METHOD 2: Fallback - manual user-specific file finding
-                        import glob, re
+                        # look inside CSV_DIR (normal + recursive)
+                        base_glob = os.path.join(CSV_DIR, user_pattern)
+                        rec_glob  = os.path.join(CSV_DIR, "**", user_pattern)
+                        candidates = glob.glob(base_glob) + glob.glob(rec_glob, recursive=True)
 
-                        # Case-insensitive match + support running from subfolders
-                        candidates = glob.glob(user_pattern) + glob.glob(f"./**/{user_pattern}", recursive=True)
-
-                        # keep files that contain the username case-insensitively
+                        # keep files that contain the username case-insensitively (extra guard)
                         rx = re.compile(re.escape(username), re.IGNORECASE)
                         user_files = [p for p in candidates if rx.search(p)]
-
-                        # newest first
                         user_files.sort(key=os.path.getmtime, reverse=True)
                         latest_user_file = user_files[0] if user_files else None
 
-                    
                     if latest_user_file and os.path.exists(latest_user_file):
                         print(f"✅ Found user file: {latest_user_file}")
-                        
                         df = pd.read_csv(latest_user_file)
-                        
+
                         if not df.empty:
-                            # ✅ DOUBLE-CHECK: Additional user filtering as backup
+                            # Double-check: filter rows that belong to user (if column exists)
                             if CSV_USER_DEBUG_AVAILABLE:
                                 from csv_user_debug import filter_csv_for_user
                                 df = filter_csv_for_user(df, username)
-                            
-                            # ✅ TRIPLE-CHECK: Manual filtering as final backup
-                            user_columns = ['generated_by', 'username', 'user_id', 'created_by']
-                            for col in user_columns:
-                                if col in df.columns:
-                                    original_count = len(df)
-                                    df = df[df[col].astype(str).str.lower() == username.lower()]
-                                    if len(df) < original_count:
-                                        print(f"🔒 Filtered {platform_name}: {original_count} → {len(df)} rows (removed other users' data)")
-                                    break
-                            
-                            if not df.empty:
-                                # Ensure platform column exists
-                                if 'platform' not in df.columns:
-                                    platform_key = platform_name.split()[1].lower()
-                                    df['platform'] = platform_key
-                                
-                                all_empire_data.append(df)
-                                empire_totals[platform_name] = len(df)
-                                print(f"✅ Loaded {len(df)} {platform_name} leads for {username}")
-                                
-                                # 🌍 Language statistics (if available)
-                                if MULTILINGUAL_AVAILABLE and 'detected_language' in df.columns:
-                                    platform_languages = df['detected_language'].value_counts().to_dict()
-                                    for lang, count in platform_languages.items():
-                                        language_stats[lang] = language_stats.get(lang, 0) + count
-                            else:
-                                empire_totals[platform_name] = 0
-                                print(f"⚠️ {platform_name}: File found but no user data after filtering")
-                        else:
-                            empire_totals[platform_name] = 0
-                            print(f"⚠️ {platform_name}: File found but empty")
-                    else:
-                        empire_totals[platform_name] = 0
-                        print(f"❌ {platform_name}: No user-specific files found")
-                        
-                except Exception as e:
-                    empire_totals[platform_name] = 0
-                    print(f"❌ {platform_name} error: {e}")
-                    
-            # Ensure we have a username before loading user CSVs
-            current_username = (
-                st.session_state.get("username")
-                or getattr(simple_auth, "current_user", None)
-            )
 
+                            for col in ('generated_by', 'username', 'user_id', 'created_by'):
+                                if col in df.columns:
+                                    before = len(df)
+                                    df = df[df[col].astype(str).str.lower() == username.lower()]
+                                    if len(df) < before:
+                                        print(f"🔒 Filtered {platform_label}: {before} → {len(df)}")
+                                    break
+
+                            if not df.empty:
+                                # Ensure canonical platform column
+                                plat_key = PLAT_LABEL_TO_KEY.get(platform_label, platform_label.split()[-1].lower())
+                                if 'platform' not in df.columns:
+                                    df['platform'] = plat_key
+                                else:
+                                    # normalize existing values just in case
+                                    df['platform'] = df['platform'].astype(str).str.lower().replace(
+                                        {"x": "twitter", "tiktok.com": "tiktok", "twitter.com": "twitter"}
+                                    )
+
+                                # Safe de-duplication
+                                subset_cols = [c for c in ("name", "handle") if c in df.columns]
+                                if subset_cols:
+                                    df = df.drop_duplicates(subset=subset_cols, keep='first')
+                                else:
+                                    df = df.drop_duplicates(keep='first')
+
+                                all_empire_data.append(df)
+                                empire_totals[platform_label] = len(df)
+                                print(f"✅ Loaded {len(df)} {platform_label} leads for {username}")
+
+                                # Languages (optional)
+                                if MULTILINGUAL_AVAILABLE and 'detected_language' in df.columns:
+                                    for lang, count in df['detected_language'].value_counts().to_dict().items():
+                                        language_stats[lang] = language_stats.get(lang, 0) + int(count)
+                            else:
+                                empire_totals[platform_label] = 0
+                                print(f"⚠️ {platform_label}: File found but no user data after filtering")
+                        else:
+                            empire_totals[platform_label] = 0
+                            print(f"⚠️ {platform_label}: File found but empty")
+                    else:
+                        empire_totals[platform_label] = 0
+                        print(f"❌ {platform_label}: No user-specific files found")
+                except Exception as e:
+                    empire_totals[platform_label] = 0
+                    print(f"❌ {platform_label} error: {e}")
+
+            # Ensure we have a username before loading user CSVs
+            current_username = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
             if not current_username:
                 st.info("Please log in to load your leads.")
                 st.stop()
@@ -6593,47 +6604,28 @@ with tab2: # Lead Results
             # ✅ SECURITY VERIFICATION
             total_loaded_files = len(all_empire_data)
             total_leads = sum(len(df) for df in all_empire_data)
-
-            print(f"🔐 SECURITY CHECK:")
-            print(f"   User: {username}")
-            print(f"   Files loaded: {total_loaded_files}")
-            print(f"   Total leads: {total_leads}")
-            print(f"   Expected: Only {username}'s data")
-
-            if total_leads > 100:
-                print(f"⚠️ WARNING: {total_leads} leads seems high for one user - verify user isolation")
-            elif total_leads == 0:
-                print(f"ℹ️ INFO: No leads found for {username} - they may need to generate some")
-            else:
-                print(f"✅ GOOD: {total_leads} leads for {username} (reasonable amount)")
+            print(f"🔐 SECURITY CHECK:\n   User: {username}\n   Files loaded: {total_loaded_files}\n   Total leads: {total_leads}")
 
             # Combine user's empire data only
             if all_empire_data:
                 empire_df = pd.concat(all_empire_data, ignore_index=True)
-                empire_df = empire_df.drop_duplicates(subset=['name', 'handle'], keep='first')
-                print(f"✅ Combined user empire: {len(empire_df)} unique leads")
-                
-                platforms_with_data = {
-                    **{name: pattern for name, pattern in empire_platforms.items()},
-                    "👑 Empire Combined": empire_df
-                }
+                # (already de-duped per file; you can re-dedupe globally if desired)
+                platforms_with_data = {**empire_platforms, "👑 Empire Combined": empire_df}
             else:
                 empire_df = pd.DataFrame()
                 platforms_with_data = empire_platforms
                 print(f"❌ No user data found for {username}")
 
-            # ✅ ADD USER VERIFICATION MESSAGE
-            st.markdown(f"### 👤 {username}'s Empire Intelligence")
-
-            # Build the file list once
+            # Build the file list once (your helper should already use CSV_DIR)
             files_all = get_user_csv_files(current_username)
             files_to_show = [f for f in files_all if f.get("leads", 0) > 0]  # hide 0-lead CSVs
 
-            csv_total_leads = sum(f.get("leads", 0) for f in files_to_show)
+            csv_total_leads = sum(int(f.get("leads", 0) or 0) for f in files_to_show)
             if csv_total_leads > 0:
                 st.success(f"✅ Found {csv_total_leads} leads belonging to you")
             else:
                 st.warning(f"📡 No leads found for {current_username} yet")
+
 
             # Total size (robust to old cached rows without size_mb)
             import os
