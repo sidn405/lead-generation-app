@@ -8876,7 +8876,22 @@ with tab6:  # Settings tab
 
             # View statistics
             st.markdown("---")
-            st.subheader("📊 Detailed Usage Statistics1")
+            st.subheader("📊 Detailed Usage Statistics")
+
+            # --- SAFE seed so totals/platforms/last_session always exist ---
+            ensure_stats_in_store(username)  # no-op if already present
+            st.session_state["stats"] = load_empire_stats(username)
+            _stats = st.session_state.get("stats")
+            if not isinstance(_stats, dict):
+                _stats = {
+                    "totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
+                    "platforms": {},
+                    "last_session": {},
+                }
+
+            totals       = _stats.get("totals") or {}
+            platforms    = _stats.get("platforms") or {}
+            last_session = _stats.get("last_session") or {}
 
             try:
                 user_info = credit_system.get_user_info(username)
@@ -8884,66 +8899,63 @@ with tab6:  # Settings tab
                     # ✅ ENHANCED USAGE METRICS WITH DYNAMIC CREDITS
                     usage_col1, usage_col2, usage_col3, usage_col4 = st.columns(4)
                     
+                    from datetime import datetime
+
+                    is_demo = (user_plan or "demo").lower() == "demo"
+                    txs = (user_info or {}).get("transactions", []) or []
+
                     with usage_col1:
-                        if user_plan == "demo":
-                            # For demo users, calculate total from demo leads used
+                        if is_demo:
                             try:
-                                stats = st.session_state.get("stats", {})
-                                totals = stats.get("totals", {})
                                 can_demo, remaining = credit_system.can_use_demo(username)
-                                demo_used = 5 - remaining  # Calculate used demo leads
-                                total_leads = demo_used     # ✅ FIX: Use demo leads as total
-                                st.metric("Total Leads Generated", totals.get("leads", 0))
-                            except:
-                                total_leads = user_info.get('total_leads_downloaded', 0)
-                                st.metric("Total Leads Generated", total_leads)
+                                demo_used = 5 - int(remaining)
+                            except Exception:
+                                # fallback: clamp to 0..5 from any stored total
+                                demo_used = max(0, min(5, int(user_info.get("total_leads_downloaded", 0))))
+                            st.metric("Total Leads Generated", demo_used)
                         else:
-                            # For paid users, use regular total
-                            total_leads = user_info.get('total_leads_downloaded', 0)
-                            st.metric("Total Leads Generated", total_leads)
-                    
+                            st.metric("Total Leads Generated", int(user_info.get("total_leads_downloaded", 0)))
+
                     with usage_col2:
-                        total_campaigns = len(user_info.get('transactions', []))
-                        st.metric("Campaigns Run", totals.get("campaigns", 0))
-                    
+                        total_campaigns = len(txs)
+                        st.metric("Campaigns Run", total_campaigns)
+
                     with usage_col3:
-                        if user_plan == "demo":
+                        if is_demo:
                             try:
                                 can_demo, remaining = credit_system.can_use_demo(username)
-                                demo_used = 5 - remaining
-                                st.metric("Demo Leads Used", f"{demo_used}/5")  # ✅ This looks correct
-                            except:
+                                demo_used = 5 - int(remaining)
+                                st.metric("Demo Leads Used", f"{demo_used}/5")
+                            except Exception:
                                 st.metric("Demo Leads Used", "5/5")
                         else:
-                            # ✅ DYNAMIC CREDITS USED CALCULATION
+                            # Dynamic credits used = (starting credits + purchases + top-ups) - current_credits
                             try:
-                                current_credits = simple_auth.get_user_credits()  # 1340 in your case
-                                
-                                # Calculate total credits ever owned
-                                plan_starting_credits = {
-                                    'demo': 5,
-                                    'starter': 250,
-                                    'pro': 2000,
-                                    'ultimate': 9999
-                                }
-                                starting_credits = plan_starting_credits.get(user_plan, 250)
-                                
-                                # Add any purchased credits from transactions
-                                purchased_credits = 0
-                                transactions = user_info.get('transactions', [])
-                                for tx in transactions:
-                                    if tx.get('type') == 'credit_purchase':
-                                        purchased_credits += tx.get('credits_added', 0)
-                                
-                                total_credits_ever = starting_credits + purchased_credits
-                                credits_used = total_credits_ever - current_credits
-                                
-                                st.metric("Credits Used", credits_used, delta=f"of {total_credits_ever}")
-                                
-                            except Exception as e:
-                                # Fallback: use total leads as approximation
-                                total_leads = user_info.get('total_leads_downloaded', 0)
-                                st.metric("Credits Used", total_leads, delta="≈ leads generated")
+                                current_credits_now = int(current_credits if current_credits is not None else simple_auth.get_user_credits() or 0)
+                            except Exception:
+                                current_credits_now = int(user_info.get("credits", 0))
+
+                            starting_by_plan = {"starter": 250, "pro": 2000, "ultimate": 5000}
+                            starting = int(starting_by_plan.get((user_plan or "").lower(), 0))
+
+                            purchased = sum(int(tx.get("credits_added", 0) or 0) for tx in txs if tx.get("type") == "credit_purchase")
+                            # include any monthly top-ups if you log them (optional)
+                            topups = sum(int(tx.get("credits_added", 0) or 0) for tx in txs if tx.get("type") in ("subscription_topup","plan_activation"))
+
+                            total_ever = starting + purchased + topups
+                            used = max(total_ever - current_credits_now, 0)
+                            st.metric("Credits Used", used, delta=f"of {total_ever}")
+
+                    with usage_col4:
+                        created_at = (user_info or {}).get("created_at", "")
+                        if created_at:
+                            try:
+                                days_active = (datetime.now() - datetime.fromisoformat(created_at)).days
+                                st.metric("Days Active", days_active)
+                            except Exception:
+                                st.metric("Status", "Active")
+                        else:
+                            st.metric("Status", "Active")
 
                     # ============================================================
                     # ✅ PLATFORM PERFORMANCE + RECENT ACTIVITY + QUICK STATS
@@ -9186,102 +9198,8 @@ with tab6:  # Settings tab
                     User Plan: {user_plan if 'user_plan' in locals() else 'Not set'}
                     Session Credits: {st.session_state.get('credits', 'Not set')}
                     """)
-
-            # now, conditionally render the Detailed Usage panel
-            if st.session_state.show_usage_details:
-                st.markdown("---")
-                st.subheader("📊 Detailed Usage Statistics")
-
-                # make sure store has a basic stats doc (no-op if present)
-                username = st.session_state.get("username") or "anonymous"
-                ensure_stats_in_store(username)
-
-                # load (or reload) stats into session
-                st.session_state["stats"] = load_empire_stats(username)
-                stats = st.session_state["stats"]
-
-                # GUARANTEED variables
-                totals      = stats.get("totals", {})
-                platforms   = stats.get("platforms", {})
-                last_session= stats.get("last_session", {})
-                
-                try:
-                    user_info = credit_system.get_user_info(username)
-                    if user_info:
-                        # Usage metrics
-                        usage_col1, usage_col2, usage_col3, usage_col4 = st.columns(4)
-                        
-                        with usage_col1:
-                            total_leads = user_info.get('total_leads_downloaded', 0)
-                            st.metric("Total Leads Generated", total_leads)
-                        
-                        with usage_col2:
-                            total_campaigns = len(user_info.get('transactions', []))
-                            st.metric("Campaigns Run", total_campaigns)
-                        
-                        with usage_col3:
-                            if user_plan == "demo":
-                                can_demo, remaining = credit_system.can_use_demo(username)
-                                demo_used = 5 - remaining
-                                st.metric("Demo Leads Used", f"{demo_used}/5")
-                            else:
-                                credits_used = user_info.get('total_credits_used', 0)
-                                st.metric("Credits Used", credits_used)
-                        
-                        with usage_col4:
-                            member_since = user_info.get('created_at', '')
-                            if member_since:
-                                try:
-                                    days_active = (datetime.now() - datetime.fromisoformat(member_since)).days
-                                    st.metric("Days Active", days_active)
-                                except:
-                                    st.metric("Status", "Active")
-                            else:
-                                st.metric("Status", "Active")
-                        
-                        # Transaction history
-                        transactions = user_info.get('transactions', [])
-                        if transactions:
-                            st.markdown("**📋 Recent Activity:**")
-                            
-                            # Show last 10 transactions
-                            recent_transactions = sorted(transactions, key=lambda x: x.get('timestamp', ''), reverse=True)[:10]
-                            
-                            for tx in recent_transactions:
-                                tx_type = tx.get('type', 'unknown')
-                                timestamp = tx.get('timestamp', '')
-                                
-                                if timestamp:
-                                    try:
-                                        tx_date = datetime.fromisoformat(timestamp).strftime("%m/%d/%Y %H:%M")
-                                    except:
-                                        tx_date = timestamp
-                                else:
-                                    tx_date = "Unknown"
-                                
-                                if tx_type == 'lead_download':
-                                    leads_count = tx.get('leads_downloaded', 0)
-                                    platform = tx.get('platform', 'unknown')
-                                    st.success(f"📊 {tx_date}: Generated {leads_count} leads from {platform}")
-                                
-                                elif tx_type == 'credit_purchase':
-                                    credits_added = tx.get('credits_added', 0)
-                                    st.info(f"💳 {tx_date}: Purchased {credits_added} credits")
-                                
-                                elif tx_type == 'demo_usage':
-                                    st.info(f"🎯 {tx_date}: Used demo lead")
-                        else:
-                            st.info("📋 No activity yet - start generating leads!")
                     
-                    else:
-                        st.warning("⚠️ Could not load usage data")
-                        
-                except Exception as e:
-                    st.error(f"❌ Error loading usage data: {str(e)}")
-            
-            # Settings sections
-            st.markdown("---")
-            
+            st.markdown("---")            
             # Personal Preferences
             st.subheader("🎯 Lead Generation Preferences")
 
