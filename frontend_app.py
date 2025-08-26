@@ -4365,7 +4365,7 @@ main .block-container {
     gap: 10px; 
     margin: 0; 
     padding: 0;
-    transform: translateY(-25px); /* Move up 20px */
+    transform: translateY(-35px); /* Move up 20px */
 }
 h1.main-header { 
     margin: 0 !important; 
