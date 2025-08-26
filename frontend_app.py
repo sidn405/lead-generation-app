@@ -6861,7 +6861,27 @@ with tab2: # Lead Results
                     st.info(f"🌍 **Global Reach:** Your empire speaks {len(language_stats)} languages! Consider regional campaigns.")
             
             st.markdown("---")
+            from pathlib import Path
+            import os, glob
+
+            CSV_DIR = Path(os.environ.get("CSV_DIR", "client_configs")).resolve()
             
+            def get_latest_csv(pattern: str):
+                """
+                Return the newest CSV file matching `pattern` inside CSV_DIR.
+                `pattern` can include globs like 'twitter_leads_*jane_*.csv'.
+                If `pattern` is an absolute path, use it directly.
+                """
+                base = CSV_DIR if isinstance(CSV_DIR, Path) else Path(CSV_DIR)
+                # If caller passed an absolute path, glob in its parent
+                p = Path(pattern)
+                if p.is_absolute():
+                    files = sorted(glob.glob(str(p)), key=os.path.getmtime, reverse=True)
+                else:
+                    files = sorted(glob.glob(str(base / pattern)), key=os.path.getmtime, reverse=True)
+                return files[0] if files else None
+ 
+
             # Platform intelligence tabs
             platform_tabs = st.tabs(list(platforms_with_data.keys()))
             
