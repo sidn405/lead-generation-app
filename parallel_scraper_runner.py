@@ -385,43 +385,47 @@ class ParallelScraperRunner:
         print("=" * 60)
         
         if max_workers is None:
-            max_workers = min(len(platforms), 7)  # Max 4 concurrent scrapers
-        
+            max_workers = min(len(platforms), 7)
+
         self.start_time = time.time()
+        self.results = {}  # ✅ ensure dict exists
         
+        from concurrent.futures import ThreadPoolExecutor, as_completed
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all scraper tasks
             future_to_platform = {
-                executor.submit(self.run_single_scraper, platform): platform 
+                executor.submit(self.run_single_scraper, platform): platform
                 for platform in platforms
             }
-            
-            # Process results as they complete
             for future in as_completed(future_to_platform):
                 platform = future_to_platform[future]
                 try:
-                    result = future.result()
-                    self.results[platform] = result
-                    
-                    if result['success']:
-                        print(f"🎉 {platform.title()}: {result['leads']} leads in {result['duration']:.1f}s")
+                    result = future.result() or {}
+                    # normalize result so downstream code is safe
+                    norm = {
+                        "platform": platform,
+                        "success": bool(result.get("success")),
+                        "leads": int(result.get("leads") or 0),
+                        "duration": float(result.get("duration") or 0.0),
+                        "error": result.get("error"),
+                    }
+                    self.results[platform] = norm
+                    if norm["success"]:
+                        print(f"🎉 {platform.title()}: {norm['leads']} leads in {norm['duration']:.1f}s")
                     else:
-                        print(f"💥 {platform.title()}: FAILED - {result.get('error', 'Unknown error')}")
-                        
+                        print(f"💥 {platform.title()}: FAILED - {norm.get('error') or 'Unknown error'}")
                 except Exception as e:
                     print(f"💥 {platform.title()}: CRASHED - {e}")
                     self.results[platform] = {
-                        'platform': platform,
-                        'success': False,
-                        'error': str(e),
-                        'duration': 0,
-                        'leads': 0
+                        "platform": platform,
+                        "success": False,
+                        "error": str(e),
+                        "duration": 0.0,
+                        "leads": 0,
                     }
-        
-        # Calculate final statistics
+
         total_duration = time.time() - self.start_time
-        successful_platforms = sum(1 for r in self.results.values() if r['success'])
-        total_leads = sum(r['leads'] for r in self.results.values())
+        successful_platforms = sum(1 for r in self.results.values() if r["success"])
+        total_leads = sum(r["leads"] for r in self.results.values())
         
         print("\n" + "=" * 60)
         print(f"🎉 PARALLEL SCRAPING COMPLETE!")
@@ -440,40 +444,23 @@ class ParallelScraperRunner:
             if not result['success'] and 'error' in result:
                 print(f"      Error: {result['error']}")
 
-        # Test the class structure
-        self.test_method()
-        
-        # Save summary
-        self.save_session_summary(total_duration, successful_platforms, total_leads)
+        # Test + save, but don't let exceptions kill the return
+        try: self.test_method()
+        except Exception as e: print(f"[test_method] ignored: {e}")
+        try: self.save_session_summary(total_duration, successful_platforms, total_leads)
+        except Exception as e: print(f"[save_session_summary] ignored: {e}")
+        try: self.finalize_session()
+        except Exception as e: print(f"[finalize_session] ignored: {e}")
 
-        # ✅ ADD THIS LINE - finalize the session
-        self.finalize_session()
-        
         total_leads = sum(r['leads'] for r in self.results.values())
         
-        # --- DEMO CREDIT CONSUMPTION + count for stats ---
-        consumed = 0
-        if self.user_plan == "demo" and total_leads > 0:
-            try:
-                from postgres_credit_system import credit_system
-                # consume up to remaining demo credits
-                remaining = credit_system.get_demo_leads_remaining(self.username)
-                to_consume = min(total_leads, remaining)
-                for _ in range(to_consume):
-                    if credit_system.consume_demo_lead(self.username):
-                        consumed += 1
-                    else:
-                        break
-                try:
-                    credit_system.save_data()
-                except Exception:
-                    pass
-                print(f"📱 Demo consumption: used {consumed}/{total_leads}")
-            except Exception as e:
-                print(f"❌ Demo credit error: {e}")
+        # pull counted_leads from finalize_session (fallback to total_leads)
+        summary = getattr(self, "session_summary", {}) or {}
+        count_for_stats = int(summary.get("counted_leads", total_leads))
+        print(f"[STATS] total_leads={total_leads}, counted_leads={count_for_stats}")
+        
 
-        count_for_stats = consumed if self.user_plan == "demo" else total_leads
-
+        return dict(self.results)
                 
     def finalize_session(self):
         from datetime import datetime
@@ -596,29 +583,47 @@ def _env_user_triplet():
 # Integration with your existing frontend
 def run_parallel_scrapers(platforms, search_term, max_scrolls, username, user_plan):
     """
-    Drop-in replacement for your sequential scraper
-    Call this instead of run_all_platform_scrapers()
+    Run scrapers in parallel and return a frontend-friendly dict:
+    { platform: [ {id, platform}, ... ] }
+    Always returns a dict (never None).
     """
-    # Use environment-based user info instead of session state
-    env_username, env_plan, env_credits = _env_user_triplet()
-    active_username = env_username or username
-    active_plan = env_plan or user_plan
+    # --- Resolve user/plan from env if available
+    env_username, env_plan, env_credits = _env_user_triplet()  # must return a 3-tuple
+    active_username = env_username or username or "anonymous"
+    active_plan = (env_plan or user_plan or "demo").lower()
     print(f"Scraping as user: {active_username} ({active_plan} plan)")
-    
+
+    # --- Fallback platforms if caller passed None/[]
+    if not platforms:
+        try:
+            from run_daily_scraper import determine_platforms_to_run
+            platforms = determine_platforms_to_run(active_plan)
+        except Exception:
+            platforms = ["twitter"]  # last-resort
+
     runner = ParallelScraperRunner(active_username, active_plan, search_term, max_scrolls)
-    results = runner.run_parallel(platforms)
- 
-    # Convert to format expected by frontend
+
+    # --- Never let 'results' be None
+    try:
+        raw = runner.run_parallel(platforms)
+    except Exception as e:
+        print(f"[PARALLEL] run_parallel raised: {e}")
+        raw = {}
+
+    results = raw or {}  # guarantee dict
+
+    # --- Convert to FE shape
     frontend_results = {}
-    for platform, result in results.items():
-        if result['success']:
-            # Create fake leads list (since we don't return actual lead objects)
-            fake_leads = [{'id': i, 'platform': platform} for i in range(result['leads'])]
-            frontend_results[platform] = fake_leads
-        else:
-            frontend_results[platform] = []
-    
+    for plat in platforms:
+        r = results.get(plat) or {}
+        ok = bool(r.get("success"))
+        n  = int(r.get("leads") or 0)
+        frontend_results[plat] = (
+            [{"id": i, "platform": plat} for i in range(n)] if ok and n > 0 else []
+        )
+
     return frontend_results
+
 
 # Update your frontend launch button
 def update_frontend_launch_button():

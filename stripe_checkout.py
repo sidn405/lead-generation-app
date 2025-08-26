@@ -261,88 +261,125 @@ def handle_payment_success_url():
         print(f"[stripe ids] capture failed: {e}")
     # ----------------------------------------------------------------------------- 
 
-    credit_amount = monthly_credits if is_subscription else credits
+    # Normalize inputs up front
+    plan_key = (tier_name or "").strip().lower().replace(" ", "_")
+    credit_amount = (monthly_credits if is_subscription else credits) or 0
     is_package = bool(package_type)
 
+    # capture pre state so we can verify changes even if functions return None
+    prev = credit_system.get_user_info(username) or {}
+    prev_credits = int(prev.get("credits", 0))
+    prev_status  = (prev.get("subscription_status") or "").lower()
+
     ok = False
+    err_msg = None
+
     if is_package:
-        # Handle package purchase - CREATE DOWNLOADABLE FILE
-        print(f"Processing package purchase: {package_type} for {username}")
-        
+        # Package flow
         try:
-            # Create the actual downloadable package
-            success = create_package_download(username, package_type, industry, location)
-            
-            if success:
-                st.success(f"Package created and added to your downloads!")
-                ok = True
+            print(f"Processing package purchase: {package_type} for {username}")
+            ok = bool(create_package_download(username, package_type, industry, location))
+            if ok:
+                st.success("Package created and added to your downloads!")
             else:
-                st.error("Failed to create package download")
-                
+                err_msg = "Failed to create package download"
         except Exception as e:
-            print(f"Package creation error: {e}")
-            st.error(f"Package creation failed: {e}")
-    
+            err_msg = f"Package creation failed: {e}"
+            print(err_msg)
+
     elif is_subscription:
-        ok = credit_system.activate_subscription(
-            username=username,
-            plan=tier_name or "pro",
-            monthly_credits=credit_amount or 2000,
-            stripe_session_id=payment_intent,
-        )
-    else:
-        ok = credit_system.add_credits(
-            username=username,
-            credits=credit_amount,
-            plan="credit_purchase",
-            stripe_session_id=payment_intent,
+        # Subscription flow: call and then VERIFY persisted effects
+        try:
+            _ret = credit_system.activate_subscription(
+                username=username,
+                plan=plan_key or "pro",
+                monthly_credits=credit_amount or 2000,
+                stripe_session_id=payment_intent,  # this is really the checkout session id
+            )
+        except Exception as e:
+            _ret = False
+            err_msg = f"activate_subscription error: {e}"
+            print(err_msg)
+
+        # Re-fetch and validate regardless of return value
+        fresh = credit_system.get_user_info(username) or {}
+        new_credits = int(fresh.get("credits", prev_credits))
+        status = (fresh.get("subscription_status") or "").lower()
+        plan_in_store = (fresh.get("plan") or "").lower()
+
+        ok = (_ret is True) or (
+            status == "active" and
+            (plan_key == "" or plan_in_store == plan_key) and
+            new_credits >= prev_credits  # monthly top-up might be equal if already added
         )
 
-    # CRITICAL FIX: Restore session state BEFORE doing anything else
+    else:
+        # One-time credits flow: call then VERIFY credits increased
+        try:
+            _ret = credit_system.add_credits(
+                username=username,
+                credits=credit_amount,
+                plan="credit_purchase",
+                stripe_session_id=payment_intent,
+            )
+        except Exception as e:
+            _ret = False
+            err_msg = f"add_credits error: {e}"
+            print(err_msg)
+
+        fresh = credit_system.get_user_info(username) or {}
+        new_credits = int(fresh.get("credits", prev_credits))
+        ok = (_ret is True) or (new_credits >= prev_credits + max(int(credit_amount), 0))
+
+    # ---- CRITICAL: only restore + rerun on success ----
     if ok:
         try:
-            fresh = credit_system.get_user_info(username)
-            if fresh:
-                # Force restore COMPLETE session state
-                st.session_state.authenticated = True
-                st.session_state.username = username
-                st.session_state.user_data = fresh
-                st.session_state.credits = fresh.get("credits", 0)
-                st.session_state.user_plan = fresh.get("plan", "demo")
-                st.session_state.show_login = False
-                st.session_state.show_register = False
-                
-                print(f"SESSION RESTORED: {username} with {fresh.get('credits', 0)} credits")
-                
-                # Show success message
-                #st.balloons()
-                st.success(f"Payment successful! {credit_amount} credits added to your account!")
-                
+            fresh = credit_system.get_user_info(username) or {}
+            st.session_state.authenticated = True
+            st.session_state.username = username
+            st.session_state.user_data = fresh
+            st.session_state.credits = fresh.get("credits", 0)
+            st.session_state.user_plan = fresh.get("plan", "demo")
+            st.session_state.show_login = False
+            st.session_state.show_register = False
+            print(f"SESSION RESTORED: {username} with {st.session_state.credits} credits")
+
+            if is_package:
+                st.success("Payment successful! Your package is ready in Downloads.")
+            elif is_subscription:
+                st.success(f"Subscription active! Monthly credits: {credit_amount}")
+            else:
+                st.success(f"Payment successful! {credit_amount} credits added.")
         except Exception as e:
             print(f"Session restore error: {e}")
 
-    # Admin logging (after session restore)
-    if ok:
+        # Admin logging (best-effort)
         try:
             from frontend_app import log_payment_to_admin_system
-            admin_log_entry = {
+            log_payment_to_admin_system({
                 "timestamp": datetime.now().isoformat(),
                 "username": username,
                 "tier": tier_name,
                 "credits": credit_amount,
                 "amount": amount,
                 "payment_intent": payment_intent,
-                "type": payment_type
-            }
-            log_payment_to_admin_system(admin_log_entry)
-            print(f"Payment logged to admin: {username} - {tier_name} - ${amount}")
+                "type": payment_type,
+            })
         except Exception as e:
             print(f"Admin logging failed (non-critical): {e}")
 
-    # Clear query params and rerun (session state should now be preserved)
-    st.query_params.clear()
-    st.rerun()
-    return True
+        # Clear QS and rerun only on success
+        try: st.query_params.clear()
+        except Exception: pass
+        st.rerun()
+        return True
+    else:
+        # Don’t rerun; show a meaningful error so you can see the issue
+        if not err_msg:
+            err_msg = "We couldn’t verify the account update. Please refresh or contact support."
+        st.error(err_msg)
+        return False
+
 
 def ensure_user_session(username: str):
     """Ensure user session is properly maintained"""

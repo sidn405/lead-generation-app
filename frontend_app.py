@@ -1896,6 +1896,38 @@ def show_auth_required_dashboard():
 AUTH_AVAILABLE = True  # Always available with simple system
 USAGE_TRACKING_AVAILABLE = False  # Not needed with credit system
 
+def _persist_user_info(credit_system, username, info):
+    """
+    Persist user info regardless of CreditSystem method surface.
+    Tries several likely method names; falls back to save_data() only.
+    """
+    try:
+        if hasattr(credit_system, "save_user_info"):
+            credit_system.save_user_info(username, info);  return True
+        if hasattr(credit_system, "set_user_info"):
+            credit_system.set_user_info(username, info);   return True
+        if hasattr(credit_system, "update_user_info"):
+            credit_system.update_user_info(username, info);return True
+        if hasattr(credit_system, "set_user"):
+            credit_system.set_user(username, info);        return True
+        # last resort: mutate then save if the API allows it
+        try:
+            # if there is an in-memory dict, update it
+            store = getattr(credit_system, "_data", None) or getattr(credit_system, "data", None)
+            if isinstance(store, dict):
+                users = store.setdefault("users", {})
+                users[username] = info
+                if hasattr(credit_system, "save_data"):
+                    credit_system.save_data()
+                return True
+        except Exception:
+            pass
+        # at minimum try to flush
+        if hasattr(credit_system, "save_data"):
+            credit_system.save_data(); return True
+    except Exception:
+        pass
+    return False
 
 
 
