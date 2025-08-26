@@ -9110,7 +9110,9 @@ with tab6:  # Settings tab
                     else:
                         st.info("📋 No activity yet - start generating leads to see your history!")
 
-
+                    totals      = stats.get("totals", {})
+                    platforms   = stats.get("platforms", {})
+                    last_session= stats.get("last_session", {})
                     # 6) Quick Stats (now safe because totals exist)
                     # ----------------------------------------------------------------
                     st.markdown("---")
