@@ -341,6 +341,38 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
+# --- EARLY in frontend_app.py (after imports) ---
+did_restore = False
+try:
+    # 1) Stripe return
+    restore_payment_authentication()
+    did_restore = True
+except Exception as e:
+    print(f"restore_payment_authentication failed: {e}")
+
+try:
+    # 2) Rehydrate from querystring (?username=...)
+    did_restore = _quick_rehydrate_from_qs() or did_restore
+except Exception as e:
+    print(f"_quick_rehydrate_from_qs failed: {e}")
+
+try:
+    # 3) Soft rehydrate from simple_auth cache
+    soft_rehydrate_from_simple_auth()
+except Exception as e:
+    print(f"soft_rehydrate_from_simple_auth failed: {e}")
+
+# Only now compute auth flags
+user_authenticated = bool(st.session_state.get("authenticated"))
+username = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
+
+# Gate any loaders/probes:
+if not user_authenticated or not username:
+    # render login / marketing, then stop BEFORE loaders use fallback demo
+    # (Your existing login UI here)
+    st.stop()
+
+    
 def refresh_subscription_status(username: str, current_plan: str):
     try:
         active, status = credit_system.check_subscription_status(username)
@@ -1021,6 +1053,10 @@ def get_platform_emoji(platform):
     }
     return emoji_map.get(platform, '📄')
 
+from pathlib import Path
+CSV_DIR = Path(os.environ.get("CSV_DIR", "client_configs")).resolve()
+print(f"[CSV DEBUG] CSV_DIR={CSV_DIR} cwd={Path.cwd()}")
+
 
 def download_csv_file(file_path: str, filename: str):
     try:
@@ -1565,6 +1601,18 @@ print(f"[PLAN] normalized -> {plan_fixed} (source={source}) "
       f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
       f"'subscription_status': {user_info.get('subscription_status')}}}")
 # --- end normalizer ---
+
+import glob, re, os
+
+def _glob_user_files(pattern: str, username: str):
+    base_glob = str(CSV_DIR / pattern)
+    rec_glob  = str(CSV_DIR / "**" / pattern)
+    candidates = glob.glob(base_glob) + glob.glob(rec_glob, recursive=True)
+    rx = re.compile(re.escape(username), re.IGNORECASE)
+    files = [p for p in candidates if rx.search(p)]
+    files.sort(key=os.path.getmtime, reverse=True)
+    return files
+
 # ---- Stats defaults & helpers ----
 def _default_stats():
     return {
