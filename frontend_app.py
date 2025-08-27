@@ -452,6 +452,10 @@ def _is_stripe_return(qp: dict) -> bool:
             "package_success", "package_cancelled",
         ))
     )
+    
+username = st.session_state.get("username") or "anonymous"
+st.session_state["stats"] = load_empire_stats(username)
+refresh_demo_status(username)
 
 # only rehydrate on Stripe returns, and not while opening login/register
 if _is_stripe_return(st.query_params) and not st.session_state.get("show_login") and not st.session_state.get("show_register"):
