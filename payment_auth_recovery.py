@@ -615,6 +615,273 @@ def _create_emergency_session(username: str, query_params: Dict) -> bool:
         print(f"❌ Emergency session creation failed: {e}")
         return False
 
+def show_payment_success_message() -> bool:
+    """
+    Only handles plan upgrade success UI here.
+    Package success is handled in stripe_checkout.handle_payment_success_url().
+    Returns True if a message was shown.
+    """
+    qp = st.query_params
+    if "success" not in qp:
+        return False
+
+    # Defer package purchases to stripe_checkout to avoid double-processing
+    if "package" in qp:
+        return False
+
+    # Plan upgrade UI (keep existing look & feel)
+    plan = qp.get("plan")
+    if plan:
+        st.success(f"Plan upgrade successful! Welcome to {plan.title()} plan!")
+        if st.button("Continue to Dashboard", type="primary"):
+            try:
+                st.query_params.clear()
+            except Exception:
+                pass
+            st.rerun()
+        return True
+
+    return False
+
+def _normalize_plan_from_user_data(user_data: dict) -> str:
+    """Return one of {'demo','starter','pro','ultimate'} from DB row."""
+    ud = user_data or {}
+    sp = (ud.get("subscribed_plan") or "").lower()
+    ss = (ud.get("subscription_status") or "").lower()
+    bp = (ud.get("plan") or "").lower()
+
+    if sp == "demo" or bp == "demo":
+        return "demo"
+    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
+        return sp
+    if bp in {"starter", "pro", "ultimate"}:
+        return bp
+    return "demo"
+
+def update_simple_auth_state(simple_auth_instance) -> None:
+    """Update simple_auth state after session restoration WITHOUT clobbering plan."""
+    if not st.session_state.get('authenticated', False):
+        return
+
+    username  = st.session_state.get('username')
+    user_data = st.session_state.get('user_data') or {}
+    if not username:
+        return
+
+    # Sync simple_auth
+    simple_auth_instance.current_user = username
+    simple_auth_instance.user_data     = user_data
+
+    # Keep credits in sync
+    st.session_state['credits'] = user_data.get('credits', st.session_state.get('credits', 0))
+
+    # Only set plan if it's missing/invalid; NEVER default to 'starter'
+    current_plan = st.session_state.get('plan')
+    if current_plan not in {'demo','starter','pro','ultimate'}:
+        st.session_state['plan'] = _normalize_plan_from_user_data(user_data)
+
+    print(f"Updated simple_auth state for {username} (plan={st.session_state.get('plan')})")
+    print("[PLAN_GUARD] after update_simple_auth_state =>", st.session_state.get("plan"))
+
+def create_package_stripe_session(
+    stripe,
+    username: str,
+    package_type: str,
+    amount: float,
+    description: str,
+    industry: str,
+    location: str,
+    requires_build: bool = True,
+):
+    """Create Stripe session for package purchases (one-time payments)."""
+    import time
+    from urllib.parse import quote_plus
+
+    # Get user email safely
+    try:
+        user_data = st.session_state.get('user_data', {})
+        user_email = user_data.get('email', f"{username}@empire.com")
+    except:
+        user_email = f"{username}@empire.com"
+
+    base = APP_BASE_URL.rstrip("/")
+    stamp = int(time.time())
+
+    # Build success/cancel URLs (include requires_build + session_id)
+    success_url = (
+        f"{base}/?success=1"
+        f"&package_success=1"
+        f"&package={package_type}"
+        f"&username={username}"
+        f"&amount={amount}"
+        f"&industry={quote_plus(industry or '')}"
+        f"&location={quote_plus(location or '')}"
+        f"&requires_build={'1' if requires_build else '0'}"
+        f"&timestamp={stamp}"
+        f"&session_id={{CHECKOUT_SESSION_ID}}"
+    )
+    cancel_url = (
+        f"{base}/?success=0"
+        f"&package_cancelled=1"
+        f"&package={package_type}"
+        f"&username={username}"
+        f"&industry={quote_plus(industry or '')}"
+        f"&location={quote_plus(location or '')}"
+    )
+
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": description,
+                    "description": f"Industry: {industry} | Location: {location}"
+                },
+                "unit_amount": int(amount * 100),
+            },
+            "quantity": 1,
+        }],
+        mode="payment",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        customer_email=user_email,
+        metadata={
+            "purchase_type": "package",
+            "username": username,
+            "package_type": package_type,
+            "target_industry": industry,
+            "target_location": location,
+            "amount": str(amount),
+            "requires_build": "1" if requires_build else "0",
+            "order_type": "custom" if requires_build else "prebuilt",
+        },
+    )
+    return session
+
+def create_improved_stripe_session(stripe, username: str, plan_type: str, amount: float, description: str):
+    """Create improved Stripe checkout session with better return handling"""
+    
+    # Get user email safely
+    try:
+        user_data = st.session_state.get('user_data', {})
+        user_email = user_data.get('email', f"{username}@empire.com")
+    except:
+        user_email = f"{username}@empire.com"
+        
+    base = APP_BASE_URL.rstrip("/")
+    # Create more robust success URL
+    success_url = f"https://leadgeneratorempire.com/?success=true&plan={plan_type}&username={username}&amount={amount}&timestamp={int(time.time())}"
+    cancel_url = (
+        f"{base}/?cancel=1"
+        f"&type=credits"
+        f"&tier={plan_type.lower().replace(' ', '_')}"
+        f"&username={username}"
+    )
+    
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": description
+                },
+                "unit_amount": int(amount * 97),
+                "recurring": {"interval": "month"} if plan_type in ["starter", "pro", "ultimate"] else None
+            },
+            "quantity": 1,
+        }],
+        mode="subscription" if plan_type in ["starter", "pro", "ultimate"] else "payment",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        customer_email=user_email,
+        metadata={
+            "username": username,
+            "plan_type": plan_type,
+            "amount": str(amount)
+        }
+    )
+    
+    return session
+
+def debug_authentication_state(simple_auth_instance, credit_system) -> None:
+    """Debug authentication state - for troubleshooting"""
+    
+    if st.button("Debug Authentication State"):
+        st.subheader("Authentication Debug Info")
+        
+        # Session state
+        st.markdown("**Streamlit Session State:**")
+        auth_keys = ['authenticated', 'username', 'user_data', 'credits', 'login_time']
+        for key in auth_keys:
+            value = st.session_state.get(key, "NOT SET")
+            st.text(f"{key}: {value}")
+        
+        # Simple auth state
+        st.markdown("**Simple Auth State:**")
+        st.text(f"current_user: {simple_auth_instance.current_user}")
+        st.text(f"user_data: {simple_auth_instance.user_data}")
+        st.text(f"is_authenticated(): {simple_auth_instance.is_authenticated()}")
+        
+        # URL parameters
+        st.markdown("**URL Parameters:**")
+        query_params = st.query_params
+        if query_params:
+            for key, value in query_params.items():
+                st.text(f"{key}: {value}")
+        else:
+            st.text("No URL parameters")
+        
+        # Credit system check
+        st.markdown("**Credit System Check:**")
+        try:
+            username = st.session_state.get('username', 'none')
+            if username and username != 'none':
+                user_info = credit_system.get_user_info(username)
+                st.text(f"Credit system has user: {bool(user_info)}")
+                if user_info:
+                    st.json(user_info)
+            else:
+                st.text("No username to check")
+        except Exception as e:
+            st.text(f"Credit system error: {e}")
+        
+        # Quick fix button
+        st.markdown("**Force Re-authentication:**")
+        username = st.text_input("Enter username:", key="debug_username")
+        if username and st.button("Force Login", key="debug_force_login"):
+            try:
+                user_info = credit_system.get_user_info(username)
+                if user_info:
+                    _set_session_state(username, user_info)
+                    update_simple_auth_state(simple_auth_instance)
+                    st.success("Force login successful!")
+                    st.rerun()
+                else:
+                    st.error("User not found")
+            except Exception as e:
+                st.error(f"Force login failed: {e}")
+
+def scroll_to_top():
+    """Force scroll to top of page using JavaScript"""
+    scroll_script = """
+    <script>
+        // Scroll to top immediately
+        window.scrollTo(0, 0);
+        
+        // Also scroll after a small delay in case of timing issues
+        setTimeout(function() {
+            window.scrollTo(0, 0);
+        }, 100);
+        
+        // Force focus to top of page
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+    </script>
+    """
+    st.markdown(scroll_script, unsafe_allow_html=True)
+
 def _set_session_state(username: str, user_data: Dict) -> None:
     """Set session state for authenticated user"""
     # FORCE restore session state
