@@ -8,6 +8,8 @@ import json
 import streamlit as st
 import stripe
 from sqlalchemy import create_engine, text
+from urllib.parse import quote_plus, urlencode
+
 
 # -----------------------------
 # Environment & configuration
@@ -188,27 +190,26 @@ def create_package_stripe_session(
     package_key: str,
     price: float,
     package_name: str,
-    industry: Optional[str] = None,
-    location: Optional[str] = None,
+    industry: str = None,
+    location: str = None,
     requires_build: bool = False,
 ):
-    '''Create a Stripe Checkout Session for a package purchase.
-    Set requires_build=True for custom/build-to-order packages.
-    '''
+    """Create a Stripe Checkout Session for a package purchase."""
     stripe.api_key = api_key
 
-    # Human name and QS-safe strings
-    display = package_name or KEY_TO_NAME.get(package_key, package_key)
+    display = package_name or {
+        "starter": "Niche Starter Pack",
+        "deep_dive": "Industry Deep Dive",
+        "domination": "Market Domination",
+    }.get(package_key, package_key)
+
+    base = os.getenv("APP_BASE_URL", "https://leadgeneratorempire.com").rstrip("/")
+    stamp = os.environ.get("APP_COMMIT", "")[:7] or "dev"
     ind = quote_plus(industry or "Fitness & Wellness")
     loc = quote_plus(location or "United States")
 
-    # canonical base (supports reverse proxy)
-    base = APP_BASE_URL.rstrip("/")
-    stamp = os.environ.get("APP_COMMIT", "")[:7] or "dev"
-
-    from urllib.parse import quote_plus  # ensure this is imported above
-
     session = stripe.checkout.Session.create(
+        client_reference_id=username,
         payment_method_types=["card"],
         line_items=[{
             "price_data": {
@@ -217,8 +218,8 @@ def create_package_stripe_session(
                     "name": f"{'Custom ' if requires_build else ''}{display}",
                     "description": (
                         "Built-to-order • Allow 48–120 hours"
-                        if requires_build
-                        else "Verified leads • Instant download"
+                        if requires_build else
+                        "Verified leads • Instant download"
                     ),
                 },
                 "unit_amount": int(round(float(price) * 100)),
@@ -229,8 +230,8 @@ def create_package_stripe_session(
         success_url=(
             f"{base}/?success=1"
             f"&package_success=1"
-            f"&package={quote_plus(display)}"
-            f"&package_key={quote_plus(package_key)}"
+            f"&package={quote_plus(package_key)}"
+            f"&package_name={quote_plus(display)}"
             f"&username={quote_plus(username)}"
             f"&amount={price}"
             f"&industry={ind}"
@@ -259,87 +260,146 @@ def create_package_stripe_session(
         },
     )
 
-    session = stripe.checkout.Session.create(
-        client_reference_id=username,  # helps identify the user later
-        payment_method_types=["card"],
-        line_items=[{ ... }],
-        mode="payment",
-        success_url=..., cancel_url=...,
-        customer_email=f"{username}@example.com",
-        metadata={ ... },
-    )
-
-    # Persist server-side so a fresh Streamlit session (no QS) can still finalize
-    remember_checkout_session(
-        username=username,
-        kind="package",
-        session_id=session.id,
-        payload={
-            "package_key": package_key,
-            "package_name": package_name or display,
-            "requires_build": bool(requires_build),
-            "industry": industry or "",
-            "location": location or "",
-            "amount": float(price),
-        },
-    )
-
-    # (Optional) keep your in-memory session_state too, but Postgres is the source of truth now
+    # remember the session in case user returns without query params
     st.session_state["last_checkout_session_id"] = session.id
     st.session_state["last_checkout_kind"] = "package"
     st.session_state["last_checkout_payload"] = {
         "package_key": package_key,
-        "package_name": (package_name or display),
+        "package_name": display,
         "requires_build": bool(requires_build),
         "industry": industry or "",
         "location": location or "",
         "amount": float(price),
     }
 
-
-    # Friendly redirect hint
     st.success("✅ Checkout session created! Redirecting to Stripe…")
-    st.markdown('''
-        <meta http-equiv="refresh" content="2;url={url}">
+    st.markdown(
+        f"""
+        <meta http-equiv="refresh" content="2;url={session.url}">
         <div style="text-align:center;padding:20px;">
-          <h3>Redirecting to Stripe</h3>
-          <p>If you're not redirected automatically:</p>
-          <a href="{url}" target="_blank" style="background:#635bff;color:white;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Open Checkout</a>
+            <h3>🔄 Redirecting to Stripe…</h3>
+            <p>If you're not redirected automatically:</p>
+            <a href="{session.url}" target="_blank" style="
+                background:#635bff;color:white;padding:12px 20px;
+                border-radius:8px;text-decoration:none;font-weight:600;">
+                🚀 Open Checkout
+            </a>
         </div>
-    '''.replace("{url}", session.url), unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
     return session
+
 
 # -----------------------------
 # UI helpers (Store & Downloads)
 # -----------------------------
 
-def show_package_store(username: str, industry: Optional[str] = None, location: Optional[str] = None,
-                       api_key: Optional[str] = None):
-    '''Minimal store that sells the 3 pre-built packages (instant download).'''
-    api_key = api_key or os.getenv("STRIPE_SECRET_KEY", "")
-    st.subheader("Package Store")
-    cols = st.columns(3)
-    entries = [
-        ("starter", "Niche Starter Pack", 97),
-        ("deep_dive", "Industry Deep Dive", 297),
-        ("domination", "Market Domination", 897),
+def show_package_store(username: str, user_authenticated: bool):
+    # cancelled?
+    if (
+        st.query_params.get("success") == "0"
+        or "cancel" in st.query_params
+        or "package_cancelled" in st.query_params
+    ):
+        st.warning("⚠️ Purchase was cancelled. You can try again anytime.")
+        st.query_params.clear()
+        st.rerun()
+
+    st.markdown('<div id="top"></div>', unsafe_allow_html=True)
+    st.markdown("# 📦 Pre-Built Lead Packages")
+
+    # Targeting summary banner
+    st.markdown("## 📋 Your Targeting Summary")
+    st.markdown("""
+    <div style="background-color:#1e3a5f; padding:20px; border-radius:10px; margin-bottom:20px;">
+      <div style="color:#60a5fa; margin-bottom:8px;">🏢 <strong>Industry:</strong> Fitness & Wellness</div>
+      <div style="color:#60a5fa; margin-bottom:8px;">📍 <strong>Location:</strong> United States (All States)</div>
+      <div style="color:#60a5fa;">👥 <strong>Lead Type:</strong> End Customers</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.success("🚀 **FITNESS & WELLNESS LEADS PRE-BUILT & READY** — Instant download available")
+    st.markdown("---")
+
+    packages = [
+        {"key":"starter","name":"Niche Starter Pack","badge":"STARTER","badge_color":"#1f77b4","leads":500,"price":97,
+         "features":["500 targeted leads in your chosen industry","2-3 platforms included","Basic filtering applied",
+                     "CSV + Google Sheets delivery","48-hour delivery"],
+         "perfect_for":"Testing a new niche, quick campaigns"},
+        {"key":"deep_dive","name":"Industry Deep Dive","badge":"MOST POPULAR","badge_color":"#28a745","leads":2000,"price":297,
+         "features":["2,000 highly-targeted leads in your industry","Comprehensive industry research","All 8 platforms",
+                     "Advanced relevance filtering","Social media profiles included","DMs pre-generated for your industry","72-hour delivery"],
+         "perfect_for":"Serious campaigns, market research"},
+        {"key":"domination","name":"Market Domination","badge":"ENTERPRISE","badge_color":"#fd7e14","leads":5000,"price":897,
+         "features":["5,000 premium leads across multiple related niches","Advanced geographic targeting",
+                     "Phone/email enrichment when available","Custom DM sequences for your industry",
+                     "30-day refresh guarantee","5 business days delivery"],
+         "perfect_for":"Enterprise campaigns, market domination"},
     ]
-    for col, (key, name, price) in zip(cols, entries):
+
+    cols = st.columns(3)
+    for pkg, col in zip(packages, cols):
         with col:
-            st.markdown(f"### {name}")
-            st.markdown(f"**${price}**")
-            if st.button(f"Buy {name}", key=f"buy_{key}"):
-                create_package_stripe_session(
-                    api_key=api_key,
-                    username=username,
-                    package_key=key,
-                    price=price,
-                    package_name=name,
-                    industry=industry,
-                    location=location,
-                    requires_build=False,  # pre-built
-                )
+            st.markdown(f"""
+                <div style="background-color:{pkg['badge_color']};color:white;padding:8px 16px;
+                            border-radius:8px;text-align:center;font-weight:bold;margin-bottom:16px;">
+                    {pkg['badge']}
+                </div>
+            """, unsafe_allow_html=True)
+            st.markdown(f"### {pkg['name']}")
+            st.markdown(f"## ${pkg['price']}")
+            st.markdown(f"**{pkg['leads']:,} verified leads**")
+            st.markdown("---")
+            st.markdown("**📦 What's Included:**")
+            for feat in pkg["features"]:
+                st.markdown(f"• {feat}")
+            st.info(f"**Perfect for:** {pkg['perfect_for']}")
+
+            agree_key = f"agree_{pkg['key']}"
+            if agree_key not in st.session_state:
+                st.session_state[agree_key] = False
+            agreed = st.checkbox("✅ Agree to terms", key=agree_key,
+                                 help="I agree to the Terms of Service & No-Refund Policy",
+                                 value=st.session_state.get(agree_key, False))
+
+            if user_authenticated:
+                button_text = f"🛒 Buy {pkg['name']}" if agreed else f"🛒 Buy {pkg['name']} (Agree to terms first)"
+                if st.button(button_text, key=f"buy_{pkg['key']}", disabled=not agreed, use_container_width=True,
+                             type=("primary" if agreed else "secondary")):
+                    if agreed:
+                        create_package_stripe_session(
+                            os.getenv("STRIPE_SECRET_KEY", ""),
+                            username,
+                            pkg["key"],
+                            pkg["price"],
+                            pkg["name"],
+                            industry="Fitness & Wellness",
+                            location="United States",
+                            requires_build=False,  # pre-built store
+                        )
+            else:
+                if st.button("🔑 Sign In to Buy", key=f"signin_{pkg['key']}", use_container_width=True):
+                    st.session_state.show_login = True
+                    st.rerun()
+
+    # Sticky "Top" and footer
+    st.markdown(
+        '<a href="#top" style="position:fixed;bottom:20px;right:20px;'
+        'padding:12px 16px;border-radius:25px;background:linear-gradient(135deg,#0066cc,#4dabf7);'
+        'color:white;font-weight:bold;text-decoration:none;z-index:9999;">⬆️ Top</a>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("""
+      <style>
+        .appview-container .main { padding-bottom: 60px; }
+        .footer { position:fixed; bottom:0; left:0; width:100%; height:50px;
+                  background:rgba(0,0,0,0.8); color:#aaa; display:flex; align-items:center;
+                  justify-content:center; font-size:0.9rem; z-index:1000; }
+      </style>
+      <div class="footer">Lead Generator Empire Pre-Built Packages | Secure &amp; Private</div>
+    """, unsafe_allow_html=True)
+
 
 def _render_data_uri_download(username: str, package_name: str, file_path: str):
     ensure_leads_dir()
@@ -364,29 +424,90 @@ def _render_data_uri_download(username: str, package_name: str, file_path: str):
     increment_download_count_by_name(username, package_name)
 
 def show_my_packages(username: str):
-    '''List purchased packages (from Postgres) and provide download links.'''
-    st.subheader("My Downloads")
-    engine = get_pg_engine()
-    with engine.begin() as conn:
-        rows = conn.execute(text('''
-            SELECT package_name, lead_count, price, file_path, created_at, download_count
+    st.title("📁 My Downloaded Packages")
+
+    # Handle Stripe success via query params (legacy path still works)
+    if "package_success" in st.query_params:
+        raw = st.query_params.get("package", "unknown")
+        name_map = {"starter":"Niche Starter Pack","deep_dive":"Industry Deep Dive","domination":"Market Domination"}
+        add_package_to_database(username, name_map.get(raw, raw))
+        st.success(f"🎉 {name_map.get(raw, raw)} purchased successfully!")
+        st.info("📁 Your package is now available for download below")
+        st.query_params.clear()
+        st.rerun()
+
+    # Load purchases (Postgres if available; else SQLite fallback)
+    rows = []
+    try:
+        # If you're on Postgres with SQLAlchemy
+        from sqlalchemy import text as _text
+        engine = get_pg_engine()  # comment out if not using the Postgres helpers
+        with engine.begin() as conn:
+            rows = conn.execute(_text("""
+                SELECT package_name, lead_count, price, file_path, created_at, download_count
+                FROM package_purchases
+                WHERE username = :u
+                ORDER BY created_at DESC
+            """), dict(u=username)).fetchall()
+    except Exception:
+        # SQLite fallback (backup behavior)
+        import sqlite3
+        conn = sqlite3.connect("lead_generator.db")
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT package_name, lead_count, price, file_path, purchase_date, download_count
             FROM package_purchases
-            WHERE username = :u
-            ORDER BY created_at DESC
-        '''), dict(u=username)).fetchall()
+            WHERE username = ?
+            ORDER BY purchase_date DESC
+        """, (username,))
+        rows = cur.fetchall()
+        conn.close()
+
     if not rows:
-        st.info("No packages yet.")
+        st.info("📦 No packages purchased yet.")
+        st.markdown("Visit the **Package Store** to get instant-download lead packages!")
+        if st.button("🛒 Browse Packages", type="primary"):
+            st.session_state.current_page = "Package Store"
+            st.rerun()
         return
-    for row in rows:
-        name, leads, price, file_path, created_at, dl_count = row
+
+    st.success(f"You have {len(rows)} package(s) available for download")
+    for (name, leads, price, file_path, created_at, dl_count) in rows:
         st.markdown(f"### 📦 {name}")
-        try:
-            purchased = created_at.strftime("%Y-%m-%d %H:%M")
-        except Exception:
-            purchased = str(created_at)
-        st.caption(f"Leads: {leads:,} • Price: ${price} • Purchased: {purchased} • Downloads: {dl_count}")
-        if _file_exists_in_leads(file_path):
-            _render_data_uri_download(username, name, file_path)
+        st.markdown(
+            f"**📊 Lead Count:** {leads:,}  \n"
+            f"**💰 Price Paid:** ${price}  \n"
+            f"**📅 Purchase Date:** {created_at}  \n"
+            f"**📥 Downloads:** {dl_count}"
+        )
+
+        full_path = os.path.join("leads", file_path)
+        if os.path.exists(full_path):
+            try:
+                with open(full_path, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode()
+                filename = f"{name.replace(' ', '_').lower()}_fitness_wellness_leads.csv"
+                st.markdown(f"""
+                <div style="background-color:#1e3a5f;padding:20px;border-radius:10px;margin:20px 0;text-align:center;">
+                  <a href="data:file/csv;base64,{b64}" download="{filename}"
+                     style="background-color:#28a745;color:white;padding:15px 30px;
+                            text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;
+                            display:inline-block;margin-bottom:15px;">
+                    📥 Download {filename}
+                  </a>
+                  <div style="color:#60a5fa;font-size:14px;margin-top:15px;padding:10px;
+                              background-color:rgba(96,165,250,0.1);border-radius:6px;">
+                    💡 <strong>Tip:</strong> Import this CSV into your CRM or outreach tool.
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Error preparing download: {e}")
         else:
-            st.error(f"File missing on server: leads/{file_path}. Contact support.")
+            st.error("❌ File missing")
+
         st.markdown("---")
+
+        
+        
+
