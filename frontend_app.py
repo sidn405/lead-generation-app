@@ -177,13 +177,52 @@ import streamlit as st
 
 
 # ---- Page + folders (safe to run always) ----
-st.set_page_config(page_title="Lead Generator Empire", page_icon="🚀", layout="wide")
+st.set_page_config(
+    page_title="Lead Generator Empire", 
+    page_icon="assets/favicon-16x16.png",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # DM library / stats folders (prevent file-not-found noise)
 DM_DIR = Path(os.environ.get("DM_DIR", "dm_library"))
 DM_DIR.mkdir(parents=True, exist_ok=True)
 STATS_DIR = Path(os.environ.get("STATS_DIR", "stats")).resolve()
 STATS_DIR.mkdir(parents=True, exist_ok=True)
+
+def _normalize_plan(ui: dict):
+    ui = ui or {}
+    sp = (ui.get("subscribed_plan") or "").lower()
+    ss = (ui.get("subscription_status") or "").lower()
+    bp = (ui.get("plan") or "").lower()
+    if sp == "demo" or bp == "demo":
+        return "demo", "demo"
+    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
+        return sp, "subscribed_plan(active)"
+    if bp in {"starter", "pro", "ultimate"}:
+        return bp, "plan(legacy)"
+    return "demo", "fallback_demo"
+
+username = _get_current_username()
+try:
+    from postgres_credit_system import credit_system
+    user_info = credit_system.get_user_info(username) if username else {}
+except Exception:
+    user_info = {}
+
+plan_fixed, plan_source = _normalize_plan(user_info)
+st.session_state["plan"] = plan_fixed
+st.session_state["user_plan"] = plan_fixed
+st.session_state["plan_source"] = plan_source
+
+# Keep user_info consistent for old code
+user_info = user_info or {}
+user_info["plan"] = plan_fixed
+user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
+user_info["subscription_status"] = user_info.get("subscription_status") or ("demo" if plan_fixed == "demo" else "inactive")
+
+print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) raw={{'plan': {user_info.get('plan')}, 'subscribed_plan': {user_info.get('subscribed_plan')}, 'subscription_status': {user_info.get('subscription_status')}}}")
+
 
 # Single CSV root definition (Railway-safe)
 def _detect_csv_dir() -> Path:
@@ -392,38 +431,6 @@ def _get_current_username():
         or (st.query_params.get("username") if hasattr(st, "query_params") else None)
     )
 
-def _normalize_plan(ui: dict):
-    ui = ui or {}
-    sp = (ui.get("subscribed_plan") or "").lower()
-    ss = (ui.get("subscription_status") or "").lower()
-    bp = (ui.get("plan") or "").lower()
-    if sp == "demo" or bp == "demo":
-        return "demo", "demo"
-    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
-        return sp, "subscribed_plan(active)"
-    if bp in {"starter", "pro", "ultimate"}:
-        return bp, "plan(legacy)"
-    return "demo", "fallback_demo"
-
-username = _get_current_username()
-try:
-    from postgres_credit_system import credit_system
-    user_info = credit_system.get_user_info(username) if username else {}
-except Exception:
-    user_info = {}
-
-plan_fixed, plan_source = _normalize_plan(user_info)
-st.session_state["plan"] = plan_fixed
-st.session_state["user_plan"] = plan_fixed
-st.session_state["plan_source"] = plan_source
-
-# Keep user_info consistent for old code
-user_info = user_info or {}
-user_info["plan"] = plan_fixed
-user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
-user_info["subscription_status"] = user_info.get("subscription_status") or ("demo" if plan_fixed == "demo" else "inactive")
-
-print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) raw={{'plan': {user_info.get('plan')}, 'subscribed_plan': {user_info.get('subscribed_plan')}, 'subscription_status': {user_info.get('subscription_status')}}}")
 
 # ---- Auth snapshot and baseline stats (avoid NameErrors later) ----
 def _auth_snapshot():
@@ -436,10 +443,7 @@ def _auth_snapshot():
     authed = bool(st.session_state.get("authenticated")) and bool(u)
     return authed, u
 
-user_authenticated, username = _auth_snapshot()
-ensure_stats_in_store(username or "anonymous")
-st.session_state["stats"] = load_empire_stats(username or "anonymous")
-refresh_demo_status(username or "anonymous")
+
 # =========================
 # END APP BOOT BLOCK
 # =========================
@@ -599,67 +603,6 @@ def _current_username():
         st.session_state.get("username")
         or getattr(simple_auth, "current_user", None)
     )
-
-
-
-    # Respect one-shot suppression after logout
-    if st.session_state.get("suppress_auto_restore"):
-        print("⛔ quick rehydrate suppressed (logout)")
-        return False
-
-    qp = st.query_params
-    username = qp.get("username") or qp.get("user") or qp.get("u")
-    if not username:
-        return False
-
-    try:
-        info = credit_system.get_user_info(username)
-        if info:
-            # restore simple_auth + session
-            simple_auth.current_user = username
-            simple_auth.user_data = info
-            st.session_state.update(
-                authenticated=True,
-                username=username,
-                user_data=info,
-                credits=info.get("credits", 0),
-                login_time=datetime.now().isoformat(),
-            )
-            # plan: only set if empty; default demo
-            plan_from_store = (info or {}).get("plan") or "demo"
-            if st.session_state.get("plan") in (None, ""):
-                st.session_state["plan"] = plan_from_store
-            print(f"✅ QUICK REHYDRATE via credit_system: {username}")
-            return True
-    except Exception as e:
-        print(f"⚠️ quick rehydrate (credit_system) failed: {e}")
-
-    # fallback: users.json
-    try:
-        if os.path.exists("users.json"):
-            users = json.load(open("users.json"))
-            if username in users:
-                ud = users[username]
-                simple_auth.current_user = username
-                simple_auth.user_data = ud
-                st.session_state.update(
-                    authenticated=True,
-                    username=username,
-                    user_data=ud,
-                    credits=ud.get("credits", 0),
-                    login_time=datetime.now().isoformat(),
-                )
-                plan_from_store = (ud or {}).get("plan") or "demo"
-                if st.session_state.get("plan") in (None, ""):
-                    st.session_state["plan"] = plan_from_store
-                print(f"✅ QUICK REHYDRATE via users.json: {username}")
-                return True
-    except Exception as e:
-        print(f"⚠️ quick rehydrate (users.json) failed: {e}")
-
-    return False
-
-soft_rehydrate_from_simple_auth()
 
 def _is_stripe_return(qp: dict) -> bool:
     return (
