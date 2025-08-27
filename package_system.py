@@ -4,7 +4,7 @@ import os
 import base64
 from typing import Optional, Dict
 from urllib.parse import quote_plus
-
+import json
 import streamlit as st
 import stripe
 from sqlalchemy import create_engine, text
@@ -86,6 +86,43 @@ def _file_exists_in_leads(file_path: str) -> bool:
 # -----------------------------
 # Database helpers (Postgres)
 # -----------------------------
+
+
+def remember_checkout_session(username: str, kind: str, session_id: str, payload: dict) -> None:
+    engine = get_pg_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS pending_checkouts (
+          id BIGSERIAL PRIMARY KEY,
+          username TEXT NOT NULL,
+          kind TEXT NOT NULL,             -- 'package' | 'subscription' | 'credits'
+          session_id TEXT NOT NULL,
+          payload JSONB NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          resolved_at TIMESTAMPTZ
+        )"""))
+        conn.execute(text("""
+            INSERT INTO pending_checkouts (username, kind, session_id, payload)
+            VALUES (:u, :k, :sid, :p)
+        """), dict(u=username, k=kind, sid=session_id, p=json.dumps(payload)))
+
+def get_latest_pending_checkout(username: str, kind: str = "package"):
+    engine = get_pg_engine()
+    with engine.begin() as conn:
+        row = conn.execute(text("""
+            SELECT id, session_id, payload
+            FROM pending_checkouts
+            WHERE username = :u AND kind = :k AND resolved_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+        """), dict(u=username, k=kind)).mappings().first()
+    return row
+
+def resolve_pending_checkout(pending_id: int) -> None:
+    engine = get_pg_engine()
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE pending_checkouts SET resolved_at = NOW() WHERE id = :id"),
+                     dict(id=pending_id))
 
 def add_package_to_database(username: str, package_name: str) -> None:
     '''Add a pre-built package to the user's downloads (idempotent).'''
@@ -222,7 +259,32 @@ def create_package_stripe_session(
         },
     )
 
-    # remember the session in case user returns without query params
+    session = stripe.checkout.Session.create(
+        client_reference_id=username,  # helps identify the user later
+        payment_method_types=["card"],
+        line_items=[{ ... }],
+        mode="payment",
+        success_url=..., cancel_url=...,
+        customer_email=f"{username}@example.com",
+        metadata={ ... },
+    )
+
+    # Persist server-side so a fresh Streamlit session (no QS) can still finalize
+    remember_checkout_session(
+        username=username,
+        kind="package",
+        session_id=session.id,
+        payload={
+            "package_key": package_key,
+            "package_name": package_name or display,
+            "requires_build": bool(requires_build),
+            "industry": industry or "",
+            "location": location or "",
+            "amount": float(price),
+        },
+    )
+
+    # (Optional) keep your in-memory session_state too, but Postgres is the source of truth now
     st.session_state["last_checkout_session_id"] = session.id
     st.session_state["last_checkout_kind"] = "package"
     st.session_state["last_checkout_payload"] = {

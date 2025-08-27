@@ -302,21 +302,18 @@ root = Path(CSV_DIR)
 rx = re.compile(re.escape(username), re.IGNORECASE) if username else None
 pattern = f"*{username}*.csv" if username else "*.csv"
 
-def safe_mtime(p: Path) -> float:
-    try: return p.stat().st_mtime
-    except FileNotFoundError: return -1.0
-
 files = list(root.glob(pattern)) + list(root.rglob(pattern))
-seen, candidates = set(), []
+candidates = []
+seen = set()
 for p in files:
     if not p.is_file(): continue
     rp = p.resolve()
     if rp in seen: continue
     if rx and not rx.search(p.name): continue
-    seen.add(rp); candidates.append(p)
+    seen.add(rp)
+    candidates.append(p)
+candidates.sort(key=lambda p: p.stat().st_mtime if p.exists() else -1, reverse=True)
 
-candidates.sort(key=safe_mtime, reverse=True)
-latest_csv = candidates[0] if candidates else None
 
 
 # ---- Minimal stats helpers (avoid NameError) ----
@@ -477,9 +474,6 @@ def _auth_snapshot():
 # END APP BOOT BLOCK
 # =========================
 
-# keep this first if you use it
-
-
 EMPIRE_CACHE_DIR: Path = CSV_DIR
 
 def get_latest_csv(pattern: str) -> str | None:
@@ -518,34 +512,19 @@ def _dm_path(username: str) -> Path:
     safe = (username or "anonymous").strip()
     return DM_DIR / f"{safe}_dm_library.json"
 
+from pathlib import Path, PurePath
 import json
-from pathlib import Path
 
 def load_dm_library(username: str) -> dict:
-    lib_dir = Path("dm_library")
-    lib_dir.mkdir(parents=True, exist_ok=True)
-    path = lib_dir / f"{username}_dm_library.json"
-    if not path.exists():
-        path.write_text("{}", encoding="utf-8")
+    p = Path("dm_library") / f"{username}_dm_library.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    if not p.exists():
+        p.write_text("{}", encoding="utf-8")
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(p.read_text(encoding="utf-8"))
     except Exception:
         return {}
-
-
-def save_dm_library(username: str, data) -> bool:
-    """Atomic write; ensures dir exists."""
-    try:
-        p = _dm_path(username)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        tmp = p.with_suffix(".json.tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(data or [], f, indent=2, ensure_ascii=False)
-        os.replace(tmp, p)
-        return True
-    except Exception:
-        return False
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com")
