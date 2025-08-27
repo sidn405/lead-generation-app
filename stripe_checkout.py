@@ -9,7 +9,10 @@ from typing import Tuple, List, Dict
 from postgres_credit_system import credit_system
 from datetime import datetime
 from emailer import send_admin_package_notification
+import stripe
 import json
+
+STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 

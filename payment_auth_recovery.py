@@ -8,9 +8,13 @@ import streamlit as st
 from emailer import send_admin_package_notification, EMAIL_ADDRESS
 import os 
 import json
+import stripe
 import time
 from datetime import datetime
 from typing import Tuple, Optional, Dict, Any
+
+
+STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
