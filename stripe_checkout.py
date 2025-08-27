@@ -97,183 +97,288 @@ def _restore_session_state(username: str):
 
 # ---- Handle ?payment_success=1 redirects deterministically ----
 def handle_payment_success_url():
-    """
-    Finalize a purchase using query params OR the latest unresolved Checkout Session
-    saved in Postgres. Verifies payment with Stripe before recording.
-    """
+    """Finalize purchase from query params, update Postgres, refresh session/UI."""
+    if not st.query_params.get("payment_success"):
+        return False
+
+    # Pull params
     qp = st.query_params
 
     def _v(key, default=None):
         v = qp.get(key, default)
+        # st.query_params can return list-like; normalize to scalar
         if isinstance(v, (list, tuple)):
             return v[0] if v else default
         return v
 
-    username = _v("username") or st.session_state.get("username")
-    if not username:
+    username         = (_v("username", "") or "").strip()
+    payment_type     = (_v("type", "") or "").strip()
+    tier_name        = (_v("tier", "") or "").strip()
+    credits          = int(_v("credits", 0) or 0)
+    amount           = int(float(_v("amount", 0) or 0))
+    monthly_credits  = int(_v("monthly_credits", 0) or 0)
+
+    # ✅ the checkout session id that we appended in success_url as {CHECKOUT_SESSION_ID}
+    session_id = (
+        _v("session_id")
+        or _v("checkout_session_id")
+        or _v("cs")
+        or None
+    )
+
+    print(f"[stripe return] user={username} type={payment_type} tier={tier_name} "
+        f"credits={credits} monthly_credits={monthly_credits} session_id={session_id}")
+    
+    is_credit_success = bool(qp.get("payment_success"))
+    is_package_success = bool(qp.get("success") and qp.get("package"))
+    
+    if not (is_credit_success or is_package_success):
         return False
 
-    # ---- helpers ----
-    def _stripe_paid(sess):
-        try:
-            # Prefer explicit payment_status
-            if getattr(sess, "payment_status", None) in ("paid", "no_payment_required"):
-                return True
-            # Fallback via PaymentIntent
-            pi_id = getattr(sess, "payment_intent", None)
-            if pi_id:
-                pi = stripe.PaymentIntent.retrieve(pi_id)
-                return getattr(pi, "status", "") == "succeeded"
-        except Exception as e:
-            print(f"[stripe verify] error: {e}")
-        return False
-
-    def _finalize_package(username, package_key, package_name, requires_build, amount, session_id, industry, location):
-        if requires_build:
-            from package_system import create_custom_order_record
-            oid = create_custom_order_record(
-                username=username,
-                package_key=package_key or package_name,
-                package_name=package_name,
-                industry=industry or "",
-                location=location or "",
-                price=float(amount or 0),
-                stripe_session_id=session_id or "",
-            )
-            _restore_session_state(username)
-            st.success(f"🧩 Order #{oid} received for **{package_name}**")
-            st.info("👷 Your custom lead package is being built and will appear in **My Downloads** when ready (48–120 hours).")
-        else:
+    # Handle package purchases
+    if is_package_success:
+        username = qp.get("username")
+        package_key = qp.get("package")
+        
+        if username and package_key:
+            # Map package keys to display names
+            package_names = {
+                "starter": "Niche Starter Pack",
+                "deep_dive": "Industry Deep Dive", 
+                "domination": "Market Domination"
+            }
+            
+            package_name = package_names.get(package_key, package_key)
+            
+            # Add to package database
             from package_system import add_package_to_database
             add_package_to_database(username, package_name)
+            
+            # Restore session state
             _restore_session_state(username)
+            
+            # Show success message
             st.balloons()
             st.success(f"Package '{package_name}' added to your downloads!")
+            
+            # Clear params and redirect
+            st.query_params.clear()
+            st.rerun()
+            return True
+        
+    payment_type = qp.get("type", "subscription")
+    tier_name = (qp.get("tier") or "").replace("_", " ").strip().lower()
+    monthly_credits = int(qp.get("monthly_credits", "0") or 0)
+    credits = int(qp.get("credits", "0") or 0)
+    username = qp.get("username") or st.session_state.get("username")
+    payment_intent = qp.get("session_id") or qp.get("payment_intent") or "unknown"
+    amount = float(qp.get("amount", "0") or 0)
+    
+    # NEW: Check for package purchases
+    package_type = qp.get("package")
+    industry = qp.get("industry", "").replace('+', ' ')
+    location = qp.get("location", "").replace('+', ' ')
 
-    # ---------- Path A: query-string success ----------
-    if qp.get("success") and qp.get("package"):
-        session_id = _v("session_id") or _v("checkout_session_id") or _v("cs")
-        package_key  = (_v("package") or "").strip()
-        package_name = (_v("package_name") or "").strip() or {
-            "starter": "Niche Starter Pack",
-            "deep_dive": "Industry Deep Dive",
-            "domination": "Market Domination",
-        }.get(package_key, package_key)
-        amount = float(_v("amount", 0) or 0)
-        industry = _v("industry", "")
-        location = _v("location", "")
-        requires_build = str(_v("requires_build", "0")).lower() in ("1", "true", "yes")
+    # --- Idempotency guard: prevent double credit adds on reruns ---
+    pid = payment_intent  # from qp.get("session_id") or "payment_intent"
+    if pid and pid != "unknown":
+        flag = f"_paid_{pid}"
+        if st.session_state.get(flag):
+            # Already processed in this browser session, just clean URL and rerun
+            st.query_params.clear()
+            st.rerun()
+            return True
+        st.session_state[flag] = True
 
-        # verify via Stripe if we got session_id
-        if session_id:
-            try:
-                sess = stripe.checkout.Session.retrieve(session_id, expand=["customer"])
-                if not _stripe_paid(sess):
-                    st.info("⚠️ Payment not completed yet. Please refresh in a few seconds.")
-                    return False
-            except Exception as e:
-                print(f"[qs finalize] session fetch failed: {e}")
-
-        _finalize_package(username, package_key, package_name, requires_build, amount, session_id, industry, location)
-        try: st.query_params.clear()
-        except Exception: pass
-        st.rerun()
+    if not username:
+        st.error("You're not signed in. Please log in and try again.")
         return True
+    
+    subscription_id = None
+    customer_id = None
+    current_period_end = None
 
-    # ---------- Path B: no QS → consume latest unresolved checkout from Postgres ----------
-    from package_system import get_latest_pending_checkout, resolve_pending_checkout
-    pending = get_latest_pending_checkout(username, kind="package")
-    if not pending:
-        return False
+    if session_id:
+        try:
+            sess = stripe.checkout.Session.retrieve(
+                session_id,
+                expand=["subscription", "customer"]
+            )
+            if getattr(sess, "subscription", None):
+                subscription_id = (
+                    sess.subscription.id
+                    if hasattr(sess.subscription, "id") else str(sess.subscription)
+                )
+                if hasattr(sess.subscription, "current_period_end"):
+                    current_period_end = int(sess.subscription.current_period_end or 0)
 
-    pending_id = pending["id"]
-    sid = pending["session_id"]
-    payload = pending["payload"] or {}
+            if getattr(sess, "customer", None):
+                customer_id = (
+                    sess.customer.id
+                    if hasattr(sess.customer, "id") else str(sess.customer)
+                )
+        except Exception as e:
+            print(f"[stripe ids] capture failed: {e}")
 
-    # Retrieve session & verify paid
+    from postgres_credit_system import credit_system
+    from datetime import datetime
+    
+    # Process payment
+    is_subscription = (payment_type == "subscription") or (monthly_credits > 0)
+    
+    # --- expand checkout session to capture billing IDs (subscription/customer) ---
     try:
-        sess = stripe.checkout.Session.retrieve(sid, expand=["customer"])
-        if not _stripe_paid(sess):
-            print("[pending] session found but not paid yet")
-            return False
-        md = (getattr(sess, "metadata", None) or {})
+        if session_id:
+            sess = stripe.checkout.Session.retrieve(
+                session_id,
+                expand=["subscription", "customer"]
+            )
+            subscription_id = None
+            customer_id = None
+            current_period_end = None
+
+            if getattr(sess, "subscription", None):
+                subscription_id = (
+                    sess.subscription.id
+                    if hasattr(sess.subscription, "id") else str(sess.subscription)
+                )
+                if hasattr(sess.subscription, "current_period_end"):
+                    current_period_end = int(sess.subscription.current_period_end or 0)
+
+            if getattr(sess, "customer", None):
+                customer_id = sess.customer.id if hasattr(sess.customer, "id") else str(sess.customer)
+
+            if subscription_id or customer_id:
+                from postgres_credit_system import credit_system
+                credit_system.set_stripe_billing(
+                    username=username,
+                    customer_id=customer_id,
+                    subscription_id=subscription_id,
+                    current_period_end_epoch=current_period_end or 0,
+                )
     except Exception as e:
-        print(f"[pending] retrieve failed: {e}")
-        return False
+        print(f"[stripe ids] capture failed: {e}")
+    # ----------------------------------------------------------------------------- 
 
-    package_key  = (md.get("package_key") or payload.get("package_key") or "").strip()
-    package_name = (md.get("package_name") or payload.get("package_name") or package_key or "").strip()
-    if not package_name:
-        package_name = {"starter":"Niche Starter Pack","deep_dive":"Industry Deep Dive","domination":"Market Domination"}.get(package_key, package_key)
-    requires_build = str(md.get("requires_build", "0")).lower() in ("1", "true", "yes") or bool(payload.get("requires_build"))
-    amount = float(payload.get("amount", 0))
-    industry = md.get("industry", payload.get("industry", ""))
-    location = md.get("location", payload.get("location", ""))
+    # Normalize inputs up front
+    plan_key = (tier_name or "").strip().lower().replace(" ", "_")
+    credit_amount = (monthly_credits if is_subscription else credits) or 0
+    is_package = bool(package_type)
 
-    _finalize_package(username, package_key, package_name, requires_build, amount, sid, industry, location)
-    resolve_pending_checkout(pending_id)  # avoid double-apply
-    st.rerun()
-    return True
-
-    # ------------------------------------
-    # SUBSCRIPTION / ONE-TIME CREDITS FLOW
-    # ------------------------------------
-    payment_type = (_v("type", "subscription") or "").lower()  # "subscription" or "credits"
-    tier_name = (_v("tier", "") or "").replace("_", " ").strip().lower()
-    monthly_credits = int(_v("monthly_credits", 0) or 0)
-    credits = int(_v("credits", monthly_credits) or 0)  # prefer explicit "credits", else monthly_credits
-
-    # Snapshot current state to verify the update
+    # capture pre state so we can verify changes even if functions return None
     prev = credit_system.get_user_info(username) or {}
     prev_credits = int(prev.get("credits", 0))
+    prev_status  = (prev.get("subscription_status") or "").lower()
 
     ok = False
     err_msg = None
 
-    try:
-        if payment_type == "subscription":
-            ret = credit_system.activate_subscription(
-                username=username,
-                plan=tier_name or "pro",
-                monthly_credits=credits or 2000,
-                stripe_session_id=session_id or "",
-            )
-            fresh = credit_system.get_user_info(username) or {}
-            ok = (ret is True) or (fresh.get("subscription_status", "").lower() == "active")
-        else:
-            ret = credit_system.add_credits(
-                username=username,
-                credits=credits,
-                plan="credit_purchase",
-                stripe_session_id=session_id or "",
-            )
-            fresh = credit_system.get_user_info(username) or {}
-            ok = (ret is True) or (int(fresh.get("credits", prev_credits)) >= prev_credits + max(credits, 0))
-    except Exception as e:
-        err_msg = f"Billing update failed: {e}"
-        ok = False
+    if is_package:
+        # Package flow
+        try:
+            print(f"Processing package purchase: {package_type} for {username}")
+            ok = bool(create_package_download(username, package_type, industry, location))
+            if ok:
+                st.success("Package created and added to your downloads!")
+            else:
+                err_msg = "Failed to create package download"
+        except Exception as e:
+            err_msg = f"Package creation failed: {e}"
+            print(err_msg)
 
-    if ok:
+    elif is_subscription:
+        # Subscription flow: call and then VERIFY persisted effects
+        try:
+            _ret = credit_system.activate_subscription(
+                username=username,
+                plan=plan_key or "pro",
+                monthly_credits=credit_amount or 2000,
+                stripe_session_id=payment_intent,  # this is really the checkout session id
+            )
+        except Exception as e:
+            _ret = False
+            err_msg = f"activate_subscription error: {e}"
+            print(err_msg)
+
+        # Re-fetch and validate regardless of return value
         fresh = credit_system.get_user_info(username) or {}
-        st.session_state.authenticated = True
-        st.session_state.username = username
-        st.session_state.user_data = fresh
-        st.session_state.credits = fresh.get("credits", 0)
-        st.session_state.user_plan = fresh.get("plan", "demo")
-        if payment_type == "subscription":
-            st.success(f"Subscription active! Monthly credits: {credits or monthly_credits}")
-        else:
-            st.success(f"Payment successful! {credits} credits added.")
+        new_credits = int(fresh.get("credits", prev_credits))
+        status = (fresh.get("subscription_status") or "").lower()
+        plan_in_store = (fresh.get("plan") or "").lower()
+
+        ok = (_ret is True) or (
+            status == "active" and
+            (plan_key == "" or plan_in_store == plan_key) and
+            new_credits >= prev_credits  # monthly top-up might be equal if already added
+        )
+
+    else:
+        # One-time credits flow: call then VERIFY credits increased
+        try:
+            _ret = credit_system.add_credits(
+                username=username,
+                credits=credit_amount,
+                plan="credit_purchase",
+                stripe_session_id=payment_intent,
+            )
+        except Exception as e:
+            _ret = False
+            err_msg = f"add_credits error: {e}"
+            print(err_msg)
+
+        fresh = credit_system.get_user_info(username) or {}
+        new_credits = int(fresh.get("credits", prev_credits))
+        ok = (_ret is True) or (new_credits >= prev_credits + max(int(credit_amount), 0))
+
+    # ---- CRITICAL: only restore + rerun on success ----
+    if ok:
+        try:
+            fresh = credit_system.get_user_info(username) or {}
+            st.session_state.authenticated = True
+            st.session_state.username = username
+            st.session_state.user_data = fresh
+            st.session_state.credits = fresh.get("credits", 0)
+            st.session_state.user_plan = fresh.get("plan", "demo")
+            st.session_state.show_login = False
+            st.session_state.show_register = False
+            print(f"SESSION RESTORED: {username} with {st.session_state.credits} credits")
+
+            if is_package:
+                st.success("Payment successful! Your package is ready in Downloads.")
+            elif is_subscription:
+                st.success(f"Subscription active! Monthly credits: {credit_amount}")
+            else:
+                st.success(f"Payment successful! {credit_amount} credits added.")
+        except Exception as e:
+            print(f"Session restore error: {e}")
+
+        # Admin logging (best-effort)
+        try:
+            from frontend_app import log_payment_to_admin_system
+            log_payment_to_admin_system({
+                "timestamp": datetime.now().isoformat(),
+                "username": username,
+                "tier": tier_name,
+                "credits": credit_amount,
+                "amount": amount,
+                "payment_intent": payment_intent,
+                "type": payment_type,
+            })
+        except Exception as e:
+            print(f"Admin logging failed (non-critical): {e}")
+
+        # Clear QS and rerun only on success
         try: st.query_params.clear()
         except Exception: pass
         st.rerun()
         return True
+    else:
+        # Don’t rerun; show a meaningful error so you can see the issue
+        if not err_msg:
+            err_msg = "We couldn’t verify the account update. Please refresh or contact support."
+        st.error(err_msg)
+        return False
 
-    # fallthrough: show a helpful error but do not rerun
-    if not err_msg:
-        err_msg = "We couldn’t verify the account update. If you were charged, please contact support."
-    st.error(err_msg)
-    return False
 
 def ensure_user_session(username: str):
     """Ensure user session is properly maintained"""
