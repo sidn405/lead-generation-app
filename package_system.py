@@ -58,6 +58,25 @@ def get_pg_engine():
         '''))
     return engine
 
+def _ensure_pending_checkouts_table():
+    eng = get_pg_engine()
+    with eng.begin() as c:
+        c.execute(text("""
+            CREATE TABLE IF NOT EXISTS pending_checkouts (
+              id BIGSERIAL PRIMARY KEY,
+              username TEXT NOT NULL,
+              kind TEXT NOT NULL,             -- 'package' | 'subscription' | 'credits'
+              session_id TEXT NOT NULL,
+              payload JSONB NOT NULL,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              resolved_at TIMESTAMPTZ
+            )
+        """))
+        c.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_pending_sid
+            ON pending_checkouts(session_id)
+        """))
+
 # -----------------------------
 # Package definitions
 # -----------------------------
@@ -91,24 +110,16 @@ def _file_exists_in_leads(file_path: str) -> bool:
 
 
 def remember_checkout_session(username: str, kind: str, session_id: str, payload: dict) -> None:
+    _ensure_pending_checkouts_table()
     eng = get_pg_engine()
     with eng.begin() as c:
-        c.execute(text("""
-        CREATE TABLE IF NOT EXISTS pending_checkouts (
-          id BIGSERIAL PRIMARY KEY,
-          username TEXT NOT NULL,
-          kind TEXT NOT NULL,         -- 'package' | 'subscription' | 'credits'
-          session_id TEXT NOT NULL,
-          payload JSONB NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          resolved_at TIMESTAMPTZ
-        )"""))
         c.execute(text("""
           INSERT INTO pending_checkouts (username, kind, session_id, payload)
           VALUES (:u,:k,:sid,:p)
         """), dict(u=username, k=kind, sid=session_id, p=json.dumps(payload)))
 
 def get_latest_pending_checkout(username: str, kind: str = "package"):
+    _ensure_pending_checkouts_table()
     eng = get_pg_engine()
     with eng.begin() as c:
         row = c.execute(text("""
@@ -120,9 +131,12 @@ def get_latest_pending_checkout(username: str, kind: str = "package"):
     return row
 
 def resolve_pending_checkout(pending_id: int) -> None:
+    _ensure_pending_checkouts_table()
     eng = get_pg_engine()
     with eng.begin() as c:
-        c.execute(text("UPDATE pending_checkouts SET resolved_at=NOW() WHERE id=:id"), dict(id=pending_id))
+        c.execute(text("UPDATE pending_checkouts SET resolved_at=NOW() WHERE id=:id"),
+                  dict(id=pending_id))
+
 
 def resolve_pending_checkout(pending_id: int) -> None:
     engine = get_pg_engine()
