@@ -29,17 +29,6 @@ try:
 except ImportError:
     print("⚠️ Smart deduplication not available - using basic dedup")
     SMART_DEDUP_AVAILABLE = False
-    
-from scraper_debug import debug_page_content, sample_page_links, save_debug_screenshot
-
-def extract_instagram_profiles(page):
-    """Extract profiles with optional debugging"""
-    
-    # Enable debugging when needed
-    if os.getenv("DEBUG_SCRAPER", "false").lower() == "true":
-        debug_page_content(page, "instagram")
-        sample_page_links(page)
-        save_debug_screenshot(page, "instagram")
 
 PLATFORM_NAME = "instagram"
 
@@ -126,67 +115,86 @@ def is_relevant_to_search_term(name, bio, location=""):
     return relevance_score >= 2, relevance_score
 
 def extract_instagram_profiles(page):
-    """Extract ONLY verified Instagram profile links"""
-    print("Extracting Instagram profiles with strict validation...")
+    """Extract only actual Instagram user profiles"""
+    print("Extracting Instagram profiles...")
+    
+    # Enable debugging
+    from scraper_debug import debug_page_content, sample_page_links, save_debug_screenshot
+    debug_page_content(page, "instagram")
+    sample_page_links(page)
+    save_debug_screenshot(page, "instagram")
     
     results = []
     
-    try:
-        # Only target actual profile links with this very specific selector
-        profile_links = page.query_selector_all('a[href^="/"][href$="/"], a[href^="/"][href*="/"][href*="instagram.com/"]')
+    # Target only profile image links and username links in posts
+    selectors_to_try = [
+        'article a[href^="/"][href$="/"]',  # Profile links in posts
+        'a[href^="/"][role="link"]',       # Clickable profile links
+    ]
+    
+    seen_usernames = set()
+    
+    for selector in selectors_to_try:
+        elements = page.query_selector_all(selector)
+        print(f"Selector '{selector}' found {len(elements)} elements")
         
-        valid_usernames = set()
-        
-        for link in profile_links:
-            try:
-                href = link.get_attribute('href')
-                if not href:
-                    continue
-                
-                # Extract username with VERY strict validation
-                username = extract_validated_username(href)
-                if not username or username in valid_usernames:
-                    continue
-                
-                # Double-check this is a real profile link
-                if not is_real_profile_link(link, username):
-                    continue
-                
-                # Skip excluded accounts
-                if should_exclude_account(username, PLATFORM_NAME, config_loader):
-                    continue
-                
-                valid_usernames.add(username)
-                
-                lead = {
-                    "name": username.replace('_', ' ').replace('.', ' ').title(),
-                    "handle": f"@{username}",
-                    "bio": f"Instagram user interested in {SEARCH_TERM}",
-                    "url": f"https://instagram.com/{username}",
-                    "platform": "instagram",
-                    "dm": generate_dm_with_fallback(username, f"Instagram user interested in {SEARCH_TERM}", "instagram"),
-                    "title": f"Instagram user interested in {SEARCH_TERM}",
-                    "location": "Location not specified",
-                    "followers": "Followers not shown", 
-                    "profile_url": f"https://instagram.com/{username}",
-                    "contact_info": "Contact not available",
-                    "search_term": SEARCH_TERM,
-                    "extraction_method": "Validated Profile Link",
-                    "relevance_score": 2
-                }
-                
-                results.append(lead)
-                print(f"Valid profile: @{username}")
-                
-            except Exception as e:
+        for element in elements:
+            href = element.get_attribute('href')
+            if not href:
                 continue
-        
-        print(f"Extracted {len(results)} validated profiles")
-        return results
-        
-    except Exception as e:
-        print(f"Error extracting profiles: {e}")
-        return []
+                
+            # Extract username with strict validation
+            username = extract_strict_username(href)
+            if not username or username in seen_usernames:
+                continue
+                
+            seen_usernames.add(username)
+            
+            # Create lead
+            lead = {
+                "name": username.replace('_', ' ').replace('.', ' ').title(),
+                "handle": f"@{username}",
+                "bio": f"Instagram user interested in {SEARCH_TERM}",
+                "url": f"https://instagram.com/{username}",
+                "platform": "instagram",
+                "dm": generate_dm_with_fallback(username, f"Instagram user", "instagram"),
+                "search_term": SEARCH_TERM,
+                "relevance_score": 1
+            }
+            
+            results.append(lead)
+            print(f"Valid profile: @{username}")
+    
+    print(f"Extracted {len(results)} actual profiles")
+    return results
+
+def extract_strict_username(href):
+    """Only extract usernames from actual profile URLs"""
+    if not href or not href.startswith('/'):
+        return None
+    
+    # Must be exactly /{username}/ or /{username}
+    match = re.match(r'^/([a-zA-Z0-9_.]{1,30})/?$', href)
+    if not match:
+        return None
+    
+    username = match.group(1)
+    
+    # Block ALL known Instagram system pages and UI elements
+    blocked = {
+        'explore', 'reels', 'tv', 'stories', 'accounts', 'direct', 'p',
+        'create', 'dashboard', 'more', 'also_from_meta', 'meta',
+        'help', 'about', 'privacy', 'terms', 'api', 'developer'
+    }
+    
+    if username.lower() in blocked:
+        return None
+    
+    # Must contain letters (not just numbers or dots)
+    if not re.search(r'[a-zA-Z]', username):
+        return None
+    
+    return username
 
 def extract_validated_username(href):
     """Extract username only if it matches exact Instagram patterns"""

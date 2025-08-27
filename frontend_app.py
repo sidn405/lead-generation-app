@@ -184,9 +184,6 @@ def _detect_csv_dir() -> Path:
     p.mkdir(parents=True, exist_ok=True)
     return p
 
-Path(os.environ.get("CSV_DIR", "client_configs")).mkdir(parents=True, exist_ok=True)
-Path("dm_library").mkdir(parents=True, exist_ok=True)
-
 CSV_DIR: Path = _detect_csv_dir()
 EMPIRE_CACHE_DIR: Path = CSV_DIR
 
@@ -194,13 +191,64 @@ def get_latest_csv(pattern: str) -> str | None:
     files = sorted(CSV_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
     return str(files[0]) if files else None
 
-def df_stretch(df):
+CSV_DIR = Path(os.environ.get("CSV_DIR", "client_configs")).resolve()
+
+def _latest_nonempty_for_user(pattern: str, username: str):
+    """Return newest non-empty CSV under CSV_DIR matching pattern & username."""
+    import glob, os, re, pandas as pd
+    rx = re.compile(re.escape(username), re.I)
+    candidates = sorted(
+        glob.glob(str(CSV_DIR / pattern)) + glob.glob(str(CSV_DIR / "**" / pattern), recursive=True),
+        key=os.path.getmtime, reverse=True
+    )
+    for fp in candidates:
+        if not rx.search(fp):
+            continue
+        try:
+            df = pd.read_csv(fp, nrows=5)
+            if not df.empty:
+                return fp
+        except Exception:
+            continue
+    return None
+        
+# --- DM LIBRARY PATH (absolute, resilient) ---
+import os, json
+from pathlib import Path
+
+DM_DIR = Path(os.getenv("DM_DIR", "dm_library")).resolve()
+DM_DIR.mkdir(parents=True, exist_ok=True)
+
+def _dm_path(username: str) -> Path:
+    safe = (username or "anonymous").strip()
+    return DM_DIR / f"{safe}_dm_library.json"
+
+def load_dm_library(username: str):
+    """Return user's DM library list; create empty file if missing."""
     try:
-        # New API
-        st.dataframe(df, width="stretch")
-    except TypeError:
-        # Back-compat with older Streamlit
-        st.dataframe(df, use_container_width=True)
+        p = _dm_path(username)
+        if not p.exists():
+            # create an empty library silently
+            p.write_text("[]", encoding="utf-8")
+            return []
+        with p.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        # Don't spam logs; return empty so UI still works
+        return []
+
+def save_dm_library(username: str, data) -> bool:
+    """Atomic write; ensures dir exists."""
+    try:
+        p = _dm_path(username)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".json.tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(data or [], f, indent=2, ensure_ascii=False)
+        os.replace(tmp, p)
+        return True
+    except Exception:
+        return False
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com")
@@ -232,6 +280,32 @@ import os, json, time, traceback
 import streamlit as st
 from datetime import datetime
 # ... your other imports ...
+
+# --- Streamlit width shim: map old use_container_width -> width ---
+import inspect
+import streamlit as st
+
+def _shim_width(fn):
+    def wrapped(*args, **kwargs):
+        if "use_container_width" in kwargs:
+            val = kwargs.pop("use_container_width")
+            kwargs.setdefault("width", "stretch" if val else "content")
+        return fn(*args, **kwargs)
+    # Keep nice signatures in tracebacks
+    try:
+        wrapped.__signature__ = inspect.signature(fn)
+    except Exception:
+        pass
+    return wrapped
+
+# Patch the common offenders
+st.dataframe    = _shim_width(st.dataframe)
+st.data_editor  = _shim_width(getattr(st, "data_editor", st.dataframe))
+st.table        = _shim_width(st.table)
+# Add more if needed:
+# st.altair_chart = _shim_width(st.altair_chart)
+# st.plotly_chart = _shim_width(st.plotly_chart)
+
 
 # keep this first if you use it
 st.set_page_config(
@@ -389,6 +463,49 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
+# after: restore_payment_authentication(), _quick_rehydrate_from_qs(), soft_rehydrate_from_simple_auth()
+
+def _normalize_plan(ui: dict):
+    ui = ui or {}
+    def n(x):
+        try: return str(x).strip().lower()
+        except: return ""
+    ALIAS = {
+        "basic":"starter", "starter_monthly":"starter","starter_annual":"starter",
+        "pro_monthly":"pro","pro_annual":"pro",
+        "ultimate_monthly":"ultimate","ultimate_annual":"ultimate",
+    }
+    PAID = {"starter","pro","ultimate"}
+
+    sp = ALIAS.get(n(ui.get("subscribed_plan")), n(ui.get("subscribed_plan")))
+    bp = ALIAS.get(n(ui.get("plan")),            n(ui.get("plan")))
+    ss = n(ui.get("subscription_status"))
+
+    if sp == "demo" or bp == "demo":
+        return "demo", "demo"
+
+    if sp in PAID:
+        if ss in {"active","trialing"}:  return sp, f"subscribed_plan({ss})"
+        if ss == "":                     return sp, "subscribed_plan(?)"
+        if ss in {"paused","past_due","unpaid","canceled","inactive","ended"}:
+            return sp, f"subscribed_plan({ss})"
+
+    if bp in PAID:                       return bp, "plan(legacy)"
+    return "demo", "fallback_demo"
+
+# apply
+user_info = credit_system.get_user_info(username) or {}
+plan_fixed, plan_source = _normalize_plan(user_info)
+st.session_state["plan"] = plan_fixed
+st.session_state["user_plan"] = plan_fixed
+st.session_state["plan_source"] = plan_source
+
+print(
+    f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
+    f"raw={{'plan': {user_info.get('plan')}, "
+    f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
+    f"'subscription_status': {user_info.get('subscription_status')}}}"
+)
 
 
     
@@ -827,85 +944,6 @@ try:
 except Exception as e:
     print(f"[PLAN] credit_system lookup failed: {e}")
     user_info = None
-
-def _normalize_plan(ui: dict):
-    """
-    Decide the effective plan and a human-readable source tag.
-
-    Rules:
-      - If anything explicitly says demo -> ('demo', 'demo')
-      - Active/trialing subscription on subscribed_plan wins
-      - If subscribed_plan is present but status missing/unknown -> trust it ('subscribed_plan(?)')
-      - Otherwise, fall back to legacy 'plan' if it's a paid tier
-      - Else -> ('demo', 'fallback_demo')
-    """
-    ui = ui or {}
-
-    def norm(v):
-        # robust lowercasing (str/int/None-safe)
-        try:
-            return str(v).strip().lower()
-        except Exception:
-            return ""
-
-    # Map common aliases/SKU names to canonical tier keys
-    ALIAS = {
-        "basic": "starter",
-        "starter_monthly": "starter",
-        "starter_annual": "starter",
-        "pro_monthly": "pro",
-        "pro_annual": "pro",
-        "ultimate_monthly": "ultimate",
-        "ultimate_annual": "ultimate",
-    }
-    PAID = {"starter", "pro", "ultimate"}
-
-    sp = norm(ui.get("subscribed_plan"))
-    bp = norm(ui.get("plan"))
-    ss = norm(ui.get("subscription_status"))
-
-    sp = ALIAS.get(sp, sp)
-    bp = ALIAS.get(bp, bp)
-
-    # 1) Explicit demo anywhere → demo
-    if sp == "demo" or bp == "demo":
-        return "demo", "demo"
-
-    # 2) Subscribed plan with good status wins
-    if sp in PAID:
-        if ss in {"active", "trialing"}:
-            return sp, f"subscribed_plan({ss})"
-        # treat present-but-unknown status as subscribed (prevents flapping)
-        if ss == "":
-            return sp, "subscribed_plan(?)"
-        # keep other explicit statuses visible (e.g., paused, past_due, unpaid)
-        if ss in {"paused", "past_due", "unpaid", "canceled", "inactive", "ended"}:
-            return sp, f"subscribed_plan({ss})"
-
-    # 3) Legacy 'plan' is paid → accept it
-    if bp in PAID:
-        return bp, "plan(legacy)"
-
-    # 4) Default
-    return "demo", "fallback_demo"
-
-plan_fixed, plan_source = _normalize_plan(user_info)
-
-# Single source of truth for UI
-st.session_state["plan"] = plan_fixed
-st.session_state["plan_source"] = plan_source
-
-# Keep the raw values intact; add normalized view alongside
-user_info = user_info or {}
-user_info.setdefault("normalized_plan", plan_fixed)
-user_info.setdefault("normalized_plan_source", plan_source)
-
-print(
-    f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
-    f"raw={{'plan': {user_info.get('plan')}, "
-    f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
-    f"'subscription_status': {user_info.get('subscription_status')}}}"
-)
 
 username = st.session_state.get("username") or "anonymous"
 st.session_state["stats"] = load_empire_stats(username)
@@ -6589,11 +6627,15 @@ with tab2: # Lead Results
                         print(f"✅ Found user file: {latest_user_file}")
                         df = pd.read_csv(latest_user_file)
 
-                        if not df.empty:
-                            # Double-check: filter rows that belong to user (if column exists)
-                            if CSV_USER_DEBUG_AVAILABLE:
-                                from csv_user_debug import filter_csv_for_user
-                                df = filter_csv_for_user(df, username)
+                        if df.empty:
+                            fallback = _latest_nonempty_for_user(user_pattern, username)
+                            if fallback and fallback != latest_user_file:
+                                print(f"↩️ {platform_name}: latest empty, using previous non-empty: {os.path.basename(fallback)}")
+                                latest_user_file = fallback
+                                try:
+                                    df = pd.read_csv(latest_user_file)
+                                except Exception:
+                                    df = pd.DataFrame()
 
                             for col in ('generated_by', 'username', 'user_id', 'created_by'):
                                 if col in df.columns:
