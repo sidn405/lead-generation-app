@@ -215,6 +215,43 @@ try:
 except Exception:
     pass
 
+# frontend_app.py  ── top of file
+
+import os, json, time, traceback
+import streamlit as st
+from datetime import datetime
+# ... your other imports ...
+
+# keep this first if you use it
+st.set_page_config(
+    page_title="Lead Generator Empire", 
+    page_icon="assets/favicon-16x16.png",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ==== FAIL-SAFE BOOT PANEL (Section #3) ====
+APP_COMMIT = os.getenv("RAILWAY_GIT_COMMIT", "")[:7] or os.getenv("GIT_COMMIT", "")[:7] or "dev"
+BOOT_TS = time.strftime("%Y-%m-%d %H:%M:%S")
+st.sidebar.info(f"🟢 Boot v{APP_COMMIT} @ {BOOT_TS}")
+
+def show_exception(where: str, exc: BaseException):
+    st.error(f"❌ {where}: {exc}")
+    st.code("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+
+def safe_rerun(flag_key: str = "_did_one_shot_rerun"):
+    if not st.session_state.get(flag_key, False):
+        st.session_state[flag_key] = True
+        st.rerun()
+
+def run_app_safely(render_fn):
+    try:
+        render_fn()
+    except Exception as e:
+        show_exception("Top-level render", e)
+# ==== END FAIL-SAFE BOOT PANEL ====
+
+
 # 0.5) QUICK rehydrate from username in querystring (works even on cancel)
 def _quick_rehydrate_from_qs():
     # Already logged in? bail.
@@ -1318,13 +1355,6 @@ if fav32.exists():
     b64 = base64.b64encode(Path(fav32).read_bytes()).decode()
     st.markdown(f'<link rel="icon" type="image/png" href="data:image/png;base64,{b64}">', unsafe_allow_html=True)
 
-st.set_page_config(
-    page_title="Lead Generator Empire", 
-    page_icon="assets/favicon-16x16.png",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
 # 2) HEAD injection: favicon bundle, fullscreen PWA manifest, theme colors, iOS fullscreen
 st.markdown("""
     <!-- FAVICONS -->
@@ -1994,14 +2024,6 @@ try:
 except ImportError:
     MULTILINGUAL_AVAILABLE = True  # ← Force it to True anyway
     print("⚠️ Multilingual imports failed but keeping features available")
-
-# Page config
-st.set_page_config(
-    page_title="Lead Generator Empire", 
-    page_icon="assets/favicon.png",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 
 # Add this RIGHT AFTER imports, before any other code
