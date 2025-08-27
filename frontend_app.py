@@ -463,6 +463,35 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
+# === AUTH SNAPSHOT (put this a few lines above line 497) ===
+def _auth_snapshot():
+    u = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
+    authed = bool(st.session_state.get("authenticated")) and bool(u)
+    return authed, u
+
+user_authenticated, username = _auth_snapshot()
+
+# Safe guard: only hit the DB if we actually have a username
+user_info = (credit_system.get_user_info(username) or {}) if username else {}
+
+username = st.session_state.get("username") or "anonymous"
+st.session_state["stats"] = load_empire_stats(username)
+refresh_demo_status(username)
+
+# apply
+user_info = credit_system.get_user_info(username) or {}
+plan_fixed, plan_source = _normalize_plan(user_info)
+st.session_state["plan"] = plan_fixed
+st.session_state["user_plan"] = plan_fixed
+st.session_state["plan_source"] = plan_source
+
+print(
+    f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
+    f"raw={{'plan': {user_info.get('plan')}, "
+    f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
+    f"'subscription_status': {user_info.get('subscription_status')}}}"
+)
+    
 # === Empire stats persistence helpers (safe defaults) ===
 import os, json, time
 from pathlib import Path
@@ -664,38 +693,6 @@ def refresh_demo_status(username: str) -> None:
         # Keep current values if anything goes wrong
         print(f"[demo] refresh failed: {e}")
         return
-
-
-# === AUTH SNAPSHOT (put this a few lines above line 497) ===
-def _auth_snapshot():
-    u = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
-    authed = bool(st.session_state.get("authenticated")) and bool(u)
-    return authed, u
-
-user_authenticated, username = _auth_snapshot()
-
-# Safe guard: only hit the DB if we actually have a username
-user_info = (credit_system.get_user_info(username) or {}) if username else {}
-
-username = st.session_state.get("username") or "anonymous"
-st.session_state["stats"] = load_empire_stats(username)
-refresh_demo_status(username)
-
-# apply
-user_info = credit_system.get_user_info(username) or {}
-plan_fixed, plan_source = _normalize_plan(user_info)
-st.session_state["plan"] = plan_fixed
-st.session_state["user_plan"] = plan_fixed
-st.session_state["plan_source"] = plan_source
-
-print(
-    f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
-    f"raw={{'plan': {user_info.get('plan')}, "
-    f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
-    f"'subscription_status': {user_info.get('subscription_status')}}}"
-)
-
-
     
 def refresh_subscription_status(username: str, current_plan: str):
     try:
