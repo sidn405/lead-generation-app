@@ -594,6 +594,11 @@ def run_app_safely(render_fn):
         show_exception("Top-level render", e)
 # ==== END FAIL-SAFE BOOT PANEL ====
 
+def _current_username():
+    return (
+        st.session_state.get("username")
+        or getattr(simple_auth, "current_user", None)
+    )
 
 
 
