@@ -4855,7 +4855,7 @@ with st.sidebar:
                 "medium":   "📝 Medium",
                 "reddit":   "🗨️ Reddit",
             }
-            from emailer import send_daily_leads_email
+            from payment_auth_recovery import send_enhanced_admin_notification
             st.sidebar.markdown("---")
             # Add this as a test button in your Streamlit app
             if st.button("Test Email Notification"):
