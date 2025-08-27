@@ -67,6 +67,38 @@ def restore_payment_authentication() -> bool:
     print("❌ Payment authentication restoration failed")
     return True  # Still a payment return, just failed to restore
 
+# Back-compat: frontend_app imports this symbol
+import streamlit as st
+
+def show_payment_success_message() -> bool:
+    """
+    Only handles plan upgrade success UI here.
+    Package success is handled in stripe_checkout.handle_payment_success_url().
+    Returns True if a message was shown.
+    """
+    qp = st.query_params
+    if "success" not in qp:
+        return False
+
+    # Defer package purchases to stripe_checkout to avoid double-processing
+    if "package" in qp:
+        return False
+
+    # Plan upgrade UI (keep existing look & feel)
+    plan = qp.get("plan")
+    if plan:
+        st.success(f"🎉 Plan upgrade successful! Welcome to {plan.title()} plan!")
+        if st.button("🚀 Continue to Dashboard", type="primary"):
+            try:
+                st.query_params.clear()
+            except Exception:
+                pass
+            st.rerun()
+        return True
+
+    return False
+
+
 def _restore_from_credit_system(username: str) -> bool:
     """Try to restore from credit system"""
     try:
