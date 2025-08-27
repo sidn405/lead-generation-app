@@ -463,6 +463,83 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
+# === Empire stats persistence helpers (safe defaults) ===
+import os, json, time
+from pathlib import Path
+
+STATS_DIR = Path(os.environ.get("STATS_DIR", "stats")).resolve()
+STATS_DIR.mkdir(parents=True, exist_ok=True)
+
+def _stats_path(username: str) -> Path:
+    u = (username or "anonymous").strip()
+    return STATS_DIR / f"empire_stats_{u}.json"
+
+def _default_stats() -> dict:
+    now = time.strftime("%Y-%m-%dT%H:%M:%S")
+    return {
+        "totals": {            # totals used by your UI
+            "leads": 0,
+            "campaigns": 0,
+            "duration_sec": 0,
+        },
+        "platforms": {},       # e.g. {"twitter": 61, "tiktok": 40}
+        "last_session": {      # last run summary
+            "timestamp": now,
+            "platforms": {},
+            "total_leads": 0,
+            "search_term": "",
+            "duration_sec": 0,
+        },
+        "history": []          # optional per-session entries if you add them later
+    }
+
+def ensure_stats_in_store(username: str) -> bool:
+    """Create a stats file if missing; merge in any missing keys if present."""
+    p = _stats_path(username)
+    if not p.exists():
+        p.write_text(json.dumps(_default_stats(), indent=2), encoding="utf-8")
+        return True
+    try:
+        cur = json.loads(p.read_text(encoding="utf-8") or "{}")
+    except Exception:
+        cur = {}
+    base = _default_stats()
+    changed = False
+    for k, v in base.items():
+        if k not in cur:
+            cur[k] = v
+            changed = True
+    if changed:
+        tmp = p.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(cur, indent=2), encoding="utf-8")
+        os.replace(tmp, p)
+    return False
+
+def load_empire_stats(username: str) -> dict:
+    """Always return a complete stats dict; never throws."""
+    p = _stats_path(username)
+    try:
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8") or "{}")
+            return data or _default_stats()
+        # create then read
+        ensure_stats_in_store(username)
+        data = json.loads(p.read_text(encoding="utf-8") or "{}")
+        return data or _default_stats()
+    except Exception:
+        return _default_stats()
+
+def save_empire_stats(username: str, stats: dict) -> bool:
+    """Atomic save; falls back to defaults if stats is None."""
+    p = _stats_path(username)
+    try:
+        tmp = p.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(stats or _default_stats(), indent=2), encoding="utf-8")
+        os.replace(tmp, p)
+        return True
+    except Exception:
+        return False
+    
 DEMO_CAP = 5
 
 def load_empire_stats(username: str):
