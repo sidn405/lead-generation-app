@@ -171,6 +171,21 @@ from pathlib import Path
 import os, glob, pandas as pd, time
 import streamlit as st
 
+# =========================
+# APP BOOT BLOCK (ONE COPY)
+# =========================
+
+
+# ---- Page + folders (safe to run always) ----
+st.set_page_config(page_title="Lead Generator Empire", page_icon="🚀", layout="wide")
+
+# DM library / stats folders (prevent file-not-found noise)
+DM_DIR = Path(os.environ.get("DM_DIR", "dm_library"))
+DM_DIR.mkdir(parents=True, exist_ok=True)
+STATS_DIR = Path(os.environ.get("STATS_DIR", "stats")).resolve()
+STATS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Single CSV root definition (Railway-safe)
 def _detect_csv_dir() -> Path:
     env_dir = os.getenv("CSV_DIR")
     if env_dir:
@@ -178,13 +193,195 @@ def _detect_csv_dir() -> Path:
     for c in ("/client_configs", "/app/client_configs", "/data", "/app/data"):
         p = Path(c)
         if p.exists():
-            p.mkdir(parents=True, exist_ok=True)
-            return p
-    p = Path("./client_configs")
-    p.mkdir(parents=True, exist_ok=True)
-    return p
+            p.mkdir(parents=True, exist_ok=True); return p
+    p = Path("./client_configs"); p.mkdir(parents=True, exist_ok=True); return p
 
 CSV_DIR: Path = _detect_csv_dir()
+
+# ---- Minimal stats helpers (avoid NameError) ----
+def _stats_path(u: str) -> Path: return STATS_DIR / f"empire_stats_{(u or 'anonymous').strip()}.json"
+def _default_stats() -> dict:
+    now = time.strftime("%Y-%m-%dT%H:%M:%S")
+    return {
+        "totals": {"leads": 0, "campaigns": 0, "duration_sec": 0},
+        "platforms": {},
+        "last_session": {"timestamp": now, "platforms": {}, "total_leads": 0, "search_term": "", "duration_sec": 0},
+        "history": []
+    }
+
+def ensure_stats_in_store(username: str) -> bool:
+    p = _stats_path(username)
+    if not p.exists():
+        p.write_text(json.dumps(_default_stats(), indent=2))
+        return True
+    # merge any missing keys
+    try:
+        cur = json.loads(p.read_text())
+    except Exception:
+        cur = _default_stats()
+    base = _default_stats()
+    for k, v in base.items():
+        if k not in cur: cur[k] = v
+    p.write_text(json.dumps(cur, indent=2))
+    return True
+
+def load_empire_stats(username: str) -> dict:
+    p = _stats_path(username)
+    if not p.exists():
+        ensure_stats_in_store(username)
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return _default_stats()
+
+# --- Demo refresh stub (avoid NameError if not yet wired) ---
+def refresh_demo_status(username: str):
+    try:
+        from postgres_credit_system import credit_system
+        can_demo, remaining = credit_system.can_use_demo(username)
+        st.session_state["demo_remaining"] = remaining
+    except Exception:
+        st.session_state["demo_remaining"] = st.session_state.get("demo_remaining", 5)
+
+# ---- Auth helpers (idempotent) ----
+def _is_stripe_return(qp: dict) -> bool:
+    return (
+        "payment_success" in qp
+        or qp.get("success") in ("1", "0")
+        or "session_id" in qp
+        or any(k in qp for k in ("cancel","canceled","cancelled","payment_cancelled","payment_canceled","package_success","package_cancelled"))
+    )
+
+def _quick_rehydrate_from_qs():
+    if st.session_state.get("authenticated") or st.session_state.get("suppress_auto_restore"):
+        return False
+    qp = st.query_params
+    username = qp.get("username") or qp.get("user") or qp.get("u")
+    if not username: return False
+    try:
+        from postgres_credit_system import credit_system
+        info = credit_system.get_user_info(username)
+        if info:
+            import user_auth as UA
+            UA.simple_auth.current_user = username
+            UA.simple_auth.user_data = info
+            st.session_state.update(
+                authenticated=True, username=username, user_data=info,
+                credits=info.get("credits", 0), login_time=datetime.now().isoformat(),
+            )
+            if st.session_state.get("plan") in (None, ""):
+                st.session_state["plan"] = (info or {}).get("plan") or "demo"
+            return True
+    except Exception as e:
+        print(f"quick rehydrate failed: {e}")
+    return False
+
+def soft_rehydrate_from_simple_auth():
+    if st.session_state.get("show_login") or st.session_state.get("authenticated") or st.session_state.get("_soft_rehydrated"):
+        return
+    try:
+        import user_auth as UA
+        u = getattr(UA.simple_auth, "current_user", None)
+        if not u: return
+        from postgres_credit_system import credit_system
+        info = credit_system.get_user_info(u)
+        if info:
+            UA.simple_auth.user_data = info
+            st.session_state.update(authenticated=True, username=u, user_data=info, credits=info.get("credits", 0))
+            if st.session_state.get("plan") in (None, ""):
+                st.session_state["plan"] = (info or {}).get("plan") or "demo"
+            st.session_state["_soft_rehydrated"] = True
+    except Exception as e:
+        print(f"soft rehydrate failed: {e}")
+
+# Stripe success/session restore (call but don’t crash if missing)
+def restore_payment_authentication():
+    try:
+        from stripe_integration import restore_payment_authentication as _restore
+        return _restore()
+    except Exception as e:
+        print(f"restore_payment_authentication error: {e}")
+        return False
+
+# ---- Do rehydrates in this order (once) ----
+soft_rehydrate_from_simple_auth()
+if _is_stripe_return(st.query_params) and not st.session_state.get("show_login") and not st.session_state.get("show_register"):
+    _quick_rehydrate_from_qs()
+restore_payment_authentication()
+
+# ---- Plan bootstrap (ONE copy) ----
+def _get_current_username():
+    try:
+        import user_auth as UA
+    except Exception:
+        class _UA: simple_auth = type("S",(),{"current_user":None})()
+        UA = _UA
+    return (
+        st.session_state.get("username")
+        or getattr(UA.simple_auth, "current_user", None)
+        or (st.query_params.get("username") if hasattr(st, "query_params") else None)
+    )
+
+def _normalize_plan(ui: dict):
+    ui = ui or {}
+    sp = (ui.get("subscribed_plan") or "").lower()
+    ss = (ui.get("subscription_status") or "").lower()
+    bp = (ui.get("plan") or "").lower()
+    if sp == "demo" or bp == "demo":
+        return "demo", "demo"
+    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
+        return sp, "subscribed_plan(active)"
+    if bp in {"starter", "pro", "ultimate"}:
+        return bp, "plan(legacy)"
+    return "demo", "fallback_demo"
+
+username = _get_current_username()
+try:
+    from postgres_credit_system import credit_system
+    user_info = credit_system.get_user_info(username) if username else {}
+except Exception:
+    user_info = {}
+
+plan_fixed, plan_source = _normalize_plan(user_info)
+st.session_state["plan"] = plan_fixed
+st.session_state["user_plan"] = plan_fixed
+st.session_state["plan_source"] = plan_source
+
+# Keep user_info consistent for old code
+user_info = user_info or {}
+user_info["plan"] = plan_fixed
+user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
+user_info["subscription_status"] = user_info.get("subscription_status") or ("demo" if plan_fixed == "demo" else "inactive")
+
+print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) raw={{'plan': {user_info.get('plan')}, 'subscribed_plan': {user_info.get('subscribed_plan')}, 'subscription_status': {user_info.get('subscription_status')}}}")
+
+# ---- Auth snapshot and baseline stats (avoid NameErrors later) ----
+def _auth_snapshot():
+    try:
+        import user_auth as UA
+    except Exception:
+        class _UA: simple_auth = type("S",(),{"current_user":None})()
+        UA = _UA
+    u = st.session_state.get("username") or getattr(UA.simple_auth, "current_user", None)
+    authed = bool(st.session_state.get("authenticated")) and bool(u)
+    return authed, u
+
+user_authenticated, username = _auth_snapshot()
+ensure_stats_in_store(username or "anonymous")
+st.session_state["stats"] = load_empire_stats(username or "anonymous")
+refresh_demo_status(username or "anonymous")
+# =========================
+# END APP BOOT BLOCK
+# =========================
+
+# keep this first if you use it
+st.set_page_config(
+    page_title="Lead Generator Empire", 
+    page_icon="assets/favicon-16x16.png",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 EMPIRE_CACHE_DIR: Path = CSV_DIR
 
 def get_latest_csv(pattern: str) -> str | None:
@@ -304,16 +501,7 @@ st.data_editor  = _shim_width(getattr(st, "data_editor", st.dataframe))
 st.table        = _shim_width(st.table)
 # Add more if needed:
 # st.altair_chart = _shim_width(st.altair_chart)
-# st.plotly_chart = _shim_width(st.plotly_chart)
-
-
-# keep this first if you use it
-st.set_page_config(
-    page_title="Lead Generator Empire", 
-    page_icon="assets/favicon-16x16.png",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# st.plotly_chart = _shim_width(st.plotly_chart))
 
 # ==== FAIL-SAFE BOOT PANEL (Section #3) ====
 APP_COMMIT = os.getenv("RAILWAY_GIT_COMMIT", "")[:7] or os.getenv("GIT_COMMIT", "")[:7] or "dev"
@@ -337,11 +525,7 @@ def run_app_safely(render_fn):
 # ==== END FAIL-SAFE BOOT PANEL ====
 
 
-# 0.5) QUICK rehydrate from username in querystring (works even on cancel)
-def _quick_rehydrate_from_qs():
-    # Already logged in? bail.
-    if st.session_state.get("authenticated"):
-        return False
+
 
     # Respect one-shot suppression after logout
     if st.session_state.get("suppress_auto_restore"):
@@ -400,45 +584,6 @@ def _quick_rehydrate_from_qs():
 
     return False
 
-
-def soft_rehydrate_from_simple_auth():
-    # Don’t rehydrate if already authed or login form is up
-    if st.session_state.get("show_login") or st.session_state.get("authenticated"):
-        return
-
-    # Respect one-shot suppression after logout
-    if st.session_state.get("suppress_auto_restore"):
-        print("⛔ soft rehydrate suppressed (logout)")
-        return
-
-    # Prevent multiple soft rehydrates on the same run
-    if st.session_state.get("_soft_rehydrated"):
-        return
-
-    u = getattr(simple_auth, "current_user", None)
-    if not u:
-        return
-
-    try:
-        info = credit_system.get_user_info(u)
-        if info:
-            simple_auth.user_data = info
-            st.session_state.update(
-                authenticated=True,
-                username=u,
-                user_data=info,
-                credits=info.get("credits", 0),
-            )
-            plan_from_store = (info or {}).get("plan") or "demo"
-            if st.session_state.get("plan") in (None, ""):
-                st.session_state["plan"] = plan_from_store
-
-            st.session_state["_soft_rehydrated"] = True
-            print(f"✅ Soft rehydrate for {u}")
-    except Exception as e:
-        print(f"soft rehydrate failed: {e}")
-
-
 soft_rehydrate_from_simple_auth()
 
 def _is_stripe_return(qp: dict) -> bool:
@@ -463,34 +608,7 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
-# === AUTH SNAPSHOT (put this a few lines above line 497) ===
-def _auth_snapshot():
-    u = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
-    authed = bool(st.session_state.get("authenticated")) and bool(u)
-    return authed, u
 
-user_authenticated, username = _auth_snapshot()
-
-# Safe guard: only hit the DB if we actually have a username
-user_info = (credit_system.get_user_info(username) or {}) if username else {}
-
-username = st.session_state.get("username") or "anonymous"
-st.session_state["stats"] = load_empire_stats(username)
-refresh_demo_status(username)
-
-# apply
-user_info = credit_system.get_user_info(username) or {}
-plan_fixed, plan_source = _normalize_plan(user_info)
-st.session_state["plan"] = plan_fixed
-st.session_state["user_plan"] = plan_fixed
-st.session_state["plan_source"] = plan_source
-
-print(
-    f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
-    f"raw={{'plan': {user_info.get('plan')}, "
-    f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
-    f"'subscription_status': {user_info.get('subscription_status')}}}"
-)
     
 # === Empire stats persistence helpers (safe defaults) ===
 import os, json, time
@@ -1109,36 +1227,6 @@ except Exception as e:
 username = st.session_state.get("username") or "anonymous"
 st.session_state["stats"] = load_empire_stats(username)
 
-# ---- Persistent CSV folder (Railway volume) ----
-import os
-from pathlib import Path
-
-def _detect_csv_dir() -> Path:
-    # 1) Respect env var if you set it in Railway (recommended)
-    env_dir = os.getenv("CSV_DIR")
-    if env_dir:
-        p = Path(env_dir)
-        p.mkdir(parents=True, exist_ok=True)
-        return p
-
-    # 2) Common Railway mount paths for your setup
-    candidates = [
-        "/client_configs",          # most likely for your app volume
-        "/app/client_configs",      # some images mount under /app
-        "/data", "/app/data"        # if you ever switch to 'data'
-    ]
-    for c in candidates:
-        p = Path(c)
-        if p.exists():
-            p.mkdir(parents=True, exist_ok=True)
-            return p
-
-    # 3) Fallback to local relative folder (ephemeral but avoids crashes)
-    p = Path("./client_configs")
-    p.mkdir(parents=True, exist_ok=True)
-    return p
-
-CSV_DIR = _detect_csv_dir()
 
 # ===== Empire stats helpers (define once at module level) =====
 
