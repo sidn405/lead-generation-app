@@ -378,36 +378,7 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
-# --- EARLY in frontend_app.py (after imports) ---
-did_restore = False
-try:
-    # 1) Stripe return
-    restore_payment_authentication()
-    did_restore = True
-except Exception as e:
-    print(f"restore_payment_authentication failed: {e}")
 
-try:
-    # 2) Rehydrate from querystring (?username=...)
-    did_restore = _quick_rehydrate_from_qs() or did_restore
-except Exception as e:
-    print(f"_quick_rehydrate_from_qs failed: {e}")
-
-try:
-    # 3) Soft rehydrate from simple_auth cache
-    soft_rehydrate_from_simple_auth()
-except Exception as e:
-    print(f"soft_rehydrate_from_simple_auth failed: {e}")
-
-# Only now compute auth flags
-user_authenticated = bool(st.session_state.get("authenticated"))
-username = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
-
-# Gate any loaders/probes:
-if not user_authenticated or not username:
-    # render login / marketing, then stop BEFORE loaders use fallback demo
-    # (Your existing login UI here)
-    st.stop()
 
     
 def refresh_subscription_status(username: str, current_plan: str):
