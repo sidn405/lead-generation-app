@@ -208,153 +208,107 @@ class ParallelScraperRunner:
 
     def finalize_session(self):
         """Finalize session - consume credits and update dashboard"""
+        
         print(f"\n🎯 FINALIZING PARALLEL SESSION...")
-
-        # Local imports for safety (in case module tops aren't loaded here)
-        import os, json, time
-        from datetime import datetime
-        try:
-            from postgres_credit_system import credit_system
-        except Exception as e:
-            print(f"❌ Credit system not available: {e}")
-            credit_system = None
-
-        total_leads = int(sum(int(r.get("leads") or 0) for r in self.results.values()))
-        plan_lc = (self.user_plan or "").lower()
-
-        # --- PAID PATH (not demo) -------------------------------------------------
-        if total_leads > 0 and plan_lc != "demo" and credit_system:
+        
+        # Calculate total leads
+        total_leads = sum(r['leads'] for r in self.results.values())
+        
+        if total_leads > 0 and self.user_plan != 'demo':
             try:
-                pre = credit_system.get_user_info(self.username) or {}
-                pre_credits = int(pre.get("credits", 0))
-                print(f"💎 PRE credits: {pre_credits}")
-
+                from postgres_credit_system import credit_system
+                
+                # Get current credits
+                user_info = credit_system.get_user_info(self.username)
+                current_credits = user_info.get('credits', 0) if user_info else 0
+                print(f"💎 Current credits: {current_credits}")
+                
                 total_consumed = 0
+
                 for platform, result in self.results.items():
-                    leads_here = int(result.get("leads") or 0)
-                    ok = bool(result.get("success"))
-                    if not ok or leads_here <= 0:
-                        continue
+                    if result['success'] and result['leads'] > 0:
+                        platform_leads = result['leads']
+                        platform_name = platform.lower()
 
-                    platform_name = (platform or "multi").lower()
-                    # If pricing changes later, adjust here:
-                    credits_used = leads_here
-                    leads_downloaded = leads_here
-
-                    try:
-                        # Named args to avoid mis-order bugs
-                        ret = None
-                        if hasattr(credit_system, "consume_credits"):
-                            ret = credit_system.consume_credits(
-                                username=self.username,
-                                credits_used=credits_used,
-                                leads_downloaded=leads_downloaded,
-                                platform=platform_name,
-                            )
-                            success = (ret is True) or (ret is None)
-                        elif hasattr(credit_system, "spend_credits"):
-                            ret = credit_system.spend_credits(self.username, credits_used)
-                            success = (ret is True) or isinstance(ret, int)
-                        elif hasattr(credit_system, "adjust_credits"):
-                            ret = credit_system.adjust_credits(self.username, -credits_used)
-                            success = (ret is True) or isinstance(ret, int)
-                        else:
-                            # Manual last-resort (file-backed stores)
-                            cur = int(pre.get("credits", 0))
-                            pre["credits"] = max(0, cur - credits_used)
-                            if hasattr(credit_system, "update_user_info"):
-                                credit_system.update_user_info(self.username, pre)
-                            elif hasattr(credit_system, "set_user_info"):
-                                credit_system.set_user_info(self.username, pre)
-                            elif hasattr(credit_system, "save_data"):
-                                credit_system.save_data()
-                            success = True
-
-                        if success:
-                            total_consumed += credits_used
-                            print(f"✅ {platform.title()}: {credits_used} credits consumed (ret={ret})")
-                        else:
-                            print(f"❌ {platform.title()}: credit consumption failed (ret={ret})")
-
-                        # Ensure a transaction exists if your store doesn't auto-log it
                         try:
-                            tx = {
-                                "type": "lead_download",
-                                "platform": platform_name,
-                                "leads_downloaded": leads_here,
-                                "timestamp": datetime.now().isoformat(),
-                            }
-                            if hasattr(credit_system, "add_transaction"):
-                                credit_system.add_transaction(self.username, tx)
-                            else:
-                                info = credit_system.get_user_info(self.username) or {}
-                                txs = info.get("transactions") or []
-                                txs.insert(0, tx)
-                                info["transactions"] = txs
-                                if hasattr(credit_system, "update_user_info"):
-                                    credit_system.update_user_info(self.username, info)
-                                elif hasattr(credit_system, "set_user_info"):
-                                    credit_system.set_user_info(self.username, info)
-                                elif hasattr(credit_system, "save_data"):
-                                    credit_system.save_data()
-                        except Exception as tx_err:
-                            print(f"⚠️ Tx log error ({platform}): {tx_err}")
+                            # ✅ FIXED: Pass all 4 required parameters
+                            # consume_credits(username, credits_used, leads_downloaded, platform)
+                            success = credit_system.consume_credits(
+                                self.username,           # username: str
+                                platform_leads,          # credits_used: int  
+                                platform_leads,          # leads_downloaded: int (same as credits_used)
+                                platform_name            # platform: str
+                            )
 
-                    except Exception as platform_error:
-                        print(f"❌ {platform.title()}: Credit error - {platform_error}")
+                            if success:
+                                total_consumed += platform_leads
+                                print(f"✅ {platform.title()}: {platform_leads} credits consumed")
+                            else:
+                                print(f"❌ {platform.title()}: Credit consumption failed")
+                                
+                        except Exception as platform_error:
+                            print(f"❌ {platform.title()}: Credit error - {platform_error}")
 
                 if total_consumed > 0:
-                    # Flush if your backend needs it
                     try:
-                        if hasattr(credit_system, "save_data"):
-                            credit_system.save_data()
+                        credit_system.save_data()  # Force save
+                        
+                        # Verify consumption
+                        updated_info = credit_system.get_user_info(self.username)
+                        new_credits = updated_info.get('credits', 0) if updated_info else 0
+                        actual_consumed = current_credits - new_credits
+                        
+                        print(f"✅ Total credits consumed: {actual_consumed}")
+                        print(f"💎 Remaining credits: {new_credits}")
                     except Exception as save_error:
-                        print(f"⚠️ save_data error (non-critical): {save_error}")
-
-                    # Verify consumption
-                    updated = credit_system.get_user_info(self.username) or {}
-                    post_credits = int(updated.get("credits", 0))
-                    print(f"✅ POST credits: {post_credits} (Δ={pre_credits - post_credits}, expected ≥ {total_consumed})")
+                        print(f"❌ Save error: {save_error}")
                 else:
-                    print(f"ℹ️ No credits consumed (total_leads={total_leads})")
+                    print(f"❌ No credits consumed")
 
+            except ImportError:
+                print(f"❌ Credit system not available")
             except Exception as e:
                 print(f"❌ Credit system error: {e}")
-
-        # --- DASHBOARD JSONS (unchanged in spirit) --------------------------------
+        
+        # Update dashboard data
         try:
             dashboard_data = {
-                "timestamp": datetime.now().isoformat(),
-                "username": self.username,
-                "search_term": self.search_term,
-                "total_leads": total_leads,
-                "platforms": {platform: int(r.get("leads") or 0) for platform, r in self.results.items()},
-                "session_complete": True,
+                'timestamp': datetime.now().isoformat(),
+                'username': self.username,
+                'search_term': self.search_term,
+                'total_leads': total_leads,
+                'platforms': {platform: r['leads'] for platform, r in self.results.items()},
+                'session_complete': True
             }
-            with open("latest_session.json", "w") as f:
+            
+            # Save session data for dashboard
+            with open('latest_session.json', 'w') as f:
                 json.dump(dashboard_data, f, indent=2)
-
-            empire_file = f"empire_totals_{self.username}.json"
+            
+            # Update empire totals
+            empire_file = f'empire_totals_{self.username}.json'
             if os.path.exists(empire_file):
-                with open(empire_file, "r") as f:
+                with open(empire_file, 'r') as f:
                     empire_totals = json.load(f)
             else:
-                empire_totals = {"total_empire": 0, "platforms": {}}
-
+                empire_totals = {'total_empire': 0, 'platforms': {}}
+            
+            # Add this session's results
             for platform, result in self.results.items():
-                count = int(result.get("leads") or 0)
-                empire_totals["platforms"][platform] = int(empire_totals["platforms"].get(platform, 0)) + count
-                empire_totals["total_empire"] = int(empire_totals["total_empire"]) + count
-
-            empire_totals["last_updated"] = datetime.now().isoformat()
-            with open(empire_file, "w") as f:
+                count = result['leads']
+                empire_totals['platforms'][platform] = empire_totals['platforms'].get(platform, 0) + count
+                empire_totals['total_empire'] += count
+            
+            empire_totals['last_updated'] = datetime.now().isoformat()
+            
+            with open(empire_file, 'w') as f:
                 json.dump(empire_totals, f, indent=2)
-
+            
             print(f"📊 Dashboard updated!")
             print(f"🏆 Total Empire: {empire_totals['total_empire']}")
+            
         except Exception as e:
             print(f"❌ Dashboard error: {e}")
-
 
     def log_platform_consumption(self, platform, leads):
         """Log platform-specific consumption when the credit system doesn't track platforms"""
