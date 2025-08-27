@@ -295,18 +295,68 @@ def get_latest_csv(pattern: str):
     )
     return files[0] if files else None
 
-import glob, os, re
-root = CSV_DIR if isinstance(CSV_DIR, Path) else Path(CSV_DIR)
-rx = re.compile(re.escape(username) if username else ".*", re.IGNORECASE)
-user_pattern = f"*{username}*.csv" if username else "*.csv"
+from pathlib import Path
+import re
 
-# Only search under CSV_DIR, not CWD
-candidates = sorted(
-    glob.glob(str(root / user_pattern)) +
-    glob.glob(str(root / "**" / user_pattern), recursive=True),
-    key=os.path.getmtime,
-    reverse=True
-)
+# Ensure CSV_DIR is a Path
+root = Path(CSV_DIR)
+
+# Optional: compile a regex for extra filtering (not required for globbing)
+rx = re.compile(re.escape(username), re.IGNORECASE) if username else None
+
+# Choose your pattern(s)
+# Generic (matches any CSV for the user):
+pattern = f"*{username}*.csv" if username else "*.csv"
+
+# If you want to be stricter (uncomment and use 'patterns' instead of 'pattern'):
+# patterns = [
+#     f"twitter_leads_*{username}_*.csv",
+#     f"linkedin_leads_*{username}_*.csv",
+#     f"facebook_leads_*{username}_*.csv",
+#     f"tiktok_leads_*{username}_*.csv",
+#     f"instagram_leads_*{username}_*.csv",
+#     f"youtube_leads_*{username}_*.csv",
+#     f"medium_leads_*{username}_*.csv",
+#     f"reddit_leads_*{username}_*.csv",
+# ] if username else ["*.csv"]
+
+def safe_mtime(p: Path) -> float:
+    try:
+        return p.stat().st_mtime
+    except FileNotFoundError:
+        return -1.0
+
+# Gather candidates strictly under CSV_DIR
+files = []
+# If using single 'pattern':
+files.extend(root.glob(pattern))
+files.extend(root.rglob(pattern))
+
+# If using 'patterns' list instead:
+# for pat in patterns:
+#     files.extend(root.glob(pat))
+#     files.extend(root.rglob(pat))
+
+# Keep only files; dedupe; (optionally) regex-filter the name
+seen = set()
+candidates = []
+for p in files:
+    if not p.is_file():
+        continue
+    rp = p.resolve()
+    if rp in seen:
+        continue
+    if rx and not rx.search(p.name):
+        continue
+    seen.add(rp)
+    candidates.append(p)
+
+# Sort newest first
+candidates.sort(key=safe_mtime, reverse=True)
+
+# Example: use the newest CSV (if any)
+latest_csv = candidates[0] if candidates else None
+
 user_files = [p for p in candidates if rx.search(p)]
 latest_user_file = user_files[0] if user_files else None
 

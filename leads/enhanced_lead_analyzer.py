@@ -163,7 +163,7 @@ class OrganizedLeadAnalyzer:
     def analyze_file_with_duplicates(self, filepath):
         """Analyze file and handle duplicates"""
         try:
-            print(f"\n🔍 Analyzing with duplicate detection: {filepath}")
+            print(f"\nAnalyzing with duplicate detection: {filepath}")
             
             df = pd.read_csv(filepath)
             original_count = len(df)
@@ -182,7 +182,7 @@ class OrganizedLeadAnalyzer:
                 base_name = os.path.splitext(os.path.basename(filepath))[0]
                 duplicate_filename = f"{base_name}_DUPLICATES_{timestamp}.csv"
                 duplicates_df.to_csv(duplicate_filename, index=False)
-                print(f"  📁 Exported {len(duplicates)} duplicates to: {duplicate_filename}")
+                print(f"  Exported {len(duplicates)} duplicates to: {duplicate_filename}")
             
             # Update duplicate stats
             duplicate_groups = defaultdict(int)
@@ -249,14 +249,14 @@ class OrganizedLeadAnalyzer:
             end_customers = business_target_counts.get('end_customer', 0)
             target_businesses = business_target_counts.get('target_business', 0)
             
-            print(f"  ✅ Platform: {platform.replace('_end_customers', '').title()}")
-            print(f"  📊 Original: {original_count} | Clean: {len(unique_leads)} | Duplicates: {len(duplicates)}")
-            print(f"  🎯 End Customers: {end_customers} | Businesses: {target_businesses}")
+            print(f"  Platform: {platform.replace('_end_customers', '').title()}")
+            print(f"  Original: {original_count} | Clean: {len(unique_leads)} | Duplicates: {len(duplicates)}")
+            print(f"  End Customers: {end_customers} | Businesses: {target_businesses}")
             
             return stats
             
         except Exception as e:
-            print(f"  ❌ Error: {e}")
+            print(f"  Error: {e}")
             return None
     
     def analyze_file(self, filepath):
@@ -266,11 +266,11 @@ class OrganizedLeadAnalyzer:
     def analyze_single_file_for_duplicates(self, filepath):
         """Standalone duplicate analysis for a single file"""
         try:
-            print(f"\n🔍 DUPLICATE ANALYSIS: {filepath}")
+            print(f"\nDUPLICATE ANALYSIS: {filepath}")
             print("=" * 60)
             
             if not os.path.exists(filepath):
-                print(f"❌ File not found: {filepath}")
+                print(f"File not found: {filepath}")
                 return None
             
             df = pd.read_csv(filepath)
@@ -280,7 +280,7 @@ class OrganizedLeadAnalyzer:
             unique_leads, duplicates = self.find_duplicates_in_dataframe(df)
             
             # Generate report
-            print(f"📋 RESULTS:")
+            print(f"RESULTS:")
             print(f"  Original leads: {original_count:,}")
             print(f"  Unique leads: {len(unique_leads):,}")
             print(f"  Duplicates found: {len(duplicates):,}")
@@ -288,7 +288,7 @@ class OrganizedLeadAnalyzer:
             
             if duplicates:
                 # Show duplicate examples
-                print(f"\n🔍 DUPLICATE EXAMPLES:")
+                print(f"\nDUPLICATE EXAMPLES:")
                 duplicate_groups = defaultdict(list)
                 for dup in duplicates[:10]:  # Show first 10
                     reason = dup.get('duplicate_reason', 'Unknown')
@@ -305,7 +305,7 @@ class OrganizedLeadAnalyzer:
                 duplicate_filename = f"{base_name}_DUPLICATES_{timestamp}.csv"
                 duplicates_df = pd.DataFrame(duplicates)
                 duplicates_df.to_csv(duplicate_filename, index=False)
-                print(f"\n📁 EXPORTED:")
+                print(f"\nEXPORTED:")
                 print(f"  Duplicates: {duplicate_filename}")
                 
                 # Export clean file
@@ -323,7 +323,7 @@ class OrganizedLeadAnalyzer:
                     'duplicate_rate': (len(duplicates)/original_count)*100
                 }
             else:
-                print(f"\n✅ No duplicates found! File is already clean.")
+                print(f"\nNo duplicates found! File is already clean.")
                 return {
                     'original_count': original_count,
                     'unique_count': len(unique_leads),
@@ -332,13 +332,13 @@ class OrganizedLeadAnalyzer:
                 }
                 
         except Exception as e:
-            print(f"❌ Error analyzing file: {e}")
+            print(f"Error analyzing file: {e}")
             return None
     
     def nuclear_classify(self, lead_data, filepath):
         """NUCLEAR: Aggressive classification that cannot be overridden"""
         
-        # 🚀 NUCLEAR RULE 1: Filename-based classification (ABSOLUTE)
+        # NUCLEAR RULE 1: Filename-based classification (ABSOLUTE)
         filename_lower = filepath.lower()
         
         # YouTube fitness customers = ALWAYS end customer
@@ -361,7 +361,7 @@ class OrganizedLeadAnalyzer:
         if '_customers' in filename_lower and 'fitness' in filename_lower:
             return 'end_customer'
         
-        # 🚀 NUCLEAR RULE 2: Column-based classification (ABSOLUTE)
+        # NUCLEAR RULE 2: Column-based classification (ABSOLUTE)
         if 'customer_type' in lead_data:
             customer_type = str(lead_data['customer_type']).lower()
             if 'end_customer' in customer_type or 'fitness_end_customer' in customer_type:
@@ -372,7 +372,7 @@ class OrganizedLeadAnalyzer:
             if 'end_customer' in business_target:
                 return 'end_customer'
         
-        # 🚀 NUCLEAR RULE 3: Lead quality indicates end customer
+        # NUCLEAR RULE 3: Lead quality indicates end customer
         if 'lead_quality' in lead_data:
             lead_quality = str(lead_data['lead_quality']).lower()
             if lead_quality in ['premium', 'standard', 'volume']:
@@ -411,7 +411,7 @@ class OrganizedLeadAnalyzer:
         """Find all lead CSV files"""
         patterns = [
             '*leads*.csv', '*_leads_*.csv', 
-            '*fitness_customers*.csv', '*_customers_*.csv',
+            '*fitness_customers*.csv', '*_customers_*.csv', '*fitness_wellness*.csv',
             'facebook_*.csv', 'instagram_*.csv', 'twitter_*.csv', 
             'linkedin_*.csv', 'youtube_*.csv', 'tiktok_*.csv', 'medium_*.csv',
             'reddit_*.csv', '*scraper*.csv', '*extracted*.csv'
@@ -428,6 +428,10 @@ class OrganizedLeadAnalyzer:
         """Identify platform from filename"""
         filename_lower = filename.lower()
         
+        # Special handling for fitness_wellness files
+        if 'fitness_wellness' in filename_lower:
+            return 'fitness_wellness'
+        
         for platform in self.platforms:
             if platform in filename_lower:
                 # Determine if it's end customer or business leads
@@ -441,7 +445,7 @@ class OrganizedLeadAnalyzer:
     def print_table(self, headers, rows, title=""):
         """Print a formatted table"""
         if title:
-            print(f"\n📊 {title}")
+            print(f"\n{title}")
             print("=" * len(title))
         
         # Calculate column widths
@@ -474,7 +478,7 @@ class OrganizedLeadAnalyzer:
     def generate_organized_report(self):
         """Generate organized report with tables including duplicate stats"""
         print("\n" + "="*80)
-        print("📈 ORGANIZED LEAD ANALYSIS REPORT (WITH DUPLICATE DETECTION)")
+        print("ORGANIZED LEAD ANALYSIS REPORT (WITH DUPLICATE DETECTION)")
         print("="*80)
         
         # Calculate totals
@@ -488,15 +492,15 @@ class OrganizedLeadAnalyzer:
         total_original_leads = sum(stats['original_count'] for stats in self.duplicate_stats.values())
         
         # Summary section
-        print(f"\n🎯 EXECUTIVE SUMMARY")
-        print(f"  📁 Total Files: {total_files}")
-        print(f"  👥 Original Leads: {total_original_leads:,}")
-        print(f"  🧹 Duplicates Removed: {total_duplicates_removed:,}")
-        print(f"  ✅ Clean Leads: {total_leads:,}")
-        print(f"  🔄 Duplicate Rate: {(total_duplicates_removed/total_original_leads*100) if total_original_leads > 0 else 0:.1f}%")
-        print(f"  🏢 Tool Buyers: {total_businesses:,} ({total_businesses/total_leads*100 if total_leads > 0 else 0:.1f}%)")
-        print(f"  💥 Lead Inventory: {total_end_customers:,} ({total_end_customers/total_leads*100 if total_leads > 0 else 0:.1f}%)")
-        print(f"  📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"\nEXECUTIVE SUMMARY")
+        print(f"  Total Files: {total_files}")
+        print(f"  Original Leads: {total_original_leads:,}")
+        print(f"  Duplicates Removed: {total_duplicates_removed:,}")
+        print(f"  Clean Leads: {total_leads:,}")
+        print(f"  Duplicate Rate: {(total_duplicates_removed/total_original_leads*100) if total_original_leads > 0 else 0:.1f}%")
+        print(f"  Tool Buyers: {total_businesses:,} ({total_businesses/total_leads*100 if total_leads > 0 else 0:.1f}%)")
+        print(f"  Lead Inventory: {total_end_customers:,} ({total_end_customers/total_leads*100 if total_leads > 0 else 0:.1f}%)")
+        print(f"  Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
         # Duplicate summary table
         if total_duplicates_removed > 0:
@@ -650,11 +654,11 @@ class OrganizedLeadAnalyzer:
             )
         
         # Strategic recommendations
-        print(f"\n💡 STRATEGIC RECOMMENDATIONS")
+        print(f"\nSTRATEGIC RECOMMENDATIONS")
         print("=" * 30)
         
         if total_duplicates_removed > 0:
-            print(f"🧹 DATA QUALITY:")
+            print(f"DATA QUALITY:")
             print(f"   • Removed {total_duplicates_removed:,} duplicate leads")
             print(f"   • Saved time and improved targeting accuracy")
             print(f"   • Duplicate rate: {(total_duplicates_removed/total_original_leads*100):.1f}%")
@@ -663,25 +667,25 @@ class OrganizedLeadAnalyzer:
             leads_per_client = total_end_customers / total_businesses
             
             if leads_per_client < 10:
-                print("🎯 PRIORITY: Increase end customer collection")
+                print("PRIORITY: Increase end customer collection")
                 print(f"   • Current: {leads_per_client:.1f} leads per business client")
                 print(f"   • Target: 50+ leads per business client")
                 print(f"   • Need: {total_businesses * 50 - total_end_customers:,} more end customers")
             elif leads_per_client > 100:
-                print("🏢 PRIORITY: Acquire more business clients")
+                print("PRIORITY: Acquire more business clients")
                 print(f"   • Excellent lead inventory: {total_end_customers:,} end customers")
                 print(f"   • Can support: {total_end_customers // 50:,} business clients")
             else:
-                print("✅ BALANCED: Good ratio of businesses to lead inventory")
+                print("BALANCED: Good ratio of businesses to lead inventory")
         
         if sorted_platforms:
             top_platform = sorted_platforms[0]
-            print(f"\n📈 Platform Focus: {top_platform[0].replace('_end_customers', '').title()}")
+            print(f"\nPlatform Focus: {top_platform[0].replace('_end_customers', '').title()}")
             print(f"   • Best volume: {top_platform[1]:,} leads")
         
         if sorted_niches:
             top_niche = sorted_niches[0]
-            print(f"\n🎯 Niche Focus: {top_niche[0].replace('_', ' ').title()}")
+            print(f"\nNiche Focus: {top_niche[0].replace('_', ' ').title()}")
             print(f"   • Strongest performance: {top_niche[1]:,} leads")
         
         return {
@@ -729,21 +733,21 @@ class OrganizedLeadAnalyzer:
         df = pd.DataFrame(all_data)
         df.to_csv(filename, index=False)
         
-        print(f"\n💾 Organized summary exported to: {filename}")
+        print(f"\nOrganized summary exported to: {filename}")
         return filename
     
     def run_organized_analysis(self):
         """Run complete organized analysis with duplicate detection"""
-        print("🚀 Starting Organized Lead Analysis with Duplicate Detection...")
+        print("Starting Organized Lead Analysis with Duplicate Detection...")
         print("=" * 60)
         
         files = self.find_lead_files()
         
         if not files:
-            print("❌ No lead files found!")
+            print("No lead files found!")
             return None
         
-        print(f"📁 Found {len(files)} files to analyze")
+        print(f"Found {len(files)} files to analyze")
         
         for file in files:
             self.analyze_file_with_duplicates(file)
@@ -757,7 +761,7 @@ def main():
     """Main function with menu options"""
     analyzer = OrganizedLeadAnalyzer()
     
-    print("🔍 LEAD ANALYZER WITH DUPLICATE DETECTION")
+    print("LEAD ANALYZER WITH DUPLICATE DETECTION")
     print("=" * 50)
     print("1. Analyze all lead files (with duplicate removal)")
     print("2. Analyze specific file for duplicates only") 
@@ -769,11 +773,11 @@ def main():
         results = analyzer.run_organized_analysis()
         
         if results:
-            print(f"\n🎉 ANALYSIS COMPLETE!")
-            print(f"📊 {results['total_leads']:,} clean leads analyzed")
-            print(f"🧹 {results['total_duplicates_removed']:,} duplicates removed")
-            print(f"🏢 {results['total_businesses']:,} business prospects")
-            print(f"💥 {results['total_end_customers']:,} end customer leads")
+            print(f"\nANALYSIS COMPLETE!")
+            print(f"{results['total_leads']:,} clean leads analyzed")
+            print(f"{results['total_duplicates_removed']:,} duplicates removed")
+            print(f"{results['total_businesses']:,} business prospects")
+            print(f"{results['total_end_customers']:,} end customer leads")
     
     elif choice == "2":
         # Get file path from user
@@ -788,14 +792,14 @@ def main():
         result = analyzer.analyze_single_file_for_duplicates(filepath)
         
         if result:
-            print(f"\n🎉 DUPLICATE ANALYSIS COMPLETE!")
-            print(f"📊 Processed {result['original_count']:,} leads")
-            print(f"🧹 Found {result['duplicate_count']:,} duplicates ({result['duplicate_rate']:.1f}%)")
-            print(f"✅ {result['unique_count']:,} unique leads remain")
+            print(f"\nDUPLICATE ANALYSIS COMPLETE!")
+            print(f"Processed {result['original_count']:,} leads")
+            print(f"Found {result['duplicate_count']:,} duplicates ({result['duplicate_rate']:.1f}%)")
+            print(f"{result['unique_count']:,} unique leads remain")
     
     elif choice == "3":
         files = analyzer.find_lead_files()
-        print(f"\n📁 Found {len(files)} lead files:")
+        print(f"\nFound {len(files)} lead files:")
         for i, file in enumerate(files, 1):
             print(f"  {i}. {file}")
     

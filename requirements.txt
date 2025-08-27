@@ -11,3 +11,4 @@ google-auth-oauthlib>=1.0.0
 pathlib
 reportlab
 psycopg2-binary>=2.9.7  # Add this for PostgreSQL
+sqlalchemy
