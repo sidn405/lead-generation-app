@@ -184,12 +184,23 @@ def _detect_csv_dir() -> Path:
     p.mkdir(parents=True, exist_ok=True)
     return p
 
+Path(os.environ.get("CSV_DIR", "client_configs")).mkdir(parents=True, exist_ok=True)
+Path("dm_library").mkdir(parents=True, exist_ok=True)
+
 CSV_DIR: Path = _detect_csv_dir()
 EMPIRE_CACHE_DIR: Path = CSV_DIR
 
 def get_latest_csv(pattern: str) -> str | None:
     files = sorted(CSV_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
     return str(files[0]) if files else None
+
+def df_stretch(df):
+    try:
+        # New API
+        st.dataframe(df, width="stretch")
+    except TypeError:
+        # Back-compat with older Streamlit
+        st.dataframe(df, use_container_width=True)
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com")
@@ -818,46 +829,83 @@ except Exception as e:
     user_info = None
 
 def _normalize_plan(ui: dict):
-    ui = ui or {}
-    sp = (ui.get("subscribed_plan") or "").lower()
-    ss = (ui.get("subscription_status") or "").lower()
-    bp = (ui.get("plan") or "").lower()
+    """
+    Decide the effective plan and a human-readable source tag.
 
-    # If *anything* says demo → demo
+    Rules:
+      - If anything explicitly says demo -> ('demo', 'demo')
+      - Active/trialing subscription on subscribed_plan wins
+      - If subscribed_plan is present but status missing/unknown -> trust it ('subscribed_plan(?)')
+      - Otherwise, fall back to legacy 'plan' if it's a paid tier
+      - Else -> ('demo', 'fallback_demo')
+    """
+    ui = ui or {}
+
+    def norm(v):
+        # robust lowercasing (str/int/None-safe)
+        try:
+            return str(v).strip().lower()
+        except Exception:
+            return ""
+
+    # Map common aliases/SKU names to canonical tier keys
+    ALIAS = {
+        "basic": "starter",
+        "starter_monthly": "starter",
+        "starter_annual": "starter",
+        "pro_monthly": "pro",
+        "pro_annual": "pro",
+        "ultimate_monthly": "ultimate",
+        "ultimate_annual": "ultimate",
+    }
+    PAID = {"starter", "pro", "ultimate"}
+
+    sp = norm(ui.get("subscribed_plan"))
+    bp = norm(ui.get("plan"))
+    ss = norm(ui.get("subscription_status"))
+
+    sp = ALIAS.get(sp, sp)
+    bp = ALIAS.get(bp, bp)
+
+    # 1) Explicit demo anywhere → demo
     if sp == "demo" or bp == "demo":
         return "demo", "demo"
 
-    # Active subscription wins
-    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
-        return sp, "subscribed_plan(active)"
+    # 2) Subscribed plan with good status wins
+    if sp in PAID:
+        if ss in {"active", "trialing"}:
+            return sp, f"subscribed_plan({ss})"
+        # treat present-but-unknown status as subscribed (prevents flapping)
+        if ss == "":
+            return sp, "subscribed_plan(?)"
+        # keep other explicit statuses visible (e.g., paused, past_due, unpaid)
+        if ss in {"paused", "past_due", "unpaid", "canceled", "inactive", "ended"}:
+            return sp, f"subscribed_plan({ss})"
 
-    # Legacy 'plan' if sane
-    if bp in {"starter", "pro", "ultimate"}:
+    # 3) Legacy 'plan' is paid → accept it
+    if bp in PAID:
         return bp, "plan(legacy)"
 
-    # Not logged in / unknown → demo
+    # 4) Default
     return "demo", "fallback_demo"
 
 plan_fixed, plan_source = _normalize_plan(user_info)
 
-# Make this the single source of truth
+# Single source of truth for UI
 st.session_state["plan"] = plan_fixed
 st.session_state["plan_source"] = plan_source
 
-# Keep user_info consistent for legacy code that still reads it
-if user_info is None:
-    user_info = {}
-user_info["plan"] = plan_fixed
-user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
-user_info["subscription_status"] = user_info.get("subscription_status") or (
-    "demo" if plan_fixed == "demo" else "inactive"
-)
+# Keep the raw values intact; add normalized view alongside
+user_info = user_info or {}
+user_info.setdefault("normalized_plan", plan_fixed)
+user_info.setdefault("normalized_plan_source", plan_source)
 
-print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
-      f"raw={{'plan': {user_info.get('plan')}, "
-      f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
-      f"'subscription_status': {user_info.get('subscription_status')}}}")
-# === end PLAN BOOTSTRAP ===
+print(
+    f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
+    f"raw={{'plan': {user_info.get('plan')}, "
+    f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
+    f"'subscription_status': {user_info.get('subscription_status')}}}"
+)
 
 username = st.session_state.get("username") or "anonymous"
 st.session_state["stats"] = load_empire_stats(username)
@@ -1560,48 +1608,6 @@ def automatic_session_restore(username):
     except Exception as e:
         print(f"❌ Automatic restoration error: {str(e)}")
         return False
-    
-# --- PLAN NORMALIZER + DEBUG (paste right after you get user_info) ---
-def _normalize_plan(ui: dict):
-    ui = ui or {}
-    sp = (ui.get("subscribed_plan") or "").lower()
-    ss = (ui.get("subscription_status") or "").lower()
-    bp = (ui.get("plan") or "").lower()
-
-    # If anything says demo => demo
-    if sp == "demo" or bp == "demo":
-        return "demo", "demo"
-
-    # Active subscription wins
-    if ss == "active" and sp in {"starter", "pro", "ultimate"}:
-        return sp, "subscribed_plan(active)"
-
-    # Fallback to legacy plan if sane
-    if bp in {"starter", "pro", "ultimate"}:
-        return bp, "plan(legacy)"
-
-    # Final fallback is demo (never pretend Starter)
-    return "demo", "fallback_demo"
-
-plan_fixed, source = _normalize_plan(user_info)
-
-# Make this the single truth everywhere
-st.session_state["plan"] = plan_fixed
-st.session_state["plan_source"] = source
-
-# Optional: keep downstream code that reads user_info consistent too
-if user_info is None:
-    user_info = {}
-user_info["plan"] = plan_fixed
-user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
-if plan_fixed == "demo":
-    user_info["subscription_status"] = "demo"
-
-print(f"[PLAN] normalized -> {plan_fixed} (source={source}) "
-      f"raw={{'plan': {user_info.get('plan')}, "
-      f"'subscribed_plan': {user_info.get('subscribed_plan')}, "
-      f"'subscription_status': {user_info.get('subscription_status')}}}")
-# --- end normalizer ---
 
 import glob, re, os
 

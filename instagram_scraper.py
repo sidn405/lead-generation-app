@@ -29,6 +29,17 @@ try:
 except ImportError:
     print("⚠️ Smart deduplication not available - using basic dedup")
     SMART_DEDUP_AVAILABLE = False
+    
+from scraper_debug import debug_page_content, sample_page_links, save_debug_screenshot
+
+def extract_instagram_profiles(page):
+    """Extract profiles with optional debugging"""
+    
+    # Enable debugging when needed
+    if os.getenv("DEBUG_SCRAPER", "false").lower() == "true":
+        debug_page_content(page, "instagram")
+        sample_page_links(page)
+        save_debug_screenshot(page, "instagram")
 
 PLATFORM_NAME = "instagram"
 
@@ -407,6 +418,8 @@ def human_like_scrolling(page, max_scrolls):
             x = random.randint(100, 800)
             y = random.randint(100, 600)
             page.mouse.move(x, y)
+            
+
 
 def main():
     """Main function to run Instagram scraper with smart user-aware deduplication"""
