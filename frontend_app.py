@@ -6860,7 +6860,7 @@ with tab2: # Lead Results
                                 except Exception:
                                     df = pd.DataFrame()
 
-                            for col in ('generated_by', 'username', 'user_id', 'created_by'):
+                            for col in ('generated_by', 'username', 'created_by'):
                                 if col in df.columns:
                                     before = len(df)
                                     df = df[df[col].astype(str).str.lower() == username.lower()]
