@@ -198,6 +198,42 @@ def _detect_csv_dir() -> Path:
 
 CSV_DIR: Path = _detect_csv_dir()
 
+from pathlib import Path
+
+# If any code reassigns CSV_DIR to a string, normalize it back to Path
+try:
+    if isinstance(CSV_DIR, str):
+        CSV_DIR = Path(CSV_DIR).resolve()
+except NameError:
+    CSV_DIR = Path(os.getenv("CSV_DIR", "client_configs")).resolve()
+    
+
+def get_latest_csv(pattern: str):
+    import glob, os
+    base = CSV_DIR if isinstance(CSV_DIR, Path) else Path(CSV_DIR)
+    files = sorted(
+        glob.glob(str(base / pattern)),
+        key=os.path.getmtime,
+        reverse=True
+    )
+    return files[0] if files else None
+
+import glob, os, re
+root = CSV_DIR if isinstance(CSV_DIR, Path) else Path(CSV_DIR)
+rx = re.compile(re.escape(username), re.IGNORECASE)
+
+# Only search under CSV_DIR, not CWD
+candidates = sorted(
+    glob.glob(str(root / user_pattern)) +
+    glob.glob(str(root / "**" / user_pattern), recursive=True),
+    key=os.path.getmtime,
+    reverse=True
+)
+user_files = [p for p in candidates if rx.search(p)]
+latest_user_file = user_files[0] if user_files else None
+
+
+
 # ---- Minimal stats helpers (avoid NameError) ----
 def _stats_path(u: str) -> Path: return STATS_DIR / f"empire_stats_{(u or 'anonymous').strip()}.json"
 def _default_stats() -> dict:
@@ -295,13 +331,47 @@ def soft_rehydrate_from_simple_auth():
         print(f"soft rehydrate failed: {e}")
 
 # Stripe success/session restore (call but don’t crash if missing)
+# --- Stripe return restoration (quiet + defensive) ---
 def restore_payment_authentication():
-    try:
-        from stripe_integration import restore_payment_authentication as _restore
-        return _restore()
-    except Exception as e:
-        print(f"restore_payment_authentication error: {e}")
+    qp = getattr(st, "query_params", {})
+    # Only attempt if QS looks like a Stripe return
+    has_stripe = any(k in qp for k in (
+        "payment_success", "package_success", "session_id", "success",
+        "cancel", "canceled", "cancelled", "payment_cancelled", "payment_canceled"
+    ))
+    if not has_stripe:
         return False
+
+    # 1) Try a local handler defined later in this file
+    try:
+        # If this function exists below, calling it now is fine in Streamlit (same run)
+        return handle_payment_success_url()
+    except NameError:
+        pass
+    except Exception as e:
+        print(f"[STRIPE] local handle failed: {e}")
+
+    # 2) Try stripe_checkout handler
+    try:
+        import stripe_checkout
+        if hasattr(stripe_checkout, "handle_payment_success_url"):
+            return stripe_checkout.handle_payment_success_url()
+    except Exception as e:
+        print(f"[STRIPE] stripe_checkout handler failed: {e}")
+
+    # 3) Defer: stash QS and let the existing payment UI handle it later
+    if not st.session_state.get("_stripe_qs_saved"):
+        st.session_state["_stripe_qs_saved"] = dict(qp)
+        print("[STRIPE] deferred: saved QS for later processing")
+    return False
+
+    
+if not st.session_state.get("_restore_done"):
+    # your soft_rehydrate_from_simple_auth()
+    # your _quick_rehydrate_from_qs()
+    restore_payment_authentication()
+    st.session_state["_restore_done"] = True
+
 
 # ---- Do rehydrates in this order (once) ----
 soft_rehydrate_from_simple_auth()
@@ -608,6 +678,24 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
+def _auth_snapshot():
+    u = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
+    return bool(st.session_state.get("authenticated") and u), u
+
+def _normalize_plan_once():
+    authed, u = _auth_snapshot()
+    key = f"{'1' if authed else '0'}:{u or ''}"
+    if st.session_state.get("_plan_norm_key") == key:
+        return
+    info = credit_system.get_user_info(u) or {} if authed and u else {}
+    plan_fixed, plan_source = _normalize_plan(info)
+    st.session_state.update(plan=plan_fixed, user_plan=plan_fixed, plan_source=plan_source)
+    print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) "
+          f"raw={{'plan': {info.get('plan')}, 'subscribed_plan': {info.get('subscribed_plan')}, "
+          f"'subscription_status': {info.get('subscription_status')}}}")
+    st.session_state["_plan_norm_key"] = key
+
+_normalize_plan_once()
 
     
 # === Empire stats persistence helpers (safe defaults) ===
