@@ -169,20 +169,22 @@ def create_package_stripe_session(
     base = APP_BASE_URL.rstrip("/")
     stamp = os.environ.get("APP_COMMIT", "")[:7] or "dev"
 
+    from urllib.parse import quote_plus  # ensure this is imported above
+
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         line_items=[{
             "price_data": {
                 "currency": "usd",
                 "product_data": {
-                    "name": f"{('Custom ' if requires_build else '')}{display}",
+                    "name": f"{'Custom ' if requires_build else ''}{display}",
                     "description": (
                         "Built-to-order • Allow 48–120 hours"
-                        if requires_build else
-                        "Verified leads • Instant download"
+                        if requires_build
+                        else "Verified leads • Instant download"
                     ),
                 },
-                "unit_amount": int(float(price) * 100),
+                "unit_amount": int(round(float(price) * 100)),
             },
             "quantity": 1,
         }],
@@ -196,7 +198,7 @@ def create_package_stripe_session(
             f"&amount={price}"
             f"&industry={ind}"
             f"&location={loc}"
-            f"&requires_build={(1 if requires_build else 0)}"
+            f"&requires_build={'1' if requires_build else '0'}"
             f"&timestamp={stamp}"
             f"&session_id={{CHECKOUT_SESSION_ID}}"
         ),
@@ -219,6 +221,19 @@ def create_package_stripe_session(
             "order_type": "custom" if requires_build else "prebuilt",
         },
     )
+
+    # remember the session in case user returns without query params
+    st.session_state["last_checkout_session_id"] = session.id
+    st.session_state["last_checkout_kind"] = "package"
+    st.session_state["last_checkout_payload"] = {
+        "package_key": package_key,
+        "package_name": (package_name or display),
+        "requires_build": bool(requires_build),
+        "industry": industry or "",
+        "location": location or "",
+        "amount": float(price),
+    }
+
 
     # Friendly redirect hint
     st.success("✅ Checkout session created! Redirecting to Stripe…")

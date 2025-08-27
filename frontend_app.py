@@ -298,64 +298,26 @@ def get_latest_csv(pattern: str):
 from pathlib import Path
 import re
 
-# Ensure CSV_DIR is a Path
 root = Path(CSV_DIR)
-
-# Optional: compile a regex for extra filtering (not required for globbing)
 rx = re.compile(re.escape(username), re.IGNORECASE) if username else None
-
-# Choose your pattern(s)
-# Generic (matches any CSV for the user):
 pattern = f"*{username}*.csv" if username else "*.csv"
 
-# If you want to be stricter (uncomment and use 'patterns' instead of 'pattern'):
-# patterns = [
-#     f"twitter_leads_*{username}_*.csv",
-#     f"linkedin_leads_*{username}_*.csv",
-#     f"facebook_leads_*{username}_*.csv",
-#     f"tiktok_leads_*{username}_*.csv",
-#     f"instagram_leads_*{username}_*.csv",
-#     f"youtube_leads_*{username}_*.csv",
-#     f"medium_leads_*{username}_*.csv",
-#     f"reddit_leads_*{username}_*.csv",
-# ] if username else ["*.csv"]
-
 def safe_mtime(p: Path) -> float:
-    try:
-        return p.stat().st_mtime
-    except FileNotFoundError:
-        return -1.0
+    try: return p.stat().st_mtime
+    except FileNotFoundError: return -1.0
 
-# Gather candidates strictly under CSV_DIR
-files = []
-# If using single 'pattern':
-files.extend(root.glob(pattern))
-files.extend(root.rglob(pattern))
-
-# If using 'patterns' list instead:
-# for pat in patterns:
-#     files.extend(root.glob(pat))
-#     files.extend(root.rglob(pat))
-
-# Keep only files; dedupe; (optionally) regex-filter the name
-seen = set()
-candidates = []
+files = list(root.glob(pattern)) + list(root.rglob(pattern))
+seen, candidates = set(), []
 for p in files:
-    if not p.is_file():
-        continue
+    if not p.is_file(): continue
     rp = p.resolve()
-    if rp in seen:
-        continue
-    if rx and not rx.search(p.name):
-        continue
-    seen.add(rp)
-    candidates.append(p)
+    if rp in seen: continue
+    if rx and not rx.search(p.name): continue
+    seen.add(rp); candidates.append(p)
 
-# Sort newest first
 candidates.sort(key=safe_mtime, reverse=True)
-
-# Example: use the newest CSV (if any)
 latest_csv = candidates[0] if candidates else None
+
 
 # ---- Minimal stats helpers (avoid NameError) ----
 def _stats_path(u: str) -> Path: return STATS_DIR / f"empire_stats_{(u or 'anonymous').strip()}.json"
@@ -556,19 +518,21 @@ def _dm_path(username: str) -> Path:
     safe = (username or "anonymous").strip()
     return DM_DIR / f"{safe}_dm_library.json"
 
-def load_dm_library(username: str):
-    """Return user's DM library list; create empty file if missing."""
+import json
+from pathlib import Path
+
+def load_dm_library(username: str) -> dict:
+    lib_dir = Path("dm_library")
+    lib_dir.mkdir(parents=True, exist_ok=True)
+    path = lib_dir / f"{username}_dm_library.json"
+    if not path.exists():
+        path.write_text("{}", encoding="utf-8")
+        return {}
     try:
-        p = _dm_path(username)
-        if not p.exists():
-            # create an empty library silently
-            p.write_text("[]", encoding="utf-8")
-            return []
-        with p.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        # Don't spam logs; return empty so UI still works
-        return []
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
 
 def save_dm_library(username: str, data) -> bool:
     """Atomic write; ensures dir exists."""
