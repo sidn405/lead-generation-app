@@ -219,8 +219,8 @@ def show_payment_success_message() -> bool:
                 admin_email = os.getenv("ADMIN_EMAIL", EMAIL_ADDRESS)
                 sent = send_admin_package_notification(
                     admin_email=admin_email,
-                    username=username,
                     user_email=user_email,
+                    username=username,
                     package_type=package,
                     amount=amount_val,
                     industry=industry,

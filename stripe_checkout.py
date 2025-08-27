@@ -9,6 +9,7 @@ from typing import Tuple, List, Dict
 from postgres_credit_system import credit_system
 from datetime import datetime
 from emailer import send_admin_package_notification
+import json
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
@@ -18,7 +19,143 @@ admin_email = (os.getenv("ADMIN_EMAIL")                        # primary admin i
                or os.getenv("SUPPORT_EMAIL")                   # optional alias
                or "support@leadgeneratorempire.com")
              
+def _queue_admin_email(payload: Dict) -> bool:
+    """Store a pending admin notification in Postgres so you can send it later."""
+    try:
+        from sqlalchemy import create_engine, text
+        db_url = os.getenv("DATABASE_URL")
+        if not db_url:
+            print("[notify.queue] DATABASE_URL missing")
+            return False
+        eng = create_engine(db_url, pool_pre_ping=True)
+        with eng.begin() as c:
+            c.execute(text("""
+                CREATE TABLE IF NOT EXISTS admin_email_outbox (
+                  id BIGSERIAL PRIMARY KEY,
+                  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                  sent_at TIMESTAMPTZ,
+                  status TEXT NOT NULL DEFAULT 'pending',
+                  session_id TEXT,
+                  username TEXT,
+                  payload JSONB NOT NULL
+                )
+            """))
+            # de-dupe on session_id if present
+            sid = payload.get("session_id") or None
+            if sid:
+                existing = c.execute(text("""
+                    SELECT id FROM admin_email_outbox
+                    WHERE session_id = :sid AND status = 'pending'
+                    LIMIT 1
+                """), dict(sid=sid)).first()
+                if existing:
+                    print(f"[notify.queue] already queued sid={sid}")
+                    return True
+            c.execute(text("""
+                INSERT INTO admin_email_outbox (session_id, username, payload)
+                VALUES (:sid, :user, :payload)
+            """), dict(sid=sid, user=payload.get("username"), payload=json.dumps(payload)))
+        print("[notify.queue] queued")
+        return True
+    except Exception as e:
+        print(f"[notify.queue] ERROR: {e}")
+        return False
 
+def notify_admin_custom_order(*, admin_email: str, user_email: str,
+                              username: str, package_type: str, package_name: str,
+                              amount: float, industry: str, location: str,
+                              session_id: str | None, timestamp: str | None) -> bool:
+    """Try SendGrid -> Webhook -> SMTP; if all fail, queue to Postgres."""
+    subject = f"New Custom Leads Order – {username} – {package_name}"
+    html = f"""
+      <h3>New Custom Lead Package</h3>
+      <p><b>User:</b> {username} ({user_email})</p>
+      <p><b>Package:</b> {package_type} / {package_name}</p>
+      <p><b>Target:</b> {industry or '-'} — {location or '-'}</p>
+      <p><b>Price:</b> ${amount:.2f}</p>
+      <p><b>Stripe Session:</b> {session_id or '-'}</p>
+      <p><b>Time:</b> {timestamp or datetime.utcnow().isoformat()}</p>
+    """
+    text = (
+        "New Custom Lead Package\n"
+        f"User: {username} ({user_email})\n"
+        f"Package: {package_type} / {package_name}\n"
+        f"Target: {industry or '-'} — {location or '-'}\n"
+        f"Price: ${amount:.2f}\n"
+        f"Stripe Session: {session_id or '-'}\n"
+        f"Time: {timestamp or datetime.utcnow().isoformat()}\n"
+    )
+
+    # 1) SendGrid
+    try:
+        sg_key = os.getenv("SENDGRID_API_KEY")
+        if sg_key:
+            import sendgrid
+            from sendgrid.helpers.mail import Mail
+            sg = sendgrid.SendGridAPIClient(api_key=sg_key)
+            resp = sg.send(Mail(from_email=admin_email, to_emails=admin_email,
+                                subject=subject, html_content=html))
+            print(f"[notify.sendgrid] {getattr(resp,'status_code',None)}")
+            if 200 <= int(getattr(resp, "status_code", 0)) < 300:
+                return True
+    except Exception as e:
+        print(f"[notify.sendgrid] ERROR: {e}")
+
+    # 2) Webhook
+    try:
+        url = os.getenv("SUPPORT_WEBHOOK_URL")
+        if url:
+            import requests
+            r = requests.post(url, json={
+                "type": "custom_order",
+                "username": username,
+                "user_email": user_email,
+                "package_type": package_type,
+                "package_name": package_name,
+                "amount": amount,
+                "industry": industry,
+                "location": location,
+                "session_id": session_id,
+                "timestamp": timestamp or int(time.time())
+            }, timeout=10)
+            print(f"[notify.webhook] {r.status_code}")
+            if 200 <= r.status_code < 300:
+                return True
+    except Exception as e:
+        print(f"[notify.webhook] ERROR: {e}")
+
+    # 3) SMTP
+    try:
+        host = os.getenv("SMTP_HOST"); user = os.getenv("SMTP_USER"); pwd = os.getenv("SMTP_PASS")
+        port = int(os.getenv("SMTP_PORT","587"))
+        if host and user and pwd and admin_email:
+            import smtplib
+            from email.mime.text import MIMEText
+            msg = MIMEText(text)
+            msg["Subject"] = subject; msg["From"] = admin_email; msg["To"] = admin_email
+            with smtplib.SMTP(host, port, timeout=10) as s:
+                s.starttls(); s.login(user, pwd); s.sendmail(admin_email, [admin_email], msg.as_string())
+            print("[notify.smtp] sent")
+            return True
+    except Exception as e:
+        print(f"[notify.smtp] ERROR: {e}")
+
+    # 4) Queue if all channels failed
+    queued = _queue_admin_email({
+        "username": username,
+        "user_email": user_email,
+        "package_type": package_type,
+        "package_name": package_name,
+        "amount": amount,
+        "industry": industry,
+        "location": location,
+        "session_id": session_id,
+        "timestamp": timestamp,
+    })
+    if not queued:
+        import streamlit as st
+        st.warning("⚠️ Could not notify support (no network). Saved nowhere; please configure email/webhook.")
+    return False
 
 def create_package_download(username: str, package_type: str, industry: str, location: str) -> bool:
     """Create downloadable package file for user"""
@@ -175,11 +312,17 @@ def _restore_session_state(username: str):
 
 # ---- Handle ?payment_success=1 redirects deterministically ----
 def handle_payment_success_url():
-    """Finalize purchase from query params, update Postgres, refresh session/UI."""
     qp = st.query_params
-    if not qp or "package" not in qp:
+
+    # nothing to do
+    if not qp or ("success" not in qp and "payment_success" not in qp):
         return False
 
+    # already handled once on this URL → do nothing
+    if qp.get("processed") == "1":
+        return False
+
+    # ---- read common fields
     username    = qp.get("username")
     package_key = qp.get("package")
     amount      = float(qp.get("amount", 0) or 0)
@@ -188,28 +331,37 @@ def handle_payment_success_url():
     session_id  = qp.get("session_id") or qp.get("checkout_session_id") or qp.get("cs") or ""
     requires_build = str(qp.get("requires_build", "0")).lower() in ("1", "true", "yes")
 
-    name_map = {"starter":"Niche Starter Pack","deep_dive":"Industry Deep Dive","domination":"Market Domination"}
-    package_name = name_map.get(package_key, package_key.replace("_", " ").title())
-
-    # ---------- idempotency guard ----------
+    # PREVENT double-processing across rerenders (also works if URL doesn’t change)
     dedupe_key = session_id or f"{username}|{package_key}|{amount}|{industry}|{location}|{int(requires_build)}"
-    handled = st.session_state.setdefault("handled_payments", {})
-    if handled.get(dedupe_key):
-        # already processed once => clear QS and stop looping
-        try: st.query_params.clear()
-        except: pass
+    done = st.session_state.setdefault("handled_payments", set())
+    if dedupe_key in done:
+        # mark URL as processed so we never enter again on refresh
+        try: st.query_params["processed"] = "1"
+        except Exception: pass
         return False
 
-    try:
-        # --------- CUSTOM (build-to-order) ---------
+    name_map = {"starter":"Niche Starter Pack","deep_dive":"Industry Deep Dive","domination":"Market Domination"}
+    package_name = name_map.get(package_key, (package_key or "").replace("_"," ").title())
+
+    # ---------- branch ----------
+    if package_key:  # package flow
         if requires_build:
             print(f"📦 Processing package purchase: {package_key} for ${amount} (custom=True)")
+
+            # build safe emails
+            user_email = ((st.session_state.get("user_data") or {}).get("email")
+                          or os.getenv("USER_EMAIL")
+                          or f"{username}@leadgeneratorempire.com")
+            admin_email = (os.getenv("ADMIN_EMAIL")
+                           or os.getenv("SUPPORT_EMAIL")
+                           or "support@leadgeneratorempire.com")
+
+            # notify but NEVER raise (network may be blocked)
             try:
-                # your existing function that emails admin / support
                 sent = send_admin_package_notification(
                     admin_email=admin_email,
                     username=username,
-                    user_email=(st.session_state.get("user_data") or {}).get("email", ""),
+                    user_email=user_email,
                     package_type=package_key,
                     amount=amount,
                     industry=industry,
@@ -220,30 +372,23 @@ def handle_payment_success_url():
                 if not sent:
                     print("⚠️ Admin notification did not send (configure email/webhook).")
             except Exception as e:
-                # DO NOT raise; we still want to finish once and clear QS
                 print(f"❌ Admin notification failed: {e}")
 
-            # show once after rerun
-            st.session_state["flash"] = ("success",
-                f"🧩 Custom order received for **{package_name}**. We’ll email you updates.")
-
-        # --------- PRE-BUILT (instant download) ---------
+            # show once; no rerun
+            st.success(f"🧩 Custom order received for **{package_name}**. We’ll email you updates.")
         else:
             print(f"📦 Processing package purchase: {package_key} for ${amount} (custom=False)")
             from package_system import add_package_to_database
             add_package_to_database(username, package_name)
-            st.session_state["flash"] = ("success",
-                f"📦 Package '{package_name}' added to your downloads!")
+            st.balloons()
+            st.success(f"📦 Package '{package_name}' added to your downloads!")
 
-        handled[dedupe_key] = True  # mark as processed (idempotent)
+        done.add(dedupe_key)
+        # mark URL as processed so future renders won’t re-enter
+        try: st.query_params["processed"] = "1"
+        except Exception: pass
+        return True
 
-    finally:
-        # clear QS and rerun exactly once to remove trigger
-        try: st.query_params.clear()
-        except: pass
-        st.rerun()
-
-    return True
         
     payment_type = qp.get("type", "subscription")
     tier_name = (qp.get("tier") or "").replace("_", " ").strip().lower()
