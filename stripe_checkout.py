@@ -8,10 +8,17 @@ import streamlit as st
 from typing import Tuple, List, Dict
 from postgres_credit_system import credit_system
 from datetime import datetime
+from emailer import send_admin_package_notification
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
+    
 )
+admin_email = (os.getenv("ADMIN_EMAIL")                        # primary admin inbox
+               or os.getenv("SUPPORT_EMAIL")                   # optional alias
+               or "support@leadgeneratorempire.com")
+             
+
 
 def create_package_download(username: str, package_type: str, industry: str, location: str) -> bool:
     """Create downloadable package file for user"""
@@ -169,107 +176,74 @@ def _restore_session_state(username: str):
 # ---- Handle ?payment_success=1 redirects deterministically ----
 def handle_payment_success_url():
     """Finalize purchase from query params, update Postgres, refresh session/UI."""
-    if not st.query_params.get("payment_success"):
-        return False
-
-    # Pull params
     qp = st.query_params
-
-    def _v(key, default=None):
-        v = qp.get(key, default)
-        # st.query_params can return list-like; normalize to scalar
-        if isinstance(v, (list, tuple)):
-            return v[0] if v else default
-        return v
-
-    username         = (_v("username", "") or "").strip()
-    payment_type     = (_v("type", "") or "").strip()
-    tier_name        = (_v("tier", "") or "").strip()
-    credits          = int(_v("credits", 0) or 0)
-    amount           = int(float(_v("amount", 0) or 0))
-    monthly_credits  = int(_v("monthly_credits", 0) or 0)
-
-    # ✅ the checkout session id that we appended in success_url as {CHECKOUT_SESSION_ID}
-    session_id = (
-        _v("session_id")
-        or _v("checkout_session_id")
-        or _v("cs")
-        or None
-    )
-
-    print(f"[stripe return] user={username} type={payment_type} tier={tier_name} "
-        f"credits={credits} monthly_credits={monthly_credits} session_id={session_id}")
-    
-    is_credit_success = bool(qp.get("payment_success"))
-    is_package_success = bool(qp.get("success") and qp.get("package"))
-    
-    if not (is_credit_success or is_package_success):
+    if not qp or "package" not in qp:
         return False
 
-    # Handle package purchases
-    if is_package_success:
-        username = qp.get("username")
-        package_key = qp.get("package")
-        
-        if username and package_key:
-            # Map package keys to display names
-            package_names = {
-                "starter": "Niche Starter Pack",
-                "deep_dive": "Industry Deep Dive", 
-                "domination": "Market Domination"
-            }
-            
-            package_name = package_names.get(package_key, package_key)
-            
-            # NEW: detect custom/build-to-order
-            requires_build = str(qp.get("requires_build", "0")).lower() in ("1", "true", "yes")
-            session_id = qp.get("session_id") or qp.get("checkout_session_id") or qp.get("cs")
-            industry = (qp.get("industry") or "").replace('+',' ')
-            location = (qp.get("location") or "").replace('+',' ')
-            amount = float(qp.get("amount") or 0)
+    username    = qp.get("username")
+    package_key = qp.get("package")
+    amount      = float(qp.get("amount", 0) or 0)
+    industry    = (qp.get("industry") or "").replace("+", " ")
+    location    = (qp.get("location") or "").replace("+", " ")
+    session_id  = qp.get("session_id") or qp.get("checkout_session_id") or qp.get("cs") or ""
+    requires_build = str(qp.get("requires_build", "0")).lower() in ("1", "true", "yes")
 
-            # Optional: confirm via Stripe metadata if present
-            if session_id and not requires_build:
-                try:
-                    md = (stripe.checkout.Session.retrieve(session_id).metadata or {})
-                    requires_build = str(md.get("requires_build", "0")).lower() in ("1", "true", "yes")
-                except Exception as e:
-                    print(f"[return.meta] {e}")
+    name_map = {"starter":"Niche Starter Pack","deep_dive":"Industry Deep Dive","domination":"Market Domination"}
+    package_name = name_map.get(package_key, package_key.replace("_", " ").title())
 
-            if not username or not package_key:
-                return False
+    # ---------- idempotency guard ----------
+    dedupe_key = session_id or f"{username}|{package_key}|{amount}|{industry}|{location}|{int(requires_build)}"
+    handled = st.session_state.setdefault("handled_payments", {})
+    if handled.get(dedupe_key):
+        # already processed once => clear QS and stop looping
+        try: st.query_params.clear()
+        except: pass
+        return False
 
-            if requires_build:
-                # ------ CUSTOM FLOW: email only; DO NOT add to downloads ------
-                print(f"[custom] order detected: user={username} package={package_key} name={package_name}")
-                send_custom_order_email(
-                    username=username, package_key=package_key, package_name=package_name,
-                    industry=industry, location=location, price=amount, session_id=session_id
+    try:
+        # --------- CUSTOM (build-to-order) ---------
+        if requires_build:
+            print(f"📦 Processing package purchase: {package_key} for ${amount} (custom=True)")
+            try:
+                # your existing function that emails admin / support
+                sent = send_admin_package_notification(
+                    admin_email=admin_email,
+                    username=username,
+                    user_email=(st.session_state.get("user_data") or {}).get("email", ""),
+                    package_type=package_key,
+                    amount=amount,
+                    industry=industry,
+                    location=location,
+                    session_id=session_id,
+                    timestamp=qp.get("timestamp"),
                 )
-                _restore_session_state(username)
-                st.success(f"🧩 Custom order received for **{package_name}**. We’ll email you updates.")
-                try: st.query_params.clear()
-                except Exception: pass
-                st.rerun()
-                return True
+                if not sent:
+                    print("⚠️ Admin notification did not send (configure email/webhook).")
+            except Exception as e:
+                # DO NOT raise; we still want to finish once and clear QS
+                print(f"❌ Admin notification failed: {e}")
 
-            # ------ PRE-BUILT FLOW (unchanged): add to downloads ------
-            
-            # Add to package database
+            # show once after rerun
+            st.session_state["flash"] = ("success",
+                f"🧩 Custom order received for **{package_name}**. We’ll email you updates.")
+
+        # --------- PRE-BUILT (instant download) ---------
+        else:
+            print(f"📦 Processing package purchase: {package_key} for ${amount} (custom=False)")
             from package_system import add_package_to_database
             add_package_to_database(username, package_name)
-            
-            # Restore session state
-            _restore_session_state(username)
-            
-            # Show success message
-            st.balloons()
-            st.success(f"Package '{package_name}' added to your downloads!")
-            
-            # Clear params and redirect
-            st.query_params.clear()
-            st.rerun()
-            return True
+            st.session_state["flash"] = ("success",
+                f"📦 Package '{package_name}' added to your downloads!")
+
+        handled[dedupe_key] = True  # mark as processed (idempotent)
+
+    finally:
+        # clear QS and rerun exactly once to remove trigger
+        try: st.query_params.clear()
+        except: pass
+        st.rerun()
+
+    return True
         
     payment_type = qp.get("type", "subscription")
     tier_name = (qp.get("tier") or "").replace("_", " ").strip().lower()

@@ -600,6 +600,10 @@ def _is_stripe_return(qp: dict) -> bool:
             "package_success", "package_cancelled",
         ))
     )
+    
+if "flash" in st.session_state:
+    kind, msg = st.session_state.pop("flash")
+    getattr(st, kind)(msg) if hasattr(st, kind) else st.info(msg)
 
 # only rehydrate on Stripe returns, and not while opening login/register
 if _is_stripe_return(st.query_params) and not st.session_state.get("show_login") and not st.session_state.get("show_register"):

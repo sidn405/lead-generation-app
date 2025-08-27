@@ -29,7 +29,7 @@ def restore_payment_authentication() -> bool:
     
     if not is_payment_return:
         return False
-    
+        
     # Get username from URL
     username_from_url = query_params.get("username", "")
     
