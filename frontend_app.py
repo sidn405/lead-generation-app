@@ -603,6 +603,69 @@ def _normalize_plan(ui: dict):
     if bp in PAID:                       return bp, "plan(legacy)"
     return "demo", "fallback_demo"
 
+# --- Demo status helper (define before first use) ---
+import os
+import streamlit as st
+
+DEMO_LIMIT = int(os.environ.get("DEMO_LEAD_LIMIT", "5"))
+
+def refresh_demo_status(username: str) -> None:
+    """
+    Update session with current demo status for `username`.
+    Never raises; safe if credit_system APIs vary.
+      - st.session_state['demo_allowed']   -> bool
+      - st.session_state['demo_remaining'] -> int
+      - st.session_state['demo_used']      -> int
+    """
+    # sensible defaults
+    st.session_state.setdefault("demo_allowed", False)
+    st.session_state.setdefault("demo_remaining", 0)
+    st.session_state.setdefault("demo_used", 0)
+
+    if not username:
+        return
+
+    try:
+        from postgres_credit_system import credit_system
+    except Exception as e:
+        # If credit system isn’t available yet, fall back to defaults
+        print(f"[demo] credit_system import failed: {e}")
+        st.session_state["demo_allowed"] = True
+        st.session_state["demo_remaining"] = DEMO_LIMIT
+        st.session_state["demo_used"] = 0
+        return
+
+    try:
+        # Preferred API: can_use_demo -> (can, remaining)
+        if hasattr(credit_system, "can_use_demo"):
+            can, remaining = credit_system.can_use_demo(username)
+            rem = max(0, int(remaining or 0))
+            st.session_state["demo_allowed"] = bool(can)
+            st.session_state["demo_remaining"] = rem
+            st.session_state["demo_used"] = max(0, DEMO_LIMIT - rem)
+            return
+
+        # Fallback API: get_demo_leads_remaining -> remaining
+        if hasattr(credit_system, "get_demo_leads_remaining"):
+            rem = max(0, int(credit_system.get_demo_leads_remaining(username) or 0))
+            st.session_state["demo_allowed"] = rem > 0
+            st.session_state["demo_remaining"] = rem
+            st.session_state["demo_used"] = max(0, DEMO_LIMIT - rem)
+            return
+
+        # Last resort: pull from user_info if demo tracked differently
+        info = credit_system.get_user_info(username) or {}
+        rem = int(info.get("demo_remaining", DEMO_LIMIT))
+        st.session_state["demo_allowed"] = rem > 0
+        st.session_state["demo_remaining"] = max(0, rem)
+        st.session_state["demo_used"] = max(0, DEMO_LIMIT - rem)
+
+    except Exception as e:
+        # Keep current values if anything goes wrong
+        print(f"[demo] refresh failed: {e}")
+        return
+
+
 # === AUTH SNAPSHOT (put this a few lines above line 497) ===
 def _auth_snapshot():
     u = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
