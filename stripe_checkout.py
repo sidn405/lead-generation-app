@@ -77,6 +77,77 @@ def add_to_downloads_database(username: str, filename: str, package_type: str, i
     except Exception as e:
         print(f"Downloads database error: {e}")
         
+def send_custom_order_email(username: str, package_key: str, package_name: str,
+                            industry: str, location: str, price: float,
+                            session_id: str | None) -> bool:
+    """Notify support about a custom/build-to-order purchase.
+       Tries SendGrid first (SENDGRID_API_KEY), then SMTP (SMTP_* envs).
+       Returns True if any channel succeeds. Prints logs either way.
+    """
+    import os
+    subject = f"[Custom Order] {username} — {package_name}"
+    support = os.getenv("SUPPORT_EMAIL", "support@leadgeneratorempire.com")
+    html = f"""
+        <h3>New Custom Lead Package</h3>
+        <p><b>User:</b> {username}</p>
+        <p><b>Package:</b> {package_key} / {package_name}</p>
+        <p><b>Target:</b> {industry or '-'} — {location or '-'}</p>
+        <p><b>Price:</b> ${price:.2f}</p>
+        <p><b>Stripe Session:</b> {session_id or '-'}</p>
+        <p>Status: new</p>
+    """
+    text = (
+        "New Custom Lead Package\n"
+        f"User: {username}\n"
+        f"Package: {package_key} / {package_name}\n"
+        f"Target: {industry or '-'} — {location or '-'}\n"
+        f"Price: ${price:.2f}\n"
+        f"Stripe Session: {session_id or '-'}\n"
+        "Status: new\n"
+    )
+
+    sent = False
+
+    # 1) SendGrid
+    try:
+        sg_key = os.getenv("SENDGRID_API_KEY")
+        if sg_key:
+            import sendgrid
+            from sendgrid.helpers.mail import Mail
+            sg = sendgrid.SendGridAPIClient(api_key=sg_key)
+            resp = sg.send(Mail(from_email=support, to_emails=support,
+                                subject=subject, html_content=html))
+            print(f"[notify.sendgrid] status={getattr(resp, 'status_code', None)}")
+            sent = sent or (200 <= int(getattr(resp, "status_code", 0)) < 300)
+    except Exception as e:
+        print(f"[notify.sendgrid] ERROR: {e}")
+
+    # 2) SMTP fallback
+    try:
+        host = os.getenv("SMTP_HOST"); user = os.getenv("SMTP_USER"); pwd = os.getenv("SMTP_PASS")
+        port = int(os.getenv("SMTP_PORT", "587")); to = support
+        if not sent and host and user and pwd and to:
+            import smtplib
+            from email.mime.text import MIMEText
+            msg = MIMEText(text)
+            msg["Subject"] = subject
+            msg["From"] = to; msg["To"] = to
+            with smtplib.SMTP(host, port, timeout=10) as s:
+                s.starttls()
+                s.login(user, pwd)
+                s.sendmail(to, [to], msg.as_string())
+            print("[notify.smtp] sent")
+            sent = True
+    except Exception as e:
+        print(f"[notify.smtp] ERROR: {e}")
+
+    if not sent:
+        import streamlit as st
+        st.warning("⚠️ Support email not sent (configure SENDGRID_API_KEY or SMTP_* envs).")
+        print("[notify] WARNING: no email channel configured")
+
+    return sent
+
 def _restore_session_state(username: str):
     """Helper to restore session state after package purchase"""
     try:
@@ -149,6 +220,40 @@ def handle_payment_success_url():
             }
             
             package_name = package_names.get(package_key, package_key)
+            
+            # NEW: detect custom/build-to-order
+            requires_build = str(qp.get("requires_build", "0")).lower() in ("1", "true", "yes")
+            session_id = qp.get("session_id") or qp.get("checkout_session_id") or qp.get("cs")
+            industry = (qp.get("industry") or "").replace('+',' ')
+            location = (qp.get("location") or "").replace('+',' ')
+            amount = float(qp.get("amount") or 0)
+
+            # Optional: confirm via Stripe metadata if present
+            if session_id and not requires_build:
+                try:
+                    md = (stripe.checkout.Session.retrieve(session_id).metadata or {})
+                    requires_build = str(md.get("requires_build", "0")).lower() in ("1", "true", "yes")
+                except Exception as e:
+                    print(f"[return.meta] {e}")
+
+            if not username or not package_key:
+                return False
+
+            if requires_build:
+                # ------ CUSTOM FLOW: email only; DO NOT add to downloads ------
+                print(f"[custom] order detected: user={username} package={package_key} name={package_name}")
+                send_custom_order_email(
+                    username=username, package_key=package_key, package_name=package_name,
+                    industry=industry, location=location, price=amount, session_id=session_id
+                )
+                _restore_session_state(username)
+                st.success(f"🧩 Custom order received for **{package_name}**. We’ll email you updates.")
+                try: st.query_params.clear()
+                except Exception: pass
+                st.rerun()
+                return True
+
+            # ------ PRE-BUILT FLOW (unchanged): add to downloads ------
             
             # Add to package database
             from package_system import add_package_to_database

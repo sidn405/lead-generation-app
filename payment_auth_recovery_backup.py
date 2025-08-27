@@ -290,52 +290,39 @@ def update_simple_auth_state(simple_auth_instance) -> None:
     print("[PLAN_GUARD] after update_simple_auth_state =>", st.session_state.get("plan"))
 
 
-def create_package_stripe_session(
-    stripe,
-    username: str,
-    package_type: str,
-    amount: float,
-    description: str,
-    industry: str,
-    location: str,
-    requires_build: bool = True,   # <— NEW
-):
-    """Create Stripe session for package purchases (one-time payments)."""
+def create_package_stripe_session(stripe, username: str, package_type: str, amount: float, description: str, industry: str, location: str):
+    """Create Stripe session for package purchases (one-time payments)"""
     import time
     from urllib.parse import quote_plus
-
     # Get user email safely
     try:
         user_data = st.session_state.get('user_data', {})
         user_email = user_data.get('email', f"{username}@empire.com")
     except:
         user_email = f"{username}@empire.com"
-
+        
     base = APP_BASE_URL.rstrip("/")
-    stamp = int(time.time())
-
-    # Build success/cancel URLs (include requires_build + session_id)
+    # Create package-specific success URL
     success_url = (
         f"{base}/?success=1"
-        f"&package_success=1"
+        f"&package_success=1"                 # <-- add this
         f"&package={package_type}"
         f"&username={username}"
         f"&amount={amount}"
         f"&industry={quote_plus(industry or '')}"
         f"&location={quote_plus(location or '')}"
-        f"&requires_build={'1' if requires_build else '0'}"  # <— NEW
-        f"&timestamp={stamp}"
-        f"&session_id={{CHECKOUT_SESSION_ID}}"               # <— NEW
+        f"&timestamp={int(time.time())}"
     )
+
     cancel_url = (
         f"{base}/?success=0"
-        f"&package_cancelled=1"
+        f"&package_cancelled=1"               # <-- and this
         f"&package={package_type}"
         f"&username={username}"
         f"&industry={quote_plus(industry or '')}"
         f"&location={quote_plus(location or '')}"
     )
-
+    
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         line_items=[{
@@ -345,11 +332,11 @@ def create_package_stripe_session(
                     "name": description,
                     "description": f"Industry: {industry} | Location: {location}"
                 },
-                "unit_amount": int(amount * 100),
+                "unit_amount": int(amount * 100),  # Convert to cents
             },
             "quantity": 1,
         }],
-        mode="payment",
+        mode="payment",  # One-time payment for packages
         success_url=success_url,
         cancel_url=cancel_url,
         customer_email=user_email,
@@ -359,91 +346,210 @@ def create_package_stripe_session(
             "package_type": package_type,
             "target_industry": industry,
             "target_location": location,
-            "amount": str(amount),
-            "requires_build": "1" if requires_build else "0",  # <— NEW
-            "order_type": "custom" if requires_build else "prebuilt",  # <— NEW
-        },
+            "amount": str(amount)
+        }
     )
+    
     return session
 
-def _process_payment_success(query_params: Dict, username: str) -> None:
-    """Process payment success actions for plans and packages, with custom/prebuilt branching."""
-    try:
-        if "success" not in query_params:
-            return
+# Update your show_payment_success_message function to handle packages:
 
-        # ----- Plan upgrades (unchanged) -----
-        if "plan" in query_params:
-            plan = query_params.get("plan", "")
-            if plan:
-                print(f"📋 Processing plan upgrade to: {plan}")
+def show_payment_success_message() -> bool:
+    """
+    Show payment success message if user just completed payment
+    Returns True if message was shown (should stop execution), False otherwise
+    """
+    query_params = st.query_params
+    
+    if "success" in query_params:
+        plan = query_params.get("plan", "")
+        amount = query_params.get("amount", "")
+        package = query_params.get("package", "")
+        industry = query_params.get("industry", "").replace('+', ' ')
+        location = query_params.get("location", "").replace('+', ' ')
+        
+        if plan:
+            # Plan upgrade success
+            #st.balloons()
+            st.success(f"🎉 Plan upgrade successful! Welcome to {plan.title()} plan!")
+            
+            # Show plan benefits
+            if plan == "pro":
+                st.info("""
+                **🚀 Pro Plan Activated:**
+                - ✅ 6 platforms unlocked (Twitter, Facebook, LinkedIn, TikTok, Instagram, YouTube)
+                - ✅ 2,000 credits per session
+                - ✅ Advanced filtering & relevance scoring
+                - ✅ Priority support
+                """)
+            elif plan == "ultimate":
+                st.info("""
+                **👑 Ultimate Plan Activated:**
+                - ✅ All 8 platforms unlocked (adds Medium, Reddit)
+                - ✅ Unlimited credits per session
+                - ✅ Enterprise features
+                - ✅ Priority+ support
+                """)
+            elif plan == "starter":
+                st.info("""
+                **🎯 Starter Plan Activated:**
+                - ✅ 2 platforms unlocked (Twitter, Facebook)
+                - ✅ 250 credits per session
+                - ✅ Basic filtering and CSV export
+                - ✅ Email support
+                """)
+            
+            if st.button("🚀 Continue to Dashboard", type="primary"):
+                st.query_params.clear()
+                st.rerun()
+            
+            return True
+            
+        elif package:
+            # Package purchase success
+            #st.balloons()
+            
+            package_names = {
+                "starter": "Niche Starter Pack",
+                "deep_dive": "Industry Deep Dive",
+                "domination": "Market Domination"
+            }
+            
+            package_name = package_names.get(package, package.title())
+            
+            st.success(f"📦 {package_name} purchase successful!")
+            
+            # Show package details
+            if package == "starter":
+                st.info(f"""
+                **🎯 Your Niche Starter Pack:**
+                - ✅ 500 targeted leads in {industry}
+                - ✅ Geographic focus: {location}
+                - ✅ 2-3 platforms included
+                - ✅ CSV + Google Sheets delivery
+                - ✅ 48-hour delivery timeline
+                """)
+            elif package == "deep_dive":
+                st.info(f"""
+                **🔥 Your Industry Deep Dive:**
+                - ✅ 2,000 highly-targeted leads in {industry}
+                - ✅ Geographic focus: {location}
+                - ✅ All 8 platforms included
+                - ✅ Advanced relevance filtering
+                - ✅ Pre-generated DMs for your industry
+                - ✅ 24-hour delivery timeline
+                """)
+            elif package == "domination":
+                st.info(f"""
+                **💎 Your Market Domination Package:**
+                - ✅ 5,000 premium leads in {industry}
+                - ✅ Geographic focus: {location}
+                - ✅ Advanced geographic targeting
+                - ✅ Phone/email enrichment when available
+                - ✅ Custom DM sequences
+                - ✅ 12-hour priority delivery
+                - ✅ Dedicated account manager assigned
+                """)
+            
+            st.markdown("---")
+            st.markdown("### 📧 What Happens Next?")
+            st.markdown("""
+            1. **📂 Instant Access**: Your lead package is immediately available for download
+            2. **💾 Go to Downloads**: Click "My Downloads" in the sidebar to access your files  
+            3. **🔄 Re-download Anytime**: Access your purchased leads whenever needed
+            4. **📧 Email Backup**: Download link also sent to your registered email
+            """)
+            
+            if st.button("🏠 Back to Dashboard", type="primary"):
+                st.query_params.clear()
+                st.rerun()
+            
+            return True
+    
+    elif "cancelled" in query_params:
+        # Payment cancelled
+        st.warning("⚠️ Payment was cancelled. You can try again anytime!")
+        
+        # Show what they missed
+        st.info("""
+        **💡 Don't miss out on:**
+        - High-quality targeted leads
+        - Fast delivery times
+        - Expert research and filtering
+        - Dedicated customer support
+        """)
+        
+        if st.button("🔙 Back to Packages"):
+            st.query_params.clear()
+            st.rerun()
+        
+        return True
+    
+    return False
+
+# Update the _process_payment_success function to handle packages:
+
+def _process_payment_success(query_params: Dict, username: str) -> None:
+    """Process payment success actions for both plans and packages"""
+    try:
+        if "success" in query_params:
+            if "plan" in query_params:
+                # Handle plan upgrade
+                plan = query_params.get("plan", "")
+                if plan:
+                    print(f"📋 Processing plan upgrade to: {plan}")
+                    try:
+                        from postgres_credit_system import credit_system
+                        credit_system.update_user_plan(username, plan)
+                        
+                        # Update session state
+                        if 'user_data' in st.session_state:
+                            st.session_state.user_data['plan'] = plan
+                        
+                        print(f"✅ Updated plan to: {plan}")
+                    except Exception as e:
+                        print(f"⚠️ Plan update warning: {e}")
+            
+            elif "package" in query_params:
+                # Handle package purchase
+                package = query_params.get("package", "")
+                amount = query_params.get("amount", "0")
+                industry = query_params.get("industry", "").replace('+', ' ')
+                location = query_params.get("location", "").replace('+', ' ')
+                
+                print(f"📦 Processing package purchase: {package} for ${amount}")
+                
                 try:
                     from postgres_credit_system import credit_system
-                    credit_system.update_user_plan(username, plan)
-                    if 'user_data' in st.session_state:
-                        st.session_state.user_data['plan'] = plan
-                    print(f"✅ Updated plan to: {plan}")
+                    
+                    # Log the package purchase
+                    package_transaction = {
+                        "type": "package_purchase",
+                        "package_type": package,
+                        "amount": float(amount),
+                        "industry": industry,
+                        "location": location,
+                        "timestamp": datetime.now().isoformat(),
+                        "status": "purchased"
+                    }
+                    
+                    # Add transaction to user record
+                    user_info = credit_system.get_user_info(username)
+                    if user_info:
+                        if "transactions" not in user_info:
+                            user_info["transactions"] = []
+                        user_info["transactions"].append(package_transaction)
+                        
+                        # Update total packages purchased
+                        user_info["total_packages_purchased"] = user_info.get("total_packages_purchased", 0) + 1
+                        
+                        credit_system.save_data()
+                        print(f"✅ Logged package purchase for {username}")
+                    
                 except Exception as e:
-                    print(f"⚠️ Plan update warning: {e}")
-            return
-
-        # ----- Package purchases -----
-        if "package" in query_params:
-            package = query_params.get("package", "")
-            amount = float(query_params.get("amount", "0") or 0)
-            industry = (query_params.get("industry", "") or "").replace('+', ' ')
-            location = (query_params.get("location", "") or "").replace('+', ' ')
-            session_id = query_params.get("session_id") or ""
-            requires_build = str(query_params.get("requires_build", "0")).lower() in ("1", "true", "yes")
-
-            print(f"📦 Processing package purchase: {package} for ${amount} (custom={requires_build})")
-
-            # Log transaction (unchanged)
-            try:
-                from postgres_credit_system import credit_system
-                tx = {
-                    "type": "package_purchase",
-                    "package_type": package,
-                    "amount": float(amount),
-                    "industry": industry,
-                    "location": location,
-                    "timestamp": datetime.now().isoformat(),
-                    "status": "purchased"
-                }
-                user_info = credit_system.get_user_info(username)
-                if user_info:
-                    user_info.setdefault("transactions", []).append(tx)
-                    user_info["total_packages_purchased"] = user_info.get("total_packages_purchased", 0) + 1
-                    credit_system.save_data()
-                    print(f"✅ Logged package purchase for {username}")
-            except Exception as e:
-                print(f"⚠️ Package logging warning: {e}")
-
-            # Branching: custom vs pre-built
-            if requires_build:
-                # CUSTOM — email support, DO NOT add to downloads
-                try:
-                    admin_email = os.getenv("ADMIN_EMAIL", EMAIL_ADDRESS)
-                    sent = send_admin_package_notification(
-                        admin_email=admin_email,
-                        username=username,
-                        user_email=(st.session_state.get("user_data") or {}).get("email", ""),
-                        package_type=package,
-                        amount=float(amount),
-                        industry=industry,
-                        location=location,
-                        session_id=session_id,
-                        timestamp=query_params.get("timestamp") or str(int(time.time()))
-                    )
-                    if sent:
-                        print("📨 Admin notified for custom package")
-                except Exception as e:
-                    print(f"⚠️ Admin notify warning: {e}")
-                # cache for UI messaging
-                st.session_state["package_industry"] = industry
-                st.session_state["package_location"] = location
-            else:
-                # PRE-BUILT — add to downloads (unchanged)
+                    print(f"⚠️ Package logging warning: {e}")
+                    
+                # Make the package downloadable in "My Downloads"
                 try:
                     from package_system import add_package_to_database
                     name_map = {
@@ -453,12 +559,13 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                     }
                     display_name = name_map.get(package, package.replace("_", " ").title())
                     add_package_to_database(username, display_name)
+                    # cache for email/UI fallbacks
                     st.session_state["package_industry"] = industry
                     st.session_state["package_location"] = location
                     print(f"✅ Added {display_name} to downloads for {username}")
                 except Exception as e:
                     print(f"⚠️ Package DB add warning: {e}")
-
+  
     except Exception as e:
         print(f"⚠️ Payment success processing error: {e}")
 
