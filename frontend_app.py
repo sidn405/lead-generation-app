@@ -189,6 +189,20 @@ DM_DIR = Path(os.environ.get("DM_DIR", "dm_library"))
 DM_DIR.mkdir(parents=True, exist_ok=True)
 STATS_DIR = Path(os.environ.get("STATS_DIR", "stats")).resolve()
 STATS_DIR.mkdir(parents=True, exist_ok=True)
+def _get_current_username():
+    try:
+        import user_auth as UA
+    except Exception:
+        class _UA: simple_auth = type("S",(),{"current_user":None})()
+        UA = _UA
+    return (
+        st.session_state.get("username")
+        or getattr(UA.simple_auth, "current_user", None)
+        or (st.query_params.get("username") if hasattr(st, "query_params") else None)
+    )
+
+
+# ---- Auth snapshot and baseline stats (avoid NameErrors later) ----
 
 def _normalize_plan(ui: dict):
     ui = ui or {}
@@ -202,6 +216,30 @@ def _normalize_plan(ui: dict):
     if bp in {"starter", "pro", "ultimate"}:
         return bp, "plan(legacy)"
     return "demo", "fallback_demo"
+
+username = _get_current_username()
+try:
+    from postgres_credit_system import credit_system
+    user_info = credit_system.get_user_info(username) if username else {}
+except Exception:
+    user_info = {}
+
+plan_fixed, plan_source = _normalize_plan(user_info)
+st.session_state["plan"] = plan_fixed
+st.session_state["user_plan"] = plan_fixed
+st.session_state["plan_source"] = plan_source
+
+# Keep user_info consistent for old code
+user_info = user_info or {}
+user_info["plan"] = plan_fixed
+user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
+user_info["subscription_status"] = user_info.get("subscription_status") or ("demo" if plan_fixed == "demo" else "inactive")
+
+print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) raw={{'plan': {user_info.get('plan')}, 'subscribed_plan': {user_info.get('subscribed_plan')}, 'subscription_status': {user_info.get('subscription_status')}}}")
+
+
+# Single CSV root definition (Railway-safe)
+
 
 username = _get_current_username()
 try:
@@ -259,7 +297,8 @@ def get_latest_csv(pattern: str):
 
 import glob, os, re
 root = CSV_DIR if isinstance(CSV_DIR, Path) else Path(CSV_DIR)
-rx = re.compile(re.escape(username), re.IGNORECASE)
+rx = re.compile(re.escape(username) if username else ".*", re.IGNORECASE)
+user_pattern = f"*{username}*.csv" if username else "*.csv"
 
 # Only search under CSV_DIR, not CWD
 candidates = sorted(
@@ -270,8 +309,6 @@ candidates = sorted(
 )
 user_files = [p for p in candidates if rx.search(p)]
 latest_user_file = user_files[0] if user_files else None
-
-
 
 # ---- Minimal stats helpers (avoid NameError) ----
 def _stats_path(u: str) -> Path: return STATS_DIR / f"empire_stats_{(u or 'anonymous').strip()}.json"
@@ -412,26 +449,9 @@ if not st.session_state.get("_restore_done"):
     st.session_state["_restore_done"] = True
 
 
-# ---- Do rehydrates in this order (once) ----
-soft_rehydrate_from_simple_auth()
-if _is_stripe_return(st.query_params) and not st.session_state.get("show_login") and not st.session_state.get("show_register"):
-    _quick_rehydrate_from_qs()
-restore_payment_authentication()
+
 
 # ---- Plan bootstrap (ONE copy) ----
-def _get_current_username():
-    try:
-        import user_auth as UA
-    except Exception:
-        class _UA: simple_auth = type("S",(),{"current_user":None})()
-        UA = _UA
-    return (
-        st.session_state.get("username")
-        or getattr(UA.simple_auth, "current_user", None)
-        or (st.query_params.get("username") if hasattr(st, "query_params") else None)
-    )
-
-
 # ---- Auth snapshot and baseline stats (avoid NameErrors later) ----
 def _auth_snapshot():
     try:
@@ -449,12 +469,7 @@ def _auth_snapshot():
 # =========================
 
 # keep this first if you use it
-st.set_page_config(
-    page_title="Lead Generator Empire", 
-    page_icon="assets/favicon-16x16.png",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+
 
 EMPIRE_CACHE_DIR: Path = CSV_DIR
 
@@ -467,7 +482,7 @@ CSV_DIR = Path(os.environ.get("CSV_DIR", "client_configs")).resolve()
 def _latest_nonempty_for_user(pattern: str, username: str):
     """Return newest non-empty CSV under CSV_DIR matching pattern & username."""
     import glob, os, re, pandas as pd
-    rx = re.compile(re.escape(username), re.I)
+    rx = re.compile(re.escape(username) if username else ".*", re.I)
     candidates = sorted(
         glob.glob(str(CSV_DIR / pattern)) + glob.glob(str(CSV_DIR / "**" / pattern), recursive=True),
         key=os.path.getmtime, reverse=True
@@ -757,34 +772,6 @@ def load_empire_stats(username: str):
     return stats
     
 # after: restore_payment_authentication(), _quick_rehydrate_from_qs(), soft_rehydrate_from_simple_auth()
-
-def _normalize_plan(ui: dict):
-    ui = ui or {}
-    def n(x):
-        try: return str(x).strip().lower()
-        except: return ""
-    ALIAS = {
-        "basic":"starter", "starter_monthly":"starter","starter_annual":"starter",
-        "pro_monthly":"pro","pro_annual":"pro",
-        "ultimate_monthly":"ultimate","ultimate_annual":"ultimate",
-    }
-    PAID = {"starter","pro","ultimate"}
-
-    sp = ALIAS.get(n(ui.get("subscribed_plan")), n(ui.get("subscribed_plan")))
-    bp = ALIAS.get(n(ui.get("plan")),            n(ui.get("plan")))
-    ss = n(ui.get("subscription_status"))
-
-    if sp == "demo" or bp == "demo":
-        return "demo", "demo"
-
-    if sp in PAID:
-        if ss in {"active","trialing"}:  return sp, f"subscribed_plan({ss})"
-        if ss == "":                     return sp, "subscribed_plan(?)"
-        if ss in {"paused","past_due","unpaid","canceled","inactive","ended"}:
-            return sp, f"subscribed_plan({ss})"
-
-    if bp in PAID:                       return bp, "plan(legacy)"
-    return "demo", "fallback_demo"
 
 # --- Demo status helper (define before first use) ---
 import os
@@ -1240,14 +1227,6 @@ is_payment_return = restore_payment_authentication()
 
 # === PLAN BOOTSTRAP (paste after auth restore, before any UI uses plan) ===
 import streamlit as st
-
-def _get_current_username():
-    # Try session, then simple_auth, then query param
-    return (
-        st.session_state.get("username")
-        or getattr(globals().get("simple_auth", object()), "current_user", None)
-        or (st.query_params.get("username") if hasattr(st, "query_params") else None)
-    )
 
 # Try to load user_info from Postgres
 user_info = None
@@ -1938,7 +1917,7 @@ def _glob_user_files(pattern: str, username: str):
     base_glob = str(CSV_DIR / pattern)
     rec_glob  = str(CSV_DIR / "**" / pattern)
     candidates = glob.glob(base_glob) + glob.glob(rec_glob, recursive=True)
-    rx = re.compile(re.escape(username), re.IGNORECASE)
+    rx = re.compile(re.escape(username) if username else ".*", re.IGNORECASE)
     files = [p for p in candidates if rx.search(p)]
     files.sort(key=os.path.getmtime, reverse=True)
     return files
@@ -6872,7 +6851,7 @@ with tab2: # Lead Results
                         candidates = glob.glob(base_glob) + glob.glob(rec_glob, recursive=True)
 
                         # keep files that contain the username case-insensitively (extra guard)
-                        rx = re.compile(re.escape(username), re.IGNORECASE)
+                        rx = re.compile(re.escape(username) if username else ".*", re.IGNORECASE)
                         user_files = [p for p in candidates if rx.search(p)]
                         user_files.sort(key=os.path.getmtime, reverse=True)
                         latest_user_file = user_files[0] if user_files else None
