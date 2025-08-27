@@ -357,9 +357,6 @@ candidates.sort(key=safe_mtime, reverse=True)
 # Example: use the newest CSV (if any)
 latest_csv = candidates[0] if candidates else None
 
-user_files = [p for p in candidates if rx.search(p)]
-latest_user_file = user_files[0] if user_files else None
-
 # ---- Minimal stats helpers (avoid NameError) ----
 def _stats_path(u: str) -> Path: return STATS_DIR / f"empire_stats_{(u or 'anonymous').strip()}.json"
 def _default_stats() -> dict:
