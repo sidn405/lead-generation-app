@@ -493,6 +493,21 @@ def _normalize_plan(ui: dict):
     if bp in PAID:                       return bp, "plan(legacy)"
     return "demo", "fallback_demo"
 
+# === AUTH SNAPSHOT (put this a few lines above line 497) ===
+def _auth_snapshot():
+    u = st.session_state.get("username") or getattr(simple_auth, "current_user", None)
+    authed = bool(st.session_state.get("authenticated")) and bool(u)
+    return authed, u
+
+user_authenticated, username = _auth_snapshot()
+
+# Safe guard: only hit the DB if we actually have a username
+user_info = (credit_system.get_user_info(username) or {}) if username else {}
+
+username = st.session_state.get("username") or "anonymous"
+st.session_state["stats"] = load_empire_stats(username)
+refresh_demo_status(username)
+
 # apply
 user_info = credit_system.get_user_info(username) or {}
 plan_fixed, plan_source = _normalize_plan(user_info)
@@ -738,10 +753,6 @@ def load_empire_stats(username: str):
     stats.setdefault("platforms", {})
     stats.setdefault("last_session", {})
     return stats
-
-username = st.session_state.get("username") or "anonymous"
-st.session_state["stats"] = load_empire_stats(username)
-refresh_demo_status(username)
 
 def refresh_demo_status(username: str):
     """Update demo remaining/used in session from DB."""
