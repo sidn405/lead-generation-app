@@ -58,6 +58,24 @@ def get_pg_engine():
         '''))
     return engine
 
+def event_log(where: str, message: str, level: str = "INFO", payload: dict | None = None):
+    eng = get_pg_engine()
+    with eng.begin() as c:
+        c.execute(text("""
+        CREATE TABLE IF NOT EXISTS lge_events (
+          id BIGSERIAL PRIMARY KEY,
+          ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          level TEXT NOT NULL,
+          where_ctx TEXT NOT NULL,
+          message TEXT NOT NULL,
+          payload JSONB
+        )"""))
+        c.execute(text("""
+          INSERT INTO lge_events (level, where_ctx, message, payload)
+          VALUES (:lv, :w, :m, :p)
+        """), dict(lv=level, w=where, m=message, p=json.dumps(payload or {})))
+    print(f"[{level}] {where}: {message} :: {payload or {}}")  # visible in app logs
+
 def _ensure_pending_checkouts_table():
     eng = get_pg_engine()
     with eng.begin() as c:
@@ -131,14 +149,6 @@ def get_latest_pending_checkout(username: str, kind: str = "package"):
     return row
 
 def resolve_pending_checkout(pending_id: int) -> None:
-    _ensure_pending_checkouts_table()
-    eng = get_pg_engine()
-    with eng.begin() as c:
-        c.execute(text("UPDATE pending_checkouts SET resolved_at=NOW() WHERE id=:id"),
-                  dict(id=pending_id))
-
-
-def resolve_pending_checkout(pending_id: int) -> None:
     engine = get_pg_engine()
     with engine.begin() as conn:
         conn.execute(text("UPDATE pending_checkouts SET resolved_at = NOW() WHERE id = :id"),
@@ -197,6 +207,90 @@ def increment_download_count_by_name(username: str, package_name: str) -> None:
             SET download_count = download_count + 1
             WHERE username = :u AND package_name = :n
         '''), dict(u=username, n=package_name))
+        
+def notify_support_new_order(order_id: int, username: str, package_key: str, package_name: str,
+                             industry: str, location: str, price: float) -> bool:
+    """
+    Try SendGrid (if configured), then Webhook (if SUPPORT_WEBHOOK_URL is set),
+    then SMTP (if SMTP_* envs exist). Log each step. Return True if any path succeeds.
+    """
+    event_log("notify", "start",
+              payload={"order_id": order_id, "username": username, "package": package_name,
+                       "industry": industry, "location": location, "price": price})
+    subject = f"New Custom Order #{order_id} – {username}"
+    html = f"""
+        <p><b>User:</b> {username}</p>
+        <p><b>Package:</b> {package_key} / {package_name}</p>
+        <p><b>Target:</b> {industry} — {location}</p>
+        <p><b>Price:</b> ${price}</p>
+        <p>Status: new</p>
+    """
+    text = (
+        f"User: {username}\n"
+        f"Package: {package_key} / {package_name}\n"
+        f"Target: {industry} — {location}\n"
+        f"Price: ${price}\n"
+        f"Status: new\n"
+    )
+
+    ok_any = False
+
+    # 1) SendGrid
+    try:
+        import os
+        sg_key = os.getenv("SENDGRID_API_KEY")
+        support = os.getenv("SUPPORT_EMAIL", "support@leadgeneratorempire.com")
+        if sg_key:
+            import sendgrid
+            from sendgrid.helpers.mail import Mail
+            sg = sendgrid.SendGridAPIClient(api_key=sg_key)
+            msg = Mail(from_email=support, to_emails=support, subject=subject, html_content=html)
+            resp = sg.send(msg)
+            event_log("notify.sendgrid", f"resp={resp.status_code}", payload={"body": getattr(resp, "body", None)})
+            ok_any = (200 <= int(resp.status_code) < 300)
+    except Exception as e:
+        event_log("notify.sendgrid", f"error: {e}", level="ERROR")
+
+    # 2) Webhook (if configured)
+    try:
+        import os, json, requests
+        url = os.getenv("SUPPORT_WEBHOOK_URL")
+        if url:
+            payload = {
+                "order_id": order_id, "username": username,
+                "package_key": package_key, "package_name": package_name,
+                "industry": industry, "location": location, "price": price,
+            }
+            r = requests.post(url, json=payload, timeout=10)
+            event_log("notify.webhook", f"status={r.status_code}", payload={"text": r.text[:200]})
+            ok_any = ok_any or (200 <= r.status_code < 300)
+    except Exception as e:
+        event_log("notify.webhook", f"error: {e}", level="ERROR")
+
+    # 3) SMTP fallback (if configured)
+    try:
+        import os, smtplib
+        from email.mime.text import MIMEText
+        host = os.getenv("SMTP_HOST"); user = os.getenv("SMTP_USER"); pwd = os.getenv("SMTP_PASS")
+        port = int(os.getenv("SMTP_PORT","587")); to = os.getenv("SUPPORT_EMAIL")
+        if host and user and pwd and to:
+            msg = MIMEText(text)
+            msg["Subject"] = subject
+            msg["From"] = to; msg["To"] = to
+            with smtplib.SMTP(host, port, timeout=10) as s:
+                s.starttls()
+                s.login(user, pwd)
+                s.sendmail(to, [to], msg.as_string())
+            event_log("notify.smtp", "sent")
+            ok_any = True
+    except Exception as e:
+        event_log("notify.smtp", f"error: {e}", level="ERROR")
+
+    if not ok_any:
+        # Surface visibly so you see it in the UI while debugging
+        st.warning("⚠️ Support notification did not send; check SENDGRID_API_KEY, SUPPORT_WEBHOOK_URL, or SMTP_* envs.")
+    return ok_any
+
 
 # -----------------------------
 # Stripe checkout
@@ -210,7 +304,7 @@ def create_package_stripe_session(
     package_name: str,
     industry: str = None,
     location: str = None,
-    requires_build: bool = False,
+    requires_build: bool = True,
 ):
     """Create a Stripe Checkout Session for a package purchase."""
     STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")
@@ -225,6 +319,11 @@ def create_package_stripe_session(
     stamp = os.environ.get("APP_COMMIT", "")[:7] or "dev"
     ind = quote_plus(industry or "Fitness & Wellness")
     loc = quote_plus(location or "United States")
+    
+    event_log("checkout.create", "creating stripe session",
+          payload={"username": username, "package_key": package_key,
+                   "package_name": package_name, "requires_build": requires_build})
+
 
     session = stripe.checkout.Session.create(
         client_reference_id=username,
@@ -277,6 +376,9 @@ def create_package_stripe_session(
             "order_type": "custom" if requires_build else "prebuilt",
         },
     )
+    event_log("checkout.create", "session created",
+          payload={"session_id": session.id, "requires_build": requires_build})
+
 
     # remember server-side so a fresh session can finalize
     remember_checkout_session(

@@ -12,3 +12,4 @@ pathlib
 reportlab
 psycopg2-binary>=2.9.7  # Add this for PostgreSQL
 sqlalchemy
+sendgrid
