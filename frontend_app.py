@@ -463,6 +463,39 @@ try:
 except Exception as e:
     print(f"restore_payment_authentication error: {e}")
     
+DEMO_CAP = 5
+
+def load_empire_stats(username: str):
+    """Get stats from DB or cached file; always return a complete shape."""
+    stats = None
+    try:
+        from postgres_credit_system import credit_system
+        info = credit_system.get_user_info(username) or {}
+        stats = info.get("stats")
+    except Exception:
+        pass
+
+    if not isinstance(stats, dict):
+        # file fallback
+        import os, json
+        path = f"client_configs/{username}_stats.json"
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    stats = json.load(f)
+            except Exception:
+                stats = None
+
+    # Guarantee shape
+    if not isinstance(stats, dict):
+        stats = _default_stats()
+    stats.setdefault("totals", {}).setdefault("leads", 0)
+    stats["totals"].setdefault("campaigns", 0)
+    stats["totals"].setdefault("credits_used", 0)
+    stats.setdefault("platforms", {})
+    stats.setdefault("last_session", {})
+    return stats
+    
 # after: restore_payment_authentication(), _quick_rehydrate_from_qs(), soft_rehydrate_from_simple_auth()
 
 def _normalize_plan(ui: dict):
@@ -721,38 +754,6 @@ def resolve_effective_plan(user_info: dict) -> tuple[str, dict]:
         "monthly_credits": 0,
         "subscription_status": "demo"
     }
-DEMO_CAP = 5
-
-def load_empire_stats(username: str):
-    """Get stats from DB or cached file; always return a complete shape."""
-    stats = None
-    try:
-        from postgres_credit_system import credit_system
-        info = credit_system.get_user_info(username) or {}
-        stats = info.get("stats")
-    except Exception:
-        pass
-
-    if not isinstance(stats, dict):
-        # file fallback
-        import os, json
-        path = f"client_configs/{username}_stats.json"
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    stats = json.load(f)
-            except Exception:
-                stats = None
-
-    # Guarantee shape
-    if not isinstance(stats, dict):
-        stats = _default_stats()
-    stats.setdefault("totals", {}).setdefault("leads", 0)
-    stats["totals"].setdefault("campaigns", 0)
-    stats["totals"].setdefault("credits_used", 0)
-    stats.setdefault("platforms", {})
-    stats.setdefault("last_session", {})
-    return stats
 
 def refresh_demo_status(username: str):
     """Update demo remaining/used in session from DB."""
