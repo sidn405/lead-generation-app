@@ -29,6 +29,8 @@ def restore_payment_authentication() -> bool:
     
     if not is_payment_return:
         return False
+    
+    is_package = "package" in query_params   # <— NEW
         
     # Get username from URL
     username_from_url = query_params.get("username", "")
@@ -59,7 +61,9 @@ def restore_payment_authentication() -> bool:
         if _create_emergency_session(username_from_url, query_params):
             _process_payment_success(query_params, username_from_url)
             return True
-    
+        if not is_package:                    # <— NEW
+            _process_payment_success(query_params, username_from_url)
+        return True
     print("❌ Payment authentication restoration failed")
     return True  # Still a payment return, just failed to restore
 
@@ -137,117 +141,6 @@ def _set_session_state(username: str, user_data: Dict) -> None:
         pass
     except:
         pass
-
-def _process_payment_success(query_params: Dict, username: str) -> None:
-    """Process payment success actions"""
-    # idempotency: avoid double-inserting on reruns/back navigations
-    stamp = query_params.get("timestamp") or query_params.get("session_id")
-    if stamp:
-        flag = f"_pkg_proc_{stamp}"
-        if st.session_state.get(flag):
-            return
-        st.session_state[flag] = True
-
-    try:
-        if "success" in query_params and "plan" in query_params:
-            plan = query_params.get("plan", "")
-            if plan:
-                print(f"📋 Processing plan upgrade to: {plan}")
-                # Update plan in system
-                try:
-                    from postgres_credit_system import credit_system
-                    credit_system.update_user_plan(username, plan)
-                    
-                    # Update session state
-                    if 'user_data' in st.session_state:
-                        st.session_state.user_data['plan'] = plan
-                    
-                    print(f"✅ Updated plan to: {plan}")
-                except Exception as e:
-                    print(f"⚠️ Plan update warning: {e}")
-    except Exception as e:
-        print(f"⚠️ Payment success processing error: {e}")
-
-def show_payment_success_message() -> bool:
-    """
-    Show payment success message if user just completed payment
-    Returns True if message was shown (should stop execution), False otherwise
-    """
-    query_params = st.query_params
-    
-    if "success" in query_params:
-        plan = query_params.get("plan", "")
-        amount = query_params.get("amount", "")
-        package = query_params.get("package", "")
-        
-        if plan:
-            #st.balloons()
-            st.success(f"🎉 Plan upgrade successful! Welcome to {plan.title()} plan!")
-            
-            if st.button("🚀 Continue to Dashboard", type="primary"):
-                st.query_params.clear()
-                st.rerun()
-            
-            return True
-            
-        elif package:
-            #st.balloons()
-            st.success(f"📦 Package purchase successful! Your {package} package will be delivered soon!")
-            
-            # ---- Admin notification (idempotent by timestamp) ----
-            username = st.session_state.get("username") or st.query_params.get("username", "")
-            user_email = (st.session_state.get("user_data") or {}).get("email", "")
-            amount_val = float(amount or 0)
-            session_id = st.query_params.get("session_id") or st.query_params.get("payment_intent")
-            stamp = st.query_params.get("timestamp")  # added by your package success_url
-            notice_flag = f"_pkg_notice_{stamp or ''}"
-            
-            # Resolve industry/location with robust fallbacks
-            industry = (
-                st.query_params.get("industry")
-                or st.session_state.get("package_industry")
-                or ""
-            )
-            location = (
-                st.query_params.get("location")
-                or st.session_state.get("package_location")
-                or ""
-            )
-
-
-            if stamp and not st.session_state.get(notice_flag):
-                admin_email = os.getenv("ADMIN_EMAIL", EMAIL_ADDRESS)
-                sent = send_admin_package_notification(
-                    admin_email=admin_email,
-                    user_email=user_email,
-                    username=username,
-                    package_type=package,
-                    amount=amount_val,
-                    industry=industry,
-                    location=location,
-                    session_id=session_id,
-                    timestamp=stamp
-                )
-                st.session_state[notice_flag] = True
-                if sent:
-                    st.info("📨 Admin has been notified. We’re preparing your package now.")
-            
-            if st.button("🏠 Back to Dashboard", type="primary"):
-                st.query_params.clear()
-                st.rerun()
-            
-            return True
-    
-    elif "cancelled" in query_params:
-        st.warning("⚠️ Payment was cancelled. You can try again anytime!")
-        
-        if st.button("🔙 Back to Dashboard"):
-            st.query_params.clear()
-            st.rerun()
-        
-        return True
-    
-    return False
 
 def _normalize_plan_from_user_data(user_data: dict) -> str:
     """Return one of {'demo','starter','pro','ultimate'} from DB row."""
