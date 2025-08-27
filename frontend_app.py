@@ -237,30 +237,12 @@ user_info["subscription_status"] = user_info.get("subscription_status") or ("dem
 
 print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) raw={{'plan': {user_info.get('plan')}, 'subscribed_plan': {user_info.get('subscribed_plan')}, 'subscription_status': {user_info.get('subscription_status')}}}")
 
-
-# Single CSV root definition (Railway-safe)
-
-
-username = _get_current_username()
+# near the top of frontend_app.py, AFTER you know username
 try:
-    from postgres_credit_system import credit_system
-    user_info = credit_system.get_user_info(username) if username else {}
-except Exception:
-    user_info = {}
-
-plan_fixed, plan_source = _normalize_plan(user_info)
-st.session_state["plan"] = plan_fixed
-st.session_state["user_plan"] = plan_fixed
-st.session_state["plan_source"] = plan_source
-
-# Keep user_info consistent for old code
-user_info = user_info or {}
-user_info["plan"] = plan_fixed
-user_info["subscribed_plan"] = plan_fixed if plan_fixed != "demo" else "demo"
-user_info["subscription_status"] = user_info.get("subscription_status") or ("demo" if plan_fixed == "demo" else "inactive")
-
-print(f"[PLAN] normalized -> {plan_fixed} (source={plan_source}) raw={{'plan': {user_info.get('plan')}, 'subscribed_plan': {user_info.get('subscribed_plan')}, 'subscription_status': {user_info.get('subscription_status')}}}")
-
+    if handle_payment_success_url():
+        st.stop()
+except Exception as e:
+    print(f"[PAYMENT HANDLER] {e}")
 
 # Single CSV root definition (Railway-safe)
 def _detect_csv_dir() -> Path:
@@ -313,8 +295,6 @@ for p in files:
     seen.add(rp)
     candidates.append(p)
 candidates.sort(key=lambda p: p.stat().st_mtime if p.exists() else -1, reverse=True)
-
-
 
 # ---- Minimal stats helpers (avoid NameError) ----
 def _stats_path(u: str) -> Path: return STATS_DIR / f"empire_stats_{(u or 'anonymous').strip()}.json"

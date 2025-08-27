@@ -98,8 +98,8 @@ def _restore_session_state(username: str):
 # ---- Handle ?payment_success=1 redirects deterministically ----
 def handle_payment_success_url():
     """
-    Finalize purchase from query params OR the latest unresolved Checkout Session in Postgres.
-    Returns True if handled.
+    Finalize a purchase using query params OR the latest unresolved Checkout Session
+    saved in Postgres. Verifies payment with Stripe before recording.
     """
     qp = st.query_params
 
@@ -113,9 +113,45 @@ def handle_payment_success_url():
     if not username:
         return False
 
-    # ---------- Primary (query-string) path ----------
-    is_package_success = bool(qp.get("success") and qp.get("package"))
-    if is_package_success:
+    # ---- helpers ----
+    def _stripe_paid(sess):
+        try:
+            # Prefer explicit payment_status
+            if getattr(sess, "payment_status", None) in ("paid", "no_payment_required"):
+                return True
+            # Fallback via PaymentIntent
+            pi_id = getattr(sess, "payment_intent", None)
+            if pi_id:
+                pi = stripe.PaymentIntent.retrieve(pi_id)
+                return getattr(pi, "status", "") == "succeeded"
+        except Exception as e:
+            print(f"[stripe verify] error: {e}")
+        return False
+
+    def _finalize_package(username, package_key, package_name, requires_build, amount, session_id, industry, location):
+        if requires_build:
+            from package_system import create_custom_order_record
+            oid = create_custom_order_record(
+                username=username,
+                package_key=package_key or package_name,
+                package_name=package_name,
+                industry=industry or "",
+                location=location or "",
+                price=float(amount or 0),
+                stripe_session_id=session_id or "",
+            )
+            _restore_session_state(username)
+            st.success(f"🧩 Order #{oid} received for **{package_name}**")
+            st.info("👷 Your custom lead package is being built and will appear in **My Downloads** when ready (48–120 hours).")
+        else:
+            from package_system import add_package_to_database
+            add_package_to_database(username, package_name)
+            _restore_session_state(username)
+            st.balloons()
+            st.success(f"Package '{package_name}' added to your downloads!")
+
+    # ---------- Path A: query-string success ----------
+    if qp.get("success") and qp.get("package"):
         session_id = _v("session_id") or _v("checkout_session_id") or _v("cs")
         package_key  = (_v("package") or "").strip()
         package_name = (_v("package_name") or "").strip() or {
@@ -124,101 +160,60 @@ def handle_payment_success_url():
             "domination": "Market Domination",
         }.get(package_key, package_key)
         amount = float(_v("amount", 0) or 0)
+        industry = _v("industry", "")
+        location = _v("location", "")
+        requires_build = str(_v("requires_build", "0")).lower() in ("1", "true", "yes")
 
-        requires_build_qs = str(_v("requires_build", "0")).lower() in ("1", "true", "yes")
-        requires_build_meta = False
-        if session_id and not requires_build_qs:
+        # verify via Stripe if we got session_id
+        if session_id:
             try:
-                sess = stripe.checkout.Session.retrieve(session_id, expand=["subscription", "customer"])
-                md = (getattr(sess, "metadata", None) or {})
-                requires_build_meta = str(md.get("requires_build", "0")).lower() in ("1", "true", "yes")
+                sess = stripe.checkout.Session.retrieve(session_id, expand=["customer"])
+                if not _stripe_paid(sess):
+                    st.info("⚠️ Payment not completed yet. Please refresh in a few seconds.")
+                    return False
             except Exception as e:
-                print(f"[stripe meta] fetch failed: {e}")
-        requires_build = requires_build_qs or requires_build_meta
+                print(f"[qs finalize] session fetch failed: {e}")
 
-        if requires_build:
-            from package_system import create_custom_order_record
-            order_id = create_custom_order_record(
-                username=username,
-                package_key=package_key or package_name,
-                package_name=package_name,
-                industry=_v("industry", ""),
-                location=_v("location", ""),
-                price=amount,
-                stripe_session_id=session_id or "",
-            )
-            _restore_session_state(username)
-            st.success(f"🧩 Order #{order_id} received for **{package_name}**")
-            st.info("👷 Your custom lead package is being built. It will appear in **My Downloads** when ready (48–120 hours).")
-            try: st.query_params.clear()
-            except Exception: pass
-            st.rerun()
-            return True
-        else:
-            from package_system import add_package_to_database
-            add_package_to_database(username, package_name)
-            _restore_session_state(username)
-            st.balloons()
-            st.success(f"Package '{package_name}' added to your downloads!")
-            try: st.query_params.clear()
-            except Exception: pass
-            st.rerun()
-            return True
+        _finalize_package(username, package_key, package_name, requires_build, amount, session_id, industry, location)
+        try: st.query_params.clear()
+        except Exception: pass
+        st.rerun()
+        return True
 
-    # ---------- Fallback: no QS, consume latest unresolved checkout from Postgres ----------
+    # ---------- Path B: no QS → consume latest unresolved checkout from Postgres ----------
     from package_system import get_latest_pending_checkout, resolve_pending_checkout
     pending = get_latest_pending_checkout(username, kind="package")
     if not pending:
-        return False  # nothing to do
+        return False
 
     pending_id = pending["id"]
     sid = pending["session_id"]
     payload = pending["payload"] or {}
+
+    # Retrieve session & verify paid
     try:
-        sess = stripe.checkout.Session.retrieve(sid, expand=["subscription", "customer"])
+        sess = stripe.checkout.Session.retrieve(sid, expand=["customer"])
+        if not _stripe_paid(sess):
+            print("[pending] session found but not paid yet")
+            return False
         md = (getattr(sess, "metadata", None) or {})
     except Exception as e:
-        print(f"[fallback] failed to retrieve session {sid}: {e}")
+        print(f"[pending] retrieve failed: {e}")
         return False
 
     package_key  = (md.get("package_key") or payload.get("package_key") or "").strip()
     package_name = (md.get("package_name") or payload.get("package_name") or package_key or "").strip()
     if not package_name:
-        package_name = {
-            "starter": "Niche Starter Pack",
-            "deep_dive": "Industry Deep Dive",
-            "domination": "Market Domination",
-        }.get(package_key, package_key)
-
+        package_name = {"starter":"Niche Starter Pack","deep_dive":"Industry Deep Dive","domination":"Market Domination"}.get(package_key, package_key)
     requires_build = str(md.get("requires_build", "0")).lower() in ("1", "true", "yes") or bool(payload.get("requires_build"))
     amount = float(payload.get("amount", 0))
+    industry = md.get("industry", payload.get("industry", ""))
+    location = md.get("location", payload.get("location", ""))
 
-    if requires_build:
-        from package_system import create_custom_order_record
-        order_id = create_custom_order_record(
-            username=username,
-            package_key=package_key or package_name,
-            package_name=package_name,
-            industry=md.get("industry", payload.get("industry", "")),
-            location=md.get("location", payload.get("location", "")),
-            price=amount,
-            stripe_session_id=sid,
-        )
-        _restore_session_state(username)
-        st.success(f"🧩 Order #{order_id} received for **{package_name}**")
-        st.info("👷 Your custom lead package is being built. It will appear in **My Downloads** when ready (48–120 hours).")
-    else:
-        from package_system import add_package_to_database
-        add_package_to_database(username, package_name)
-        _restore_session_state(username)
-        st.balloons()
-        st.success(f"Package '{package_name}' added to your downloads!")
-
-    # mark resolved so we don't double-apply
-    resolve_pending_checkout(pending_id)
+    _finalize_package(username, package_key, package_name, requires_build, amount, sid, industry, location)
+    resolve_pending_checkout(pending_id)  # avoid double-apply
     st.rerun()
     return True
-
 
     # ------------------------------------
     # SUBSCRIPTION / ONE-TIME CREDITS FLOW

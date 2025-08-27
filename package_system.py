@@ -91,34 +91,38 @@ def _file_exists_in_leads(file_path: str) -> bool:
 
 
 def remember_checkout_session(username: str, kind: str, session_id: str, payload: dict) -> None:
-    engine = get_pg_engine()
-    with engine.begin() as conn:
-        conn.execute(text("""
+    eng = get_pg_engine()
+    with eng.begin() as c:
+        c.execute(text("""
         CREATE TABLE IF NOT EXISTS pending_checkouts (
           id BIGSERIAL PRIMARY KEY,
           username TEXT NOT NULL,
-          kind TEXT NOT NULL,             -- 'package' | 'subscription' | 'credits'
+          kind TEXT NOT NULL,         -- 'package' | 'subscription' | 'credits'
           session_id TEXT NOT NULL,
           payload JSONB NOT NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           resolved_at TIMESTAMPTZ
         )"""))
-        conn.execute(text("""
-            INSERT INTO pending_checkouts (username, kind, session_id, payload)
-            VALUES (:u, :k, :sid, :p)
+        c.execute(text("""
+          INSERT INTO pending_checkouts (username, kind, session_id, payload)
+          VALUES (:u,:k,:sid,:p)
         """), dict(u=username, k=kind, sid=session_id, p=json.dumps(payload)))
 
 def get_latest_pending_checkout(username: str, kind: str = "package"):
-    engine = get_pg_engine()
-    with engine.begin() as conn:
-        row = conn.execute(text("""
-            SELECT id, session_id, payload
-            FROM pending_checkouts
-            WHERE username = :u AND kind = :k AND resolved_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT 1
+    eng = get_pg_engine()
+    with eng.begin() as c:
+        row = c.execute(text("""
+          SELECT id, session_id, payload
+          FROM pending_checkouts
+          WHERE username=:u AND kind=:k AND resolved_at IS NULL
+          ORDER BY created_at DESC LIMIT 1
         """), dict(u=username, k=kind)).mappings().first()
     return row
+
+def resolve_pending_checkout(pending_id: int) -> None:
+    eng = get_pg_engine()
+    with eng.begin() as c:
+        c.execute(text("UPDATE pending_checkouts SET resolved_at=NOW() WHERE id=:id"), dict(id=pending_id))
 
 def resolve_pending_checkout(pending_id: int) -> None:
     engine = get_pg_engine()
@@ -195,7 +199,7 @@ def create_package_stripe_session(
     requires_build: bool = False,
 ):
     """Create a Stripe Checkout Session for a package purchase."""
-    stripe.api_key = api_key
+    STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")
 
     display = package_name or {
         "starter": "Niche Starter Pack",
@@ -260,17 +264,20 @@ def create_package_stripe_session(
         },
     )
 
-    # remember the session in case user returns without query params
-    st.session_state["last_checkout_session_id"] = session.id
-    st.session_state["last_checkout_kind"] = "package"
-    st.session_state["last_checkout_payload"] = {
-        "package_key": package_key,
-        "package_name": display,
-        "requires_build": bool(requires_build),
-        "industry": industry or "",
-        "location": location or "",
-        "amount": float(price),
-    }
+    # remember server-side so a fresh session can finalize
+    remember_checkout_session(
+        username=username,
+        kind="package",
+        session_id=session.id,
+        payload={
+            "package_key": package_key,
+            "package_name": display,
+            "requires_build": bool(requires_build),
+            "industry": industry or "",
+            "location": location or "",
+            "amount": float(price),
+        },
+    )
 
     st.success("✅ Checkout session created! Redirecting to Stripe…")
     st.markdown(
