@@ -3827,18 +3827,7 @@ def show_simple_credit_status():
         </p>
     </div>
     """, unsafe_allow_html=True)
-    try:
-        credit_system.invalidate_cache(username)  # safe no-op for Postgres
-    except Exception:
-        pass
-
-    live = credit_system.get_live_credits(username)
-    if live is not None:
-        st.session_state["credits"] = live
-        try:
-            simple_auth.set_user_credits(live)
-        except Exception:
-            pass
+    
 
     # Show credits/usage info
     if plan == 'demo':
