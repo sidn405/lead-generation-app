@@ -9190,8 +9190,8 @@ with tab6:  # Settings tab
             st.markdown("Debug Email")
             from emailer import send_admin_package_notification
             # Add to your main app - only show debug when needed
-            if st.sidebar.button("Show Email Debug"):
-                st.session_state["show_debug"] = True
+            #if st.sidebar.button("Show Email Debug"):
+                #st.session_state["show_debug"] = True
 
             if st.session_state.get("show_debug"):
                 st.markdown("## Email Debug")
