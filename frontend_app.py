@@ -9189,8 +9189,8 @@ with tab6:  # Settings tab
                     
             st.markdown("---")
             # At the end of your main app, add:
+            from payment_auth_recovery import persistent_debug_email
             if st.session_state.get('authenticated'):
-                from payment_auth_recovery import persistent_debug_email
                 persistent_debug_email()
             
             # View statistics

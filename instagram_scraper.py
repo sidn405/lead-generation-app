@@ -114,59 +114,101 @@ def is_relevant_to_search_term(name, bio, location=""):
     # 🚀 OPTIMIZED: Lowered threshold from 3 to 2 for higher volume
     return relevance_score >= 2, relevance_score
 
-def extract_instagram_profiles(page):
-    """Extract only actual Instagram user profiles"""
-    print("Extracting Instagram profiles...")
-    
-    # Enable debugging
-    from scraper_debug import debug_page_content, sample_page_links, save_debug_screenshot
-    debug_page_content(page, "instagram")
-    sample_page_links(page)
-    save_debug_screenshot(page, "instagram")
-    
+def extract_instagram_profiles(page, max_posts: int | None = None):
+    """
+    From a hashtag page, open each post modal and extract the owner's profile
+    link from the modal header. This avoids scraping UI links.
+    """
+    print("Extracting Instagram profiles via post modals…")
     results = []
-    
-    # Target only profile image links and username links in posts
-    selectors_to_try = [
-        'article a[href^="/"][href$="/"]',  # Profile links in posts
-        'a[href^="/"][role="link"]',       # Clickable profile links
-    ]
-    
     seen_usernames = set()
-    
-    for selector in selectors_to_try:
-        elements = page.query_selector_all(selector)
-        print(f"Selector '{selector}' found {len(elements)} elements")
-        
-        for element in elements:
-            href = element.get_attribute('href')
-            if not href:
-                continue
-                
-            # Extract username with strict validation
-            username = extract_strict_username(href)
-            if not username or username in seen_usernames:
-                continue
-                
-            seen_usernames.add(username)
-            
-            # Create lead
-            lead = {
-                "name": username.replace('_', ' ').replace('.', ' ').title(),
-                "handle": f"@{username}",
-                "bio": f"Instagram user interested in {SEARCH_TERM}",
-                "url": f"https://instagram.com/{username}",
-                "platform": "instagram",
-                "dm": generate_dm_with_fallback(username, f"Instagram user", "instagram"),
-                "search_term": SEARCH_TERM,
-                "relevance_score": 1
-            }
-            
-            results.append(lead)
-            print(f"Valid profile: @{username}")
-    
+    max_posts = max_posts or min(MAX_PAGES * 10, 80)  # conservative upper bound
+
+    # 1) Collect post/reel hrefs visible on the page (unique & ordered)
+    post_selectors = ['a[href^="/p/"]', 'a[href^="/reel/"]', 'a[href^="/tv/"]']
+    hrefs = []
+    for sel in post_selectors:
+        els = page.query_selector_all(sel)
+        hrefs.extend([e.get_attribute("href") for e in els if e.get_attribute("href")])
+
+    # make unique in order
+    hrefs = list(dict.fromkeys(hrefs))[:max_posts]
+    print(f"Found {len(hrefs)} post links to open")
+
+    # 2) Iterate posts, open modal, read header account, close
+    for i, href in enumerate(hrefs, 1):
+        try:
+            print(f"  [{i}/{len(hrefs)}] Opening {href}")
+            # Ensure the exact element is clickable; fall back to JS click if needed
+            el = page.query_selector(f'a[href="{href}"]')
+            if not el:
+                # try a looser lookup
+                candidates = page.query_selector_all('a[href^="/p/"], a[href^="/reel/"], a[href^="/tv/"]')
+                for c in candidates:
+                    if c.get_attribute("href") == href:
+                        el = c; break
+            if el:
+                el.click(timeout=10000)
+            else:
+                # last-resort click via JS
+                page.evaluate("""(h)=>{const a=[...document.querySelectorAll('a')].find(x=>x.getAttribute('href')===h); a&&a.click();}""", href)
+
+            # Wait for modal to appear
+            page.wait_for_selector('div[role="dialog"]', timeout=12000)
+
+            # In the modal header there is an <a> to "/{username}/"
+            header_link = page.query_selector('div[role="dialog"] header a[href^="/"][href$="/"]')
+            prof_href = header_link.get_attribute('href') if header_link else None
+
+            username = extract_strict_username(prof_href) or extract_validated_username(prof_href)
+            if not username:
+                print("    ⚠️ No username found in modal header")
+            elif username.lower() in (a.lower() for a in excluded_accounts):
+                print(f"    🚫 Excluded @{username}")
+            elif username in seen_usernames:
+                print(f"    ↩️ Duplicate @{username}")
+            else:
+                seen_usernames.add(username)
+                url = f"https://www.instagram.com/{username}"
+                # simple relevance pass (we only have the handle here)
+                relevant, score = is_relevant_to_search_term(username, "")
+                lead = {
+                    "name": username.replace('_', ' ').replace('.', ' ').title(),
+                    "handle": f"@{username}",
+                    "bio": f"Instagram user related to {SEARCH_TERM}",
+                    "url": url,
+                    "platform": "instagram",
+                    "dm": generate_dm_with_fallback(username, "Instagram user", "instagram"),
+                    "search_term": SEARCH_TERM,
+                    "relevance_score": score,
+                    "extraction_method": "modal_profile_from_hashtag",
+                    # optional fields your saver expects
+                    "title": "",
+                    "location": "",
+                    "followers": "",
+                    "profile_url": url,
+                    "contact_info": "",
+                }
+                results.append(lead)
+                print(f"    ✅ @{username}")
+
+        except Exception as e:
+            print(f"    ⚠️ Modal scrape error: {str(e)[:120]}")
+
+        finally:
+            # Close modal to return to grid
+            try:
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(random.uniform(250, 500))
+            except:
+                pass
+
+            # Human-ish pacing
+            time.sleep(random.uniform(0.6, 1.5))
+
     print(f"Extracted {len(results)} actual profiles")
     return results
+
 
 def extract_strict_username(href):
     """Only extract usernames from actual profile URLs"""
