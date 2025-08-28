@@ -4855,12 +4855,7 @@ with st.sidebar:
                 "medium":   "📝 Medium",
                 "reddit":   "🗨️ Reddit",
             }
-            # Add this to your UI somewhere
-            if st.button("Debug Email System"):
-                from payment_auth_recovery import debug_email_system, debug_specific_email_error, check_railway_email_limitations
-                debug_email_system()
-                debug_specific_email_error()
-                check_railway_email_limitations()
+            
             st.sidebar.header("🏆 Empire Statistics")
 
             # 3) Render per-platform metrics dynamically
@@ -9191,7 +9186,32 @@ with tab6:  # Settings tab
                         st.metric("Status", "Active")
                 except:
                     st.metric("Status", "Active")
+                    
+            st.markdown("Debug Email")
+            from emailer import send_admin_package_notification
+            # Add to your main app - only show debug when needed
+            if st.sidebar.button("Show Email Debug"):
+                st.session_state["show_debug"] = True
 
+            if st.session_state.get("show_debug"):
+                st.markdown("## Email Debug")
+                
+                # Your debug output here (no buttons that disappear)
+                st.write("SMTP_HOST:", "CONFIGURED" if os.getenv("SMTP_HOST") else "NOT SET")
+                st.write("ADMIN_EMAIL:", "CONFIGURED" if os.getenv("ADMIN_EMAIL") else "NOT SET") 
+                
+                # Manual email test
+                if st.button("Test Email Now", key="manual_test"):
+                    try:
+                        result = send_admin_package_notification(
+                            admin_email=os.getenv("ADMIN_EMAIL"),
+                            username="test", user_email="aileadsguy@gmail.com",
+                            package_type="test", amount=100, industry="test", 
+                            location="test", session_id="test", timestamp="test"
+                        )
+                        st.write("Result:", result)
+                    except Exception as e:
+                        st.error(f"Error: {e}")
             # View statistics
             st.markdown("---")
             st.subheader("📊 Detailed Usage Statistics")
