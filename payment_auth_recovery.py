@@ -190,6 +190,54 @@ def send_email_async(admin_email, username, user_email, package_type, amount, in
         with open("custom_orders.log", "a") as f:
             f.write(f"{datetime.now()}: THREAD_FAILED - {username}, {package_type}, ${amount}, {industry}, {location}\n")
         return False
+    
+def send_email_async_with_fallback(admin_email, username, user_email, package_type, amount, industry, location, session_id, timestamp):
+    """Send email asynchronously with immediate fallback"""
+    
+    def email_worker():
+        try:
+            # Try email for max 10 seconds, then give up
+            import signal
+            def timeout_handler(signum, frame):
+                raise TimeoutError("Email timeout")
+            
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(10)  # 10 second timeout
+            
+            sent = send_admin_package_notification(
+                admin_email=admin_email,
+                username=username,
+                user_email=user_email, 
+                package_type=package_type,
+                amount=amount,
+                industry=industry,
+                location=location,
+                session_id=session_id,
+                timestamp=timestamp
+            )
+            
+            signal.alarm(0)  # Cancel timeout
+            
+            if sent:
+                print(f"Email sent successfully for {username}")
+            else:
+                print(f"Email send returned False for {username}")
+                
+        except (TimeoutError, OSError) as e:
+            print(f"Email failed due to network: {e}")
+            # Log to file for manual processing
+            with open("pending_orders.log", "a") as f:
+                f.write(f"{datetime.now()}: {username}, {package_type}, ${amount}, {industry}, {location}\n")
+        except Exception as e:
+            print(f"Email error: {e}")
+    
+    # Start in background thread
+    import threading
+    thread = threading.Thread(target=email_worker, daemon=True)
+    thread.start()
+    
+    # Return immediately - don't wait for email
+    return True
 
 # Updated _process_payment_success function:
 def _process_payment_success(query_params: Dict, username: str) -> None:
@@ -261,8 +309,9 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                 
                 # Branch handling based on package type
                 if requires_build:
-                    # CUSTOM PACKAGE - Send email asynchronously
-                    print(f"Custom package - sending async admin notification")
+                    # Send email asynchronously with immediate return
+                    send_email_async_with_fallback(admin_email, username, user_email, package, float(amount), industry, location, session_id, stamp)
+                    print("Email queued in background")
                     
                     try:
                         # Get user email safely
