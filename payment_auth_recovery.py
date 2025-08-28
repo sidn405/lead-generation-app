@@ -13,6 +13,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart 
 import json
 import stripe
+import requests
 import time
 from datetime import datetime
 from typing import Tuple, Optional, Dict, Any
@@ -26,6 +27,9 @@ if STRIPE_API_KEY:
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
 )
+
+NOTIFY_MODE = os.getenv("NOTIFY_MODE", "webhook")  # 'webhook' | 'email' | 'none'
+NOTIFY_IN_UI  = os.getenv("NOTIFY_IN_UI", "0") == "1" # only send from UI when explicitly enabled
 
 def restore_payment_authentication() -> bool:
     """
@@ -148,6 +152,28 @@ def _set_session_state(username: str, user_data: Dict) -> None:
         pass
     except:
         pass
+    
+def notify_support_order(*, username, user_email, package_type, amount, industry, location, session_id, timestamp):
+    if NOTIFY_MODE == "webhook":
+        # your Discord webhook (with file fallback) — already implemented
+        return send_notification_with_fallback(username, user_email, package_type, amount, industry, location, session_id, timestamp)
+    elif NOTIFY_MODE == "email":
+        # legacy email path if you ever want it again
+        admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
+        return send_admin_package_notification(
+            admin_email=admin_email,
+            username=username,
+            user_email=user_email,
+            package_type=package_type,
+            amount=amount,
+            industry=industry,
+            location=location,
+            session_id=session_id,
+            timestamp=timestamp
+        )
+    else:  # 'none'
+        return True
+
 
 def send_email_async(admin_email, username, user_email, package_type, amount, industry, location, session_id, timestamp):
     """Send email notification in background thread to avoid blocking UI"""
@@ -321,8 +347,8 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                     
                     def email_worker():
                         try:
-                            result = send_admin_package_notification(
-                                admin_email=admin_email,
+                            # Replace the failing email call with webhook notification
+                            result = notify_support_order(
                                 username=username,
                                 user_email=user_email,
                                 package_type=package,
@@ -332,9 +358,14 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                                 session_id=session_id,
                                 timestamp=stamp or str(int(time.time()))
                             )
-                            print(f"Background email result: {result}")
+
+                            print(f"Background notification result: {result}")
+                            
                         except Exception as e:
-                            print(f"Background email failed: {e}")
+                            print(f"Background notification failed: {e}")
+                            # Final fallback - simple log
+                            with open("critical_orders.log", "a") as f:
+                                f.write(f"{datetime.now()}: CRITICAL - {username}, {package}, ${amount}, {industry}, {location}\n")
                             # Log failed email to file
                             with open("failed_orders.log", "a") as f:
                                 f.write(f"{datetime.now()}: EMAIL_FAILED - {username}, {package}, ${amount} - {str(e)}\n")
@@ -374,6 +405,8 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
 
     except Exception as e:
         print(f"Payment success processing error: {e}")
+        
+
 
 # Optional: Add a function to check email queue status
 def get_email_queue_status():
@@ -409,6 +442,7 @@ def show_payment_success_message() -> bool:
             st.success(f"📦 Package purchase successful! Your {package} package will be delivered soon!")
             
             # ---- Admin notification (idempotent by timestamp) ----
+        if NOTIFY_MODE == "email" and NOTIFY_IN_UI:    
             username = st.session_state.get("username") or st.query_params.get("username", "")
             user_email = (st.session_state.get("user_data") or {}).get("email", "")
             amount_val = float(amount or 0)
@@ -725,6 +759,156 @@ def create_improved_stripe_session(stripe, username: str, plan_type: str, amount
     )
     
     return session
+
+def send_via_webhook(username, user_email, package_type, amount, industry, location, session_id, timestamp):
+    """Send custom order notification via webhook"""
+    webhook_url = os.getenv("WEBHOOK_URL")
+    
+    if not webhook_url:
+        print("No WEBHOOK_URL configured")
+        return False
+    
+    # Discord-formatted message
+    embed = {
+        "title": "New Custom Lead Package Order",
+        "color": 15158332,  # Red color
+        "fields": [
+            {"name": "Customer", "value": f"{username}\n{user_email}", "inline": True},
+            {"name": "Package", "value": package_type.replace("_", " ").title(), "inline": True},
+            {"name": "Amount", "value": f"${amount}", "inline": True},
+            {"name": "Industry", "value": industry or "Not specified", "inline": True},
+            {"name": "Location", "value": location or "Not specified", "inline": True},
+            {"name": "Session ID", "value": session_id or "N/A", "inline": False}
+        ],
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    payload = {"embeds": [embed]}
+    
+    try:
+        response = requests.post(webhook_url, json=payload, timeout=10)
+        return response.status_code == 204  # Discord returns 204 on success
+    except Exception as e:
+        print(f"Discord webhook error: {e}")
+        return False
+            
+    except requests.exceptions.Timeout:
+        print("Webhook request timed out")
+        return False
+    except requests.exceptions.ConnectionError:
+        print("Webhook connection failed")
+        return False
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return False
+
+def send_notification_with_fallback(username, user_email, package_type, amount, industry, location, session_id, timestamp):
+    """Try webhook first, fall back to file logging"""
+    
+    # Try webhook notification
+    webhook_sent = send_via_webhook(username, user_email, package_type, amount, industry, location, session_id, timestamp)
+    
+    if webhook_sent:
+        return True
+    
+    # Fallback: Log to file for manual processing
+    try:
+        order_data = {
+            "timestamp": datetime.now().isoformat(),
+            "username": username,
+            "user_email": user_email,
+            "package_type": package_type,
+            "amount": amount,
+            "industry": industry,
+            "location": location,
+            "session_id": session_id,
+            "status": "webhook_failed"
+        }
+        
+        # Write to JSON lines file for easy parsing
+        with open("failed_notifications.jsonl", "a") as f:
+            f.write(json.dumps(order_data) + "\n")
+        
+        print(f"Order logged to file for manual processing: {username}")
+        return True
+        
+    except Exception as e:
+        print(f"File logging also failed: {e}")
+        return False
+
+
+# Webhook service options and setup:
+
+def setup_webhook_services():
+    """
+    Webhook service options you can use:
+    
+    1. **Zapier Webhooks** (easiest):
+       - Create Zapier account
+       - Make a "Catch Hook" trigger
+       - Add Gmail/Slack/etc action
+       - Use the webhook URL Zapier gives you
+    
+    2. **Make.com (Integromat)**:
+       - Create webhook trigger
+       - Add email/notification actions
+       - Use their webhook URL
+    
+    3. **Discord Webhook** (for notifications):
+       - Create Discord server
+       - Add webhook in channel settings
+       - Use Discord webhook URL
+    
+    4. **Slack Incoming Webhooks**:
+       - Set up Slack app
+       - Add incoming webhook
+       - Use Slack webhook URL
+    
+    5. **Custom webhook server** (advanced):
+       - Deploy simple webhook receiver
+       - Forward notifications via email/SMS
+    """
+    pass
+
+def test_webhook():
+    """Test your webhook setup"""
+    webhook_url = os.getenv("WEBHOOK_URL")
+    
+    if not webhook_url:
+        print("WEBHOOK_URL not configured")
+        return False
+    
+    test_payload = {
+        "type": "test",
+        "message": "Webhook test from Lead Generator Empire",
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    try:
+        response = requests.post(webhook_url, json=test_payload, timeout=10)
+        print(f"Test webhook response: {response.status_code}")
+        return 200 <= response.status_code < 300
+    except Exception as e:
+        print(f"Test webhook failed: {e}")
+        return False
+
+# Add this to test your webhook setup
+def debug_webhook_setup():
+    """Add this to your debug interface"""
+    if st.button("Test Webhook", key="test_webhook_btn"):
+        webhook_url = os.getenv("WEBHOOK_URL")
+        
+        if not webhook_url:
+            st.error("WEBHOOK_URL not set in Railway environment")
+        else:
+            st.info(f"Testing webhook: {webhook_url[:50]}...")
+            
+            success = test_webhook()
+            
+            if success:
+                st.success("Webhook test successful!")
+            else:
+                st.error("Webhook test failed - check Railway logs")
 
 def debug_authentication_state(simple_auth_instance, credit_system) -> None:
     """Debug authentication state - for troubleshooting"""
