@@ -4609,7 +4609,7 @@ main .block-container {
     gap: 10px; 
     margin: 0; 
     padding: 0;
-    transform: translateY(-35px); /* Move up 20px */
+    transform: translateY(-45px); /* Move up 20px */
 }
 h1.main-header { 
     margin: 0 !important; 
@@ -9192,11 +9192,6 @@ with tab6:  # Settings tab
             st.subheader("📊 Detailed Usage Statistics")
             transactions = (user_info or {}).get("transactions", [])
             recent_transactions = sorted(transactions, key=lambda x: x.get("timestamp", ""), reverse=True)
-            
-
-            # View statistics
-            st.markdown("---")
-            st.subheader("📊 Detailed Usage Statistics")
 
             try:
                 # --- helpers (safe casts) ---
