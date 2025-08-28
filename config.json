@@ -59,7 +59,7 @@
         "auto_deliver_leads": true
     },
     "global": {
-        "search_term": "chef",
+        "search_term": "fitness trainer",
         "max_scrolls": 20,
         "enable_multilingual": true,
         "default_dm": "Hi there! I love your content and would be excited to connect. Let's chat!",

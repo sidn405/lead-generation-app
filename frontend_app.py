@@ -22,6 +22,7 @@ from stripe_checkout import show_compact_credit_terms, display_compact_credit_ad
 import streamlit.components.v1 as components
 import traceback
 from datetime import datetime, timedelta
+from payment_auth_recovery import persistent_debug_email
 #from simple_credit_system import credit_system, check_user_credits, consume_user_credits
 from postgres_credit_system import postgres_credit_system as credit_system, initialize_postgres_credit_system, consume_user_credits
 from stripe_checkout import (
@@ -9188,8 +9189,7 @@ with tab6:  # Settings tab
                     st.metric("Status", "Active")
                     
             st.markdown("---")
-            # At the end of your main app, add:
-            from payment_auth_recovery import persistent_debug_email
+            # Add this where you want the debug interface (maybe in a sidebar or at bottom)
             if st.session_state.get('authenticated'):
                 persistent_debug_email()
             

@@ -56,6 +56,10 @@ DELAY_MAX = config.get("delay_max", 5)
 LEAD_OUTPUT_FILE = config["lead_output_file"]
 EXTRACTION_TIMEOUT = config.get("extraction_timeout", 45000)
 
+ENRICH_PROFILES = True          # turn on/off enrichment
+ENRICH_LIMIT = 40               # cap to avoid rate limits
+ENRICH_DELAY = (1.2, 2.5)       # seconds between profiles
+
 # 🚀 Deduplication configuration
 DEDUP_MODE = config.get("deduplication_mode", "smart_user_aware")
 SAVE_RAW_LEADS = config.get("save_raw_leads", True)
@@ -113,6 +117,39 @@ def is_relevant_to_search_term(name, bio, location=""):
     
     # 🚀 OPTIMIZED: Lowered threshold from 3 to 2 for higher volume
     return relevance_score >= 2, relevance_score
+
+def _to_number(s: str) -> int | None:
+    """Convert '1,234' / '1.2k' / '3.4m' → int."""
+    if not s: return None
+    s = s.strip().lower().replace(",", "")
+    m = re.match(r"^([\d\.]+)\s*([kKmM]?)$", s)
+    if not m: 
+        # also allow "1.2 million"
+        m2 = re.match(r"^([\d\.]+)\s*(million|thousand)$", s)
+        if not m2: return None
+        n = float(m2.group(1)); unit = m2.group(2)
+        return int(n * (1_000_000 if unit.startswith("million") else 1_000))
+    n = float(m.group(1)); unit = m.group(2)
+    mul = 1_000 if unit == "k" else 1_000_000 if unit == "m" else 1
+    return int(n * mul)
+
+def _parse_counts_from_meta(desc: str) -> dict:
+    """
+    Example og:description:
+      '1,234 Followers, 56 Following, 12 Posts - See Instagram photos ...'
+    """
+    out = {"followers": None, "following": None, "posts": None}
+    if not desc: return out
+    try:
+        m = re.search(r"([\d\.,kKmM]+)\s+Followers", desc)
+        if m: out["followers"] = _to_number(m.group(1))
+        m = re.search(r"([\d\.,kKmM]+)\s+Following", desc)
+        if m: out["following"] = _to_number(m.group(1))
+        m = re.search(r"([\d\.,kKmM]+)\s+Posts?", desc)
+        if m: out["posts"] = _to_number(m.group(1))
+    except: 
+        pass
+    return out
 
 def extract_instagram_profiles(page, max_posts: int | None = None):
     """
