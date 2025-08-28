@@ -239,8 +239,9 @@ def send_email_async_with_fallback(admin_email, username, user_email, package_ty
     # Return immediately - don't wait for email
     return True
 
+# Updated _process_payment_success function:
 def _process_payment_success(query_params: Dict, username: str) -> None:
-    """Process payment success with custom/prebuilt package distinction"""
+    """Process payment success with async email notifications"""
     
     # Prevent duplicate processing
     stamp = query_params.get("timestamp") or query_params.get("session_id")
@@ -257,17 +258,17 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
             if "plan" in query_params:
                 plan = query_params.get("plan", "")
                 if plan:
-                    print(f"📋 Processing plan upgrade to: {plan}")
+                    print(f"Processing plan upgrade to: {plan}")
                     try:
                         from postgres_credit_system import credit_system
                         credit_system.update_user_plan(username, plan)
                         if 'user_data' in st.session_state:
                             st.session_state.user_data['plan'] = plan
-                        print(f"✅ Updated plan to: {plan}")
+                        print(f"Updated plan to: {plan}")
                     except Exception as e:
-                        print(f"⚠️ Plan update warning: {e}")
+                        print(f"Plan update warning: {e}")
             
-            # Handle package purchases with custom/prebuilt distinction
+            # Handle package purchases with async email
             elif "package" in query_params:
                 package = query_params.get("package", "")
                 amount = query_params.get("amount", "0")
@@ -275,10 +276,10 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                 location = query_params.get("location", "").replace('+', ' ')
                 session_id = query_params.get("session_id", "")
                 
-                # NEW: Check if this is a custom build
+                # Check if this is a custom build
                 requires_build = str(query_params.get("requires_build", "0")).lower() in ("1", "true", "yes")
                 
-                print(f"📦 Processing package purchase: {package} for ${amount} (custom={requires_build})")
+                print(f"Processing package purchase: {package} for ${amount} (custom={requires_build})")
                 
                 # Always log the transaction first
                 try:
@@ -302,9 +303,9 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                         user_info["transactions"].append(package_transaction)
                         user_info["total_packages_purchased"] = user_info.get("total_packages_purchased", 0) + 1
                         credit_system.save_data()
-                        print(f"✅ Logged package purchase for {username}")
+                        print(f"Logged package purchase for {username}")
                 except Exception as e:
-                    print(f"⚠️ Package logging warning: {e}")
+                    print(f"Package logging warning: {e}")
                 
                 # Branch handling based on package type
                 if requires_build:
@@ -350,7 +351,7 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                     
                 else:
                     # PREBUILT PACKAGE - Add to downloads immediately
-                    print(f"📦 Prebuilt package - adding to downloads")
+                    print(f"Prebuilt package - adding to downloads")
                     
                     try:
                         from package_system import add_package_to_database
@@ -367,58 +368,12 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                         st.session_state["package_location"] = location
                         st.session_state["prebuilt_package_ready"] = True
                         
-                        print(f"✅ Added {display_name} to downloads for {username}")
+                        print(f"Added {display_name} to downloads for {username}")
                     except Exception as e:
-                        print(f"⚠️ Package DB add warning: {e}")
+                        print(f"Package DB add warning: {e}")
 
     except Exception as e:
-        print(f"⚠️ Payment success processing error: {e}")
-
-def create_improved_stripe_session(stripe, username: str, plan_type: str, amount: float, description: str):
-    """Create improved Stripe checkout session with better return handling"""
-    
-    # Get user email safely
-    try:
-        user_data = st.session_state.get('user_data', {})
-        user_email = user_data.get('email', f"{username}@empire.com")
-    except:
-        user_email = f"{username}@empire.com"
-        
-    base = APP_BASE_URL.rstrip("/")
-    # Create more robust success URL
-    success_url = f"https://leadgeneratorempire.com/?success=true&plan={plan_type}&username={username}&amount={amount}&timestamp={int(time.time())}"
-    cancel_url = (
-        f"{base}/?cancel=1"
-        f"&type=credits"
-        f"&tier={plan_type.lower().replace(' ', '_')}"
-        f"&username={username}"
-    )
-    
-    session = stripe.checkout.Session.create(
-        payment_method_types=["card"],
-        line_items=[{
-            "price_data": {
-                "currency": "usd",
-                "product_data": {
-                    "name": description
-                },
-                "unit_amount": int(amount * 97),
-                "recurring": {"interval": "month"} if plan_type in ["starter", "pro", "ultimate"] else None
-            },
-            "quantity": 1,
-        }],
-        mode="subscription" if plan_type in ["starter", "pro", "ultimate"] else "payment",
-        success_url=success_url,
-        cancel_url=cancel_url,
-        customer_email=user_email,
-        metadata={
-            "username": username,
-            "plan_type": plan_type,
-            "amount": str(amount)
-        }
-    )
-    
-    return session
+        print(f"Payment success processing error: {e}")
 
 # Optional: Add a function to check email queue status
 def get_email_queue_status():
@@ -725,6 +680,52 @@ def show_payment_success_message() -> bool:
     
     return False  
 
+def create_improved_stripe_session(stripe, username: str, plan_type: str, amount: float, description: str):
+    """Create improved Stripe checkout session with better return handling"""
+    
+    # Get user email safely
+    try:
+        user_data = st.session_state.get('user_data', {})
+        user_email = user_data.get('email', f"{username}@empire.com")
+    except:
+        user_email = f"{username}@empire.com"
+        
+    base = APP_BASE_URL.rstrip("/")
+    # Create more robust success URL
+    success_url = f"https://leadgeneratorempire.com/?success=true&plan={plan_type}&username={username}&amount={amount}&timestamp={int(time.time())}"
+    cancel_url = (
+        f"{base}/?cancel=1"
+        f"&type=credits"
+        f"&tier={plan_type.lower().replace(' ', '_')}"
+        f"&username={username}"
+    )
+    
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": description
+                },
+                "unit_amount": int(amount * 97),
+                "recurring": {"interval": "month"} if plan_type in ["starter", "pro", "ultimate"] else None
+            },
+            "quantity": 1,
+        }],
+        mode="subscription" if plan_type in ["starter", "pro", "ultimate"] else "payment",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        customer_email=user_email,
+        metadata={
+            "username": username,
+            "plan_type": plan_type,
+            "amount": str(amount)
+        }
+    )
+    
+    return session
+
 def debug_authentication_state(simple_auth_instance, credit_system) -> None:
     """Debug authentication state - for troubleshooting"""
     
@@ -782,4 +783,23 @@ def debug_authentication_state(simple_auth_instance, credit_system) -> None:
                     st.error("❌ User not found")
             except Exception as e:
                 st.error(f"❌ Force login failed: {e}")
+                
+def scroll_to_top():
+    """Force scroll to top of page using JavaScript"""
+    scroll_script = """
+    <script>
+        // Scroll to top immediately
+        window.scrollTo(0, 0);
+        
+        // Also scroll after a small delay in case of timing issues
+        setTimeout(function() {
+            window.scrollTo(0, 0);
+        }, 100);
+        
+        // Force focus to top of page
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+    </script>
+    """
+    st.markdown(scroll_script, unsafe_allow_html=True)
                 
