@@ -29,7 +29,7 @@ def restore_payment_authentication() -> bool:
     Returns True if this is a payment return, False otherwise
     """
     query_params = st.query_params
-    
+    print(f"🔄 [RESTORE_AUTH] Called with params: {dict(st.query_params)}")
     # Check if this is a payment return
     payment_indicators = ["success", "payment_success", "cancelled", "plan", "package", "amount", "tier", "credits"]
     is_payment_return = any(param in query_params for param in payment_indicators)

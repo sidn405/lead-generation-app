@@ -323,7 +323,7 @@ def _restore_session_state(username: str):
 # ---- Handle ?payment_success=1 redirects deterministically ----
 def handle_payment_success_url():
     qp = st.query_params
-    
+    print(f"🔄 [HANDLE_SUCCESS] Called with params: {dict(st.query_params)}")
     # Let payment_auth_recovery handle it if it's already processing
     if st.session_state.get("processed_payments"):
         return False
