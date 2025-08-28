@@ -9517,6 +9517,12 @@ with tab6:  # Settings tab
                             st.error(f"SMTP port 587 blocked (error {result})")
                     except Exception as e:
                         st.error(f"SMTP test error: {e}")
+                        
+            # Add this to your UI somewhere
+            if st.button("Debug Email System"):
+                debug_email_system()
+                debug_specific_email_error()
+                check_railway_email_limitations()
             
             # View statistics
             st.markdown("---")
