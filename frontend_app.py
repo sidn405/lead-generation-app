@@ -4855,7 +4855,12 @@ with st.sidebar:
                 "medium":   "📝 Medium",
                 "reddit":   "🗨️ Reddit",
             }
-            
+            # Add this to your UI somewhere
+            if st.button("Debug Email System"):
+                from payment_auth_recovery import debug_email_system, debug_specific_email_error, check_railway_email_limitations
+                debug_email_system()
+                debug_specific_email_error()
+                check_railway_email_limitations()
             st.sidebar.header("🏆 Empire Statistics")
 
             # 3) Render per-platform metrics dynamically
