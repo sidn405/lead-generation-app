@@ -866,62 +866,72 @@ def debug_authentication_state(simple_auth_instance, credit_system) -> None:
                 st.error(f"❌ Force login failed: {e}")
                 
 def debug_email_system():
-    """Persistent email debugging"""
+    """Fixed email debugging with unique button keys"""
     
-    # Use session state to persist the debug interface
-    if "show_email_debug" not in st.session_state:
-        st.session_state.show_email_debug = False
+    st.subheader("Email System Debug")
     
-    if st.button("Debug Email System"):
-        st.session_state.show_email_debug = True
-        st.rerun()
+    # Step 1: Check environment variables  
+    st.markdown("### Environment Variables")
+    env_vars = {
+        "SENDGRID_API_KEY": os.getenv("SENDGRID_API_KEY"),
+        "ADMIN_EMAIL": os.getenv("ADMIN_EMAIL"),
+        "SUPPORT_EMAIL": os.getenv("SUPPORT_EMAIL"),
+        "SMTP_HOST": os.getenv("SMTP_HOST"),
+        "SMTP_USER": os.getenv("SMTP_USER"),
+    }
     
-    if st.session_state.show_email_debug:
-        st.subheader("Email System Debug")
-        
-        # Environment variables check
-        env_vars = {
-            "SENDGRID_API_KEY": os.getenv("SENDGRID_API_KEY"),
-            "ADMIN_EMAIL": os.getenv("ADMIN_EMAIL"),
-            "SMTP_HOST": os.getenv("SMTP_HOST"),
-            "SMTP_USER": os.getenv("SMTP_USER"),
-        }
-        
-        for key, value in env_vars.items():
-            if value:
-                st.success(f"{key}: CONFIGURED")
+    for key, value in env_vars.items():
+        if value:
+            st.success(f"{key}: CONFIGURED")
+        else:
+            st.error(f"{key}: NOT SET")
+    
+    # Step 2: Network test with unique key
+    if st.button("Test Network", key="network_test_btn"):
+        st.info("Testing network connectivity...")
+        try:
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            result = sock.connect_ex(("8.8.8.8", 53))
+            sock.close()
+            
+            if result == 0:
+                st.success("Network: CONNECTED")
             else:
-                st.error(f"{key}: NOT SET")
-        
-        # Quick test button
-        if st.button("Test Email Now", key="test_email_btn"):
-            try:
-                from emailer import send_admin_package_notification, EMAIL_ADDRESS
+                st.error("Network: BLOCKED")
+        except Exception as e:
+            st.error(f"Network test error: {e}")
+    
+    # Step 3: Email function test with unique key
+    if st.button("Test Email Function", key="email_function_test_btn"):
+        try:
+            from emailer import send_admin_package_notification, EMAIL_ADDRESS
+            
+            admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
+            
+            st.info(f"Testing email to: {admin_email}")
+            
+            result = send_admin_package_notification(
+                admin_email=admin_email,
+                username="debug_user",
+                user_email="debug@test.com",
+                package_type="deep_dive",
+                amount=297.0,
+                industry="Test Industry", 
+                location="Test Location",
+                session_id="debug_123",
+                timestamp=str(int(time.time()))
+            )
+            
+            if result:
+                st.success("Email function SUCCESS!")
+            else:
+                st.error("Email function returned False")
                 
-                admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
-                result = send_admin_package_notification(
-                    admin_email=admin_email,
-                    username="test_user",
-                    user_email="test@example.com",
-                    package_type="deep_dive",
-                    amount=297.0,
-                    industry="Test Industry",
-                    location="Test Location", 
-                    session_id="test_123",
-                    timestamp=str(int(time.time()))
-                )
-                
-                if result:
-                    st.success("Email test successful!")
-                else:
-                    st.error("Email function returned False")
-                    
-            except Exception as e:
-                st.error(f"Email test failed: {e}")
-        
-        if st.button("Close Debug", key="close_debug_btn"):
-            st.session_state.show_email_debug = False
-            st.rerun()
+        except Exception as e:
+            st.error(f"Email test failed: {e}")
+            st.code(str(e))  # Show full error details
 
 def debug_specific_email_error():
     """Debug the exact email error you're seeing"""
