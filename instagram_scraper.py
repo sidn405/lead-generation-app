@@ -246,6 +246,76 @@ def extract_instagram_profiles(page, max_posts: int | None = None):
     print(f"Extracted {len(results)} actual profiles")
     return results
 
+def enrich_instagram_profiles(page, leads: list[dict], limit: int | None = None):
+    """
+    Open each profile in a NEW tab, read og:title/og:description and a best-effort bio,
+    then update the lead in-place. Non-fatal on any error.
+    """
+    ctx = page.context
+    total = min(limit or ENRICH_LIMIT, len(leads))
+    print(f"🔎 Enriching {total} Instagram profiles…")
+
+    for i, lead in enumerate(leads[:total], 1):
+        handle = (lead.get("handle") or "").lstrip("@")
+        if not handle:
+            continue
+        prof_url = lead.get("profile_url") or f"https://www.instagram.com/{handle}/"
+        print(f"  [{i}/{total}] @{handle}")
+
+        p = None
+        try:
+            p = ctx.new_page()
+            p.goto(prof_url, wait_until="domcontentloaded", timeout=20000)
+
+            # OG tags are the most stable selectors on IG
+            og_title = p.query_selector('head meta[property="og:title"]')
+            og_desc  = p.query_selector('head meta[property="og:description"]')
+            title = og_title.get_attribute("content") if og_title else ""
+            desc  = og_desc.get_attribute("content") if og_desc else ""
+
+            # Display name from og:title:  'Name (@username) • Instagram photos and videos'
+            display_name = None
+            if title and "(" in title:
+                display_name = title.split("(")[0].strip() or None
+
+            counts = _parse_counts_from_meta(desc)
+
+            # Bio (best-effort; IG changes often). Try a few common containers:
+            bio = None
+            for sel in [
+                'header section div[role="button"] ~ div',            # some builds
+                'header section h1 + div',                            # older layout
+                'header + div [data-testid="user-bio"]',              # experimental
+                'article header ~ div span',                          # fallback
+            ]:
+                el = p.query_selector(sel)
+                if el:
+                    txt = (el.inner_text() or "").strip()
+                    if txt and len(txt) >= 3:
+                        bio = txt
+                        break
+
+            # Update lead in place (don’t overwrite if you already have richer fields)
+            lead["profile_url"] = prof_url
+            if display_name: lead["name"] = display_name
+            if bio:          lead["bio"] = bio
+            if counts.get("followers") is not None: lead["followers"] = counts["followers"]
+            if counts.get("following") is not None: lead["following"] = counts["following"]
+            if counts.get("posts")     is not None: lead["posts"]     = counts["posts"]
+
+            print(f"     ✅ followers={lead.get('followers')} name={lead.get('name')!s}")
+
+        except Exception as e:
+            print(f"     ⚠️ enrich error: {str(e)[:140]}")
+        finally:
+            try:
+                if p: p.close()
+            except: 
+                pass
+            time.sleep(random.uniform(*ENRICH_DELAY))
+
+    print("✅ Enrichment complete.")
+    return leads
 
 def extract_strict_username(href):
     """Only extract usernames from actual profile URLs"""

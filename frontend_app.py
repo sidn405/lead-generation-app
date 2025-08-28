@@ -22,7 +22,6 @@ from stripe_checkout import show_compact_credit_terms, display_compact_credit_ad
 import streamlit.components.v1 as components
 import traceback
 from datetime import datetime, timedelta
-from payment_auth_recovery import persistent_debug_email
 #from simple_credit_system import credit_system, check_user_credits, consume_user_credits
 from postgres_credit_system import postgres_credit_system as credit_system, initialize_postgres_credit_system, consume_user_credits
 from stripe_checkout import (
@@ -9189,7 +9188,63 @@ with tab6:  # Settings tab
                     st.metric("Status", "Active")
                     
             st.markdown("---")
-            # Add this where you want the debug interface (maybe in a sidebar or at bottom)
+            # Remove this line:
+
+            # Add this function directly in frontend_app.py:
+            def persistent_debug_email():
+                """Persistent debug interface"""
+                import os
+                
+                if "debug_active" not in st.session_state:
+                    st.session_state.debug_active = False
+                
+                if st.button("Toggle Email Debug", key="toggle_debug_main"):
+                    st.session_state.debug_active = not st.session_state.debug_active
+                
+                if st.session_state.debug_active:
+                    st.markdown("---")
+                    st.subheader("Email Debug")
+                    
+                    # Environment check
+                    env_checks = {
+                        "ADMIN_EMAIL": os.getenv("ADMIN_EMAIL"),
+                        "SMTP_HOST": os.getenv("SMTP_HOST"),
+                        "SMTP_USER": os.getenv("SMTP_USER"),
+                    }
+                    
+                    for key, value in env_checks.items():
+                        if value:
+                            st.success(f"{key}: SET")
+                        else:
+                            st.error(f"{key}: NOT SET")
+                    
+                    # Test email function
+                    if st.button("Test Email", key="test_email_now"):
+                        try:
+                            from emailer import send_admin_package_notification, EMAIL_ADDRESS
+                            admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
+                            
+                            result = send_admin_package_notification(
+                                admin_email=admin_email,
+                                username="test",
+                                user_email="test@test.com",
+                                package_type="test",
+                                amount=100,
+                                industry="test",
+                                location="test",
+                                session_id="test",
+                                timestamp="test"
+                            )
+                            
+                            if result:
+                                st.success("Email: SUCCESS")
+                            else:
+                                st.error("Email: FAILED")
+                                
+                        except Exception as e:
+                            st.error(f"Email error: {e}")
+
+            # Then call it where you want:
             if st.session_state.get('authenticated'):
                 persistent_debug_email()
             
