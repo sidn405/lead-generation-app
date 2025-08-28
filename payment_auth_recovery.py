@@ -866,182 +866,62 @@ def debug_authentication_state(simple_auth_instance, credit_system) -> None:
                 st.error(f"❌ Force login failed: {e}")
                 
 def debug_email_system():
-    """Comprehensive email debugging with step-by-step testing"""
+    """Persistent email debugging"""
     
-    st.subheader("Email System Debug")
+    # Use session state to persist the debug interface
+    if "show_email_debug" not in st.session_state:
+        st.session_state.show_email_debug = False
     
-    # Step 1: Check environment variables
-    st.markdown("### Step 1: Environment Variables")
+    if st.button("Debug Email System"):
+        st.session_state.show_email_debug = True
+        st.rerun()
     
-    env_vars = {
-        "SENDGRID_API_KEY": os.getenv("SENDGRID_API_KEY"),
-        "ADMIN_EMAIL": os.getenv("ADMIN_EMAIL"),
-        "SUPPORT_EMAIL": os.getenv("SUPPORT_EMAIL"), 
-        "SMTP_HOST": os.getenv("SMTP_HOST"),
-        "SMTP_USER": os.getenv("SMTP_USER"),
-        "SMTP_PASS": os.getenv("SMTP_PASS"),
-        "SMTP_PORT": os.getenv("SMTP_PORT"),
-        "EMAIL_ADDRESS": getattr(__import__('emailer'), 'EMAIL_ADDRESS', 'Not found')
-    }
-    
-    for key, value in env_vars.items():
-        if value:
-            masked_value = value[:8] + "..." + value[-4:] if len(value) > 12 else "SET"
-            st.success(f"{key}: {masked_value}")
-        else:
-            st.error(f"{key}: NOT SET")
-    
-    # Step 2: Network connectivity test
-    st.markdown("### Step 2: Network Connectivity")
-    
-    if st.button("Test Network Connectivity"):
-        hosts_to_test = [
-            ("Google DNS", "8.8.8.8", 53),
-            ("Gmail SMTP", "smtp.gmail.com", 587),
-            ("SendGrid", "api.sendgrid.com", 443),
-            ("Outlook SMTP", "smtp-mail.outlook.com", 587)
-        ]
+    if st.session_state.show_email_debug:
+        st.subheader("Email System Debug")
         
-        for name, host, port in hosts_to_test:
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(5)
-                result = sock.connect_ex((host, port))
-                sock.close()
-                
-                if result == 0:
-                    st.success(f"{name} ({host}:{port}): REACHABLE")
-                else:
-                    st.error(f"{name} ({host}:{port}): BLOCKED (error {result})")
-            except Exception as e:
-                st.error(f"{name} ({host}:{port}): ERROR - {str(e)}")
-    
-    # Step 3: Test SendGrid if configured
-    sendgrid_key = os.getenv("SENDGRID_API_KEY")
-    if sendgrid_key:
-        st.markdown("### Step 3: SendGrid Test")
+        # Environment variables check
+        env_vars = {
+            "SENDGRID_API_KEY": os.getenv("SENDGRID_API_KEY"),
+            "ADMIN_EMAIL": os.getenv("ADMIN_EMAIL"),
+            "SMTP_HOST": os.getenv("SMTP_HOST"),
+            "SMTP_USER": os.getenv("SMTP_USER"),
+        }
         
-        if st.button("Test SendGrid"):
+        for key, value in env_vars.items():
+            if value:
+                st.success(f"{key}: CONFIGURED")
+            else:
+                st.error(f"{key}: NOT SET")
+        
+        # Quick test button
+        if st.button("Test Email Now", key="test_email_btn"):
             try:
-                import sendgrid
-                from sendgrid.helpers.mail import Mail
+                from emailer import send_admin_package_notification, EMAIL_ADDRESS
                 
-                sg = sendgrid.SendGridAPIClient(api_key=sendgrid_key)
-                
-                # Test with a simple email
-                admin_email = os.getenv("ADMIN_EMAIL") or "test@example.com"
-                
-                mail = Mail(
-                    from_email=admin_email,
-                    to_emails=admin_email,
-                    subject="Test Email from Lead Generator Empire",
-                    html_content="<p>This is a test email to verify SendGrid connectivity.</p>"
+                admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
+                result = send_admin_package_notification(
+                    admin_email=admin_email,
+                    username="test_user",
+                    user_email="test@example.com",
+                    package_type="deep_dive",
+                    amount=297.0,
+                    industry="Test Industry",
+                    location="Test Location", 
+                    session_id="test_123",
+                    timestamp=str(int(time.time()))
                 )
                 
-                response = sg.send(mail)
-                st.success(f"SendGrid test successful! Status: {response.status_code}")
-                
-            except ImportError:
-                st.error("SendGrid library not installed. Install with: pip install sendgrid")
+                if result:
+                    st.success("Email test successful!")
+                else:
+                    st.error("Email function returned False")
+                    
             except Exception as e:
-                st.error(f"SendGrid test failed: {str(e)}")
-    
-    # Step 4: Test SMTP if configured
-    smtp_host = os.getenv("SMTP_HOST")
-    if smtp_host:
-        st.markdown("### Step 4: SMTP Test")
+                st.error(f"Email test failed: {e}")
         
-        if st.button("Test SMTP"):
-            try:
-                smtp_user = os.getenv("SMTP_USER")
-                smtp_pass = os.getenv("SMTP_PASS")
-                smtp_port = int(os.getenv("SMTP_PORT", "587"))
-                
-                if not all([smtp_host, smtp_user, smtp_pass]):
-                    st.error("Missing SMTP credentials (SMTP_HOST, SMTP_USER, SMTP_PASS)")
-                    return
-                
-                # Test SMTP connection
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-                    st.info("Connecting to SMTP server...")
-                    server.starttls()
-                    st.info("Starting TLS...")
-                    server.login(smtp_user, smtp_pass)
-                    st.info("Login successful...")
-                    
-                    # Send test email
-                    msg = MIMEText("Test email from Lead Generator Empire")
-                    msg["Subject"] = "Test Email"
-                    msg["From"] = smtp_user
-                    msg["To"] = smtp_user
-                    
-                    server.send_message(msg)
-                    st.success("SMTP test email sent successfully!")
-                    
-            except Exception as e:
-                st.error(f"SMTP test failed: {str(e)}")
-    
-    # Step 5: Test your actual email function
-    st.markdown("### Step 5: Test Your Email Function")
-    
-    if st.button("Test send_admin_package_notification"):
-        try:
-            # Get the actual function
-            from emailer import send_admin_package_notification, EMAIL_ADDRESS
-            
-            # Test with dummy data
-            admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
-            
-            result = send_admin_package_notification(
-                admin_email=admin_email,
-                username="test_user",
-                user_email="test@example.com", 
-                package_type="deep_dive",
-                amount=297.0,
-                industry="Education & Training",
-                location="United States",
-                session_id="test_session_123",
-                timestamp=str(int(time.time()))
-            )
-            
-            if result:
-                st.success("Email function test successful!")
-            else:
-                st.error("Email function returned False")
-                
-        except Exception as e:
-            st.error(f"Email function test failed: {str(e)}")
-            st.code(str(e))  # Show full error details
-    
-    # Step 6: Railway-specific network test
-    st.markdown("### Step 6: Railway Network Test")
-    
-    if st.button("Test Railway Network"):
-        try:
-            import requests
-            
-            # Test external HTTP requests
-            test_urls = [
-                "https://api.sendgrid.com/v3/mail/send",
-                "https://httpbin.org/get", 
-                "https://jsonplaceholder.typicode.com/posts/1"
-            ]
-            
-            for url in test_urls:
-                try:
-                    response = requests.get(url, timeout=5)
-                    st.success(f"{url}: HTTP {response.status_code}")
-                except requests.exceptions.Timeout:
-                    st.error(f"{url}: TIMEOUT")
-                except requests.exceptions.ConnectionError:
-                    st.error(f"{url}: CONNECTION BLOCKED")
-                except Exception as e:
-                    st.error(f"{url}: ERROR - {str(e)}")
-                    
-        except ImportError:
-            st.error("Requests library not available")
-        except Exception as e:
-            st.error(f"Network test failed: {str(e)}")
+        if st.button("Close Debug", key="close_debug_btn"):
+            st.session_state.show_email_debug = False
+            st.rerun()
 
 def debug_specific_email_error():
     """Debug the exact email error you're seeing"""
