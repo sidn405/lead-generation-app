@@ -14,6 +14,13 @@ import json
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")
 
+# CRITICAL: Set the Stripe API key
+if STRIPE_API_KEY:
+    stripe.api_key = STRIPE_API_KEY
+    print("✅ Stripe API key configured")
+else:
+    print("❌ WARNING: STRIPE_API_KEY environment variable not set!")
+
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
     

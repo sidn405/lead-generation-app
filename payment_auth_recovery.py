@@ -14,6 +14,10 @@ from typing import Tuple, Optional, Dict, Any
 
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")
+if STRIPE_API_KEY:
+    stripe.api_key = STRIPE_API_KEY
+else:
+    print("WARNING: STRIPE_API_KEY not found in environment variables")
 
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
