@@ -8850,7 +8850,8 @@ with package_col1:
                         97,
                         f"Lead Empire - Niche Starter Pack ({final_industry})",
                         final_industry,
-                        final_location
+                        final_location,
+                        requires_build=True
                     )
                     
                     st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
@@ -8923,7 +8924,8 @@ with package_col2:
                         297,
                         f"Lead Empire - Industry Deep Dive ({final_industry})",
                         final_industry,
-                        final_location
+                        final_location,
+                        requires_build=True
                     )
                     
                     st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
@@ -8995,7 +8997,8 @@ with package_col3:
                         897,
                         f"Lead Empire - Market Domination ({final_industry})",
                         final_industry,
-                        final_location
+                        final_location,
+                        requires_build=True
                     )
                     
                     st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
