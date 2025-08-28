@@ -434,75 +434,66 @@ class CreditSystem:
         else:
             return False, f"Insufficient credits: {current_credits}/{required_credits}", current_credits
 
-    def consume_credits(self, username: str, credits_used: int, leads_downloaded: int, platform: str):
-        """Consume credits and log the transaction (returns new credits or False)."""
+    def consume_credits(self, username: str, credits_used: int, leads_downloaded: int, platform: str) -> bool:
+        """Consume credits and log the transaction"""
         user = self.get_user_info(username)
-        if not user or int(user.get("credits", 0)) < int(credits_used):
+        if not user or user.get("credits", 0) < credits_used:
             return False
-
-        old_credits = int(user.get("credits", 0))
-        credits_used = int(credits_used)
-        leads_downloaded = int(leads_downloaded)
-
+        
         if self.use_postgres:
-            # Atomically update and return the new balance
-            rows = self._execute_query("""
-                UPDATE users
-                SET credits = GREATEST(0, credits - %s),
-                    total_leads_downloaded = total_leads_downloaded + %s,
-                    updated_at = NOW()
-                WHERE username = %s
-                RETURNING credits
-            """, (credits_used, leads_downloaded, username), fetch=True)
-            new_credits = int(rows[0]["credits"]) if rows else max(0, old_credits - credits_used)
-
-            # Log transaction with remaining/after for visibility
+            # Update user credits
             self._execute_query("""
-                INSERT INTO transactions (username, type, credits_used, leads_downloaded, platform, credits_remaining, credits_after)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (username, "lead_download", credits_used, leads_downloaded, platform, new_credits, new_credits))
+                UPDATE users 
+                SET credits = credits - %s, total_leads_downloaded = total_leads_downloaded + %s
+                WHERE username = %s
+            """, (credits_used, leads_downloaded, username))
+            
+            # Log transaction
+            self._execute_query("""
+                INSERT INTO transactions (username, type, credits_used, leads_downloaded, platform, credits_remaining)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (username, "lead_download", credits_used, leads_downloaded, platform, user["credits"] - credits_used))
+            
         else:
             # JSON fallback
-            new_credits = max(0, old_credits - credits_used)
-            user["credits"] = new_credits
-            user["total_leads_downloaded"] = user.get("total_leads_downloaded", 0) + leads_downloaded
-
-            tx = {
+            user["credits"] -= credits_used
+            user["total_leads_downloaded"] += leads_downloaded
+            
+            transaction = {
                 "username": username,
                 "type": "lead_download",
                 "credits_used": credits_used,
                 "leads_downloaded": leads_downloaded,
                 "platform": platform,
                 "timestamp": datetime.now().isoformat(),
-                "credits_remaining": new_credits,
-                "credits_after": new_credits,
+                "credits_remaining": user["credits"]
             }
-            user.setdefault("transactions", []).append(tx)
-            self.transactions.append(tx)
+            
+            user.setdefault("transactions", []).append(transaction)
+            self.transactions.append(transaction)
             self.save_data()
+        
+        return True
 
-        return new_credits
-
-    def add_credits(self, username: str, credits: int, plan: str, stripe_session_id: str = None):
-        """Add credits to user account (from purchase) with proper plan handling.
-        Returns the new credits balance (or False on error)."""
+    def add_credits(self, username: str, credits: int, plan: str, stripe_session_id: str = None) -> bool:
+        """Add credits to user account (from purchase) with proper plan handling"""
         user = self.get_user_info(username)
         if not user:
             print(f"❌ User {username} not found for credit addition")
             return False
 
-        old_credits = int(user.get("credits", 0))
-        credits = int(credits)
+        old_credits = user.get("credits", 0)
         new_credits = old_credits + credits
-
-        # Plan handling logic (same as before)
+        
+        # Plan handling logic (same as original)
         if plan and plan.lower() not in ["unknown", "", "credit_purchase"]:
             new_plan = plan.lower()
-            print(f"🔧 Plan upgraded: {username} {user.get('plan','demo')} → {plan}")
+            print(f"🔧 Plan upgraded: {username} {user.get('plan', 'demo')} → {plan}")
         elif plan == "credit_purchase":
             new_plan = user.get("plan", "demo")
             print(f"💳 Credits added: {username} +{credits} (plan unchanged: {new_plan})")
         else:
+            # Infer plan from credits
             current_plan = user.get("plan", "demo")
             if current_plan == "demo":
                 if new_credits >= 10000:
@@ -520,19 +511,23 @@ class CreditSystem:
         print(f"💎 Credits: {old_credits} → {new_credits}")
 
         if self.use_postgres:
+            # Update user
             self._execute_query("""
-                UPDATE users SET credits = %s, plan = %s, updated_at = NOW() WHERE username = %s
+                UPDATE users SET credits = %s, plan = %s WHERE username = %s
             """, (new_credits, new_plan, username))
-
+            
+            # Log transaction
             self._execute_query("""
                 INSERT INTO transactions (username, type, credits_added, plan, stripe_session_id, credits_after)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, (username, "credit_purchase" if plan == "credit_purchase" else "plan_upgrade",
-                credits, new_plan, stripe_session_id or "unknown", new_credits))
+            """, (username, "credit_purchase" if plan == "credit_purchase" else "plan_upgrade", 
+                  credits, new_plan, stripe_session_id or "unknown", new_credits))
         else:
+            # JSON fallback
             user["credits"] = new_credits
             user["plan"] = new_plan
-            tx = {
+            
+            transaction = {
                 "username": username,
                 "type": "credit_purchase" if plan == "credit_purchase" else "plan_upgrade",
                 "credits_added": credits,
@@ -541,12 +536,12 @@ class CreditSystem:
                 "timestamp": datetime.now().isoformat(),
                 "credits_after": new_credits
             }
-            user.setdefault("transactions", []).append(tx)
-            self.transactions.append(tx)
+            
+            user.setdefault("transactions", []).append(transaction)
+            self.transactions.append(transaction)
             self.save_data()
 
-        return new_credits
-
+        return True
     
     # --- Add these methods inside CreditSystem ------------------------------
 
@@ -589,73 +584,6 @@ class CreditSystem:
         txs.insert(0, tx)
         info["transactions"] = txs
         return self.save_user_info(username, info)
-    
-    def invalidate_cache(self, username: str | None = None) -> bool:
-        """Compatibility no-op so callers can 'bust cache' safely."""
-        if self.use_postgres:
-            return True  # nothing cached in-memory
-        try:
-            self.load_data()
-            return True
-        except Exception:
-            return False
-
-    def refresh_user(self, username: str):
-        """Compatibility helper: re-fetch the latest row for a user."""
-        return self.get_user_info(username)
-
-    def get_live_credits(self, username: str) -> int | None:
-        """Return the freshest credits straight from the source of truth."""
-        try:
-            if self.use_postgres:
-                rows = self._execute_query(
-                    "SELECT credits FROM users WHERE username=%s",
-                    (username,), fetch=True
-                )
-                return int(rows[0]["credits"]) if rows else None
-            # JSON fallback
-            return int((self._users.get(username) or {}).get("credits", 0))
-        except Exception:
-            return None
-
-    def set_user_credits(self, username: str, value: int) -> bool:
-        """Force-set credits and log a transaction for traceability."""
-        try:
-            value = int(value)
-            if self.use_postgres:
-                row = self._execute_query(
-                    "SELECT credits FROM users WHERE username=%s",
-                    (username,), fetch=True
-                )
-                old_val = int(row[0]["credits"]) if row else 0
-
-                self._execute_query(
-                    "UPDATE users SET credits=%s, updated_at=NOW() WHERE username=%s",
-                    (value, username)
-                )
-                self._execute_query("""
-                    INSERT INTO transactions (username, type, credits_set, old_credits, new_credits, reason)
-                    VALUES (%s, 'credit_set', %s, %s, %s, %s)
-                """, (username, value, old_val, value, "manual set_user_credits"))
-            else:
-                u = self._users.setdefault(username, {})
-                old_val = int(u.get("credits", 0))
-                u["credits"] = value
-                self.transactions.append({
-                    "username": username,
-                    "type": "credit_set",
-                    "credits_set": value,
-                    "old_credits": old_val,
-                    "new_credits": value,
-                    "timestamp": datetime.now().isoformat(),
-                    "reason": "manual set_user_credits",
-                })
-                self.save_data()
-            return True
-        except Exception as e:
-            print(f"[set_user_credits] {username} failed: {e}")
-            return False
-
 
 
     def spend_credits(self, username: str, amount: int):
