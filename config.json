@@ -59,8 +59,8 @@
         "auto_deliver_leads": true
     },
     "global": {
-        "search_term": "fitness trainer",
-        "max_scrolls": 20,
+        "search_term": "",
+        "max_scrolls": 8,
         "enable_multilingual": true,
         "default_dm": "Hi there! I love your content and would be excited to connect. Let's chat!",
         "fallback_dm": "Hey! Just came across your profile and really impressed by your work. Would love to connect!",
@@ -77,7 +77,7 @@
             "lead_output_file": "twitter_leads.csv",
             "backup_output_file": "twitter_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 10,
+            "max_scrolls": 8,
             "excluded_accounts": [
                 "ai leads guy"
             ]
@@ -86,7 +86,7 @@
             "lead_output_file": "facebook_leads.csv",
             "backup_output_file": "facebook_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 40,
+            "max_scrolls": 8,
             "excluded_accounts": [
                 "Sidney Muhammad"
             ]
@@ -95,7 +95,7 @@
             "lead_output_file": "linkedin_leads.csv",
             "backup_output_file": "linkedin_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 12,
+            "max_scrolls": 8,
             "excluded_accounts": [
                 "4dgamingllc"
             ]
@@ -104,7 +104,7 @@
             "lead_output_file": "tiktok_leads.csv",
             "backup_output_file": "tiktok_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 40,
+            "max_scrolls": 8,
             "excluded_accounts": [
                 "eyenvest",
                 "HollyannMom"
@@ -114,7 +114,7 @@
             "lead_output_file": "youtube_leads.csv",
             "backup_output_file": "youtube_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 50,
+            "max_scrolls": 8,
             "excluded_accounts": [
                 "4dgamingllc"
             ]
@@ -123,7 +123,7 @@
             "lead_output_file": "medium_leads.csv",
             "backup_output_file": "medium_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 12,
+            "max_scrolls": 8,
             "excluded_accounts": [
                 "Ai leads guy"
             ]
@@ -132,17 +132,16 @@
             "lead_output_file": "instagram_leads.csv",
             "backup_output_file": "instagram_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 50,
+            "max_scrolls": 8,
             "excluded_accounts": [
                 "4smart_itech"
-                
             ]
         },
         "reddit": {
             "lead_output_file": "reddit_leads.csv",
             "backup_output_file": "reddit_leads_backup.csv",
             "location_csv": "locations.csv",
-            "max_scrolls": 40,
+            "max_scrolls": 8,
             "excluded_accounts": [
                 "AI-Leads-Guy"
             ]
@@ -172,9 +171,9 @@
             ]
         }
     },
-    "search_term": "crypto trader",
+    "search_term": "",
     "max_scrolls": 8,
     "enable_multilingual": true,
     "force_language": "english",
-    "last_updated": "2025-08-11T23:36:28.502701"
+    "last_updated": "2025-08-28T10:18:36.498558"
 }

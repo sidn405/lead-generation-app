@@ -9227,7 +9227,7 @@ with tab6:  # Settings tab
                             result = send_admin_package_notification(
                                 admin_email=admin_email,
                                 username="test",
-                                user_email="test@test.com",
+                                user_email="aileadsguy@gmail.com",
                                 package_type="test",
                                 amount=100,
                                 industry="test",
