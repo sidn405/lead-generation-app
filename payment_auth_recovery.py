@@ -6,13 +6,17 @@ Handles authentication restoration after Stripe payment returns
 """
 import streamlit as st
 from emailer import send_admin_package_notification, EMAIL_ADDRESS
-import os 
+import os
+import socket
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart 
 import json
 import stripe
 import time
 from datetime import datetime
 from typing import Tuple, Optional, Dict, Any
-
+import threading
 
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")
@@ -145,35 +149,187 @@ def _set_session_state(username: str, user_data: Dict) -> None:
     except:
         pass
 
+def send_email_async(admin_email, username, user_email, package_type, amount, industry, location, session_id, timestamp):
+    """Send email notification in background thread to avoid blocking UI"""
+    try:
+        def email_worker():
+            print(f"Background email worker starting for {username}")
+            try:
+                sent = send_admin_package_notification(
+                    admin_email=admin_email,
+                    username=username,
+                    user_email=user_email,
+                    package_type=package_type,
+                    amount=amount,
+                    industry=industry,
+                    location=location,
+                    session_id=session_id,
+                    timestamp=timestamp
+                )
+                if sent:
+                    print(f"Background email sent successfully for {username}")
+                else:
+                    print(f"Background email failed for {username}")
+            except Exception as e:
+                print(f"Background email error for {username}: {e}")
+                # Log failed email to file for manual processing
+                with open("failed_emails.log", "a") as f:
+                    f.write(f"{datetime.now()}: FAILED EMAIL - {username}, {package_type}, ${amount}, {industry}, {location} - Error: {e}\n")
+        
+        # Start email in background thread
+        email_thread = threading.Thread(target=email_worker, name=f"EmailWorker-{username}")
+        email_thread.daemon = True  # Dies when main program exits
+        email_thread.start()
+        
+        print(f"Email worker thread started for {username}")
+        return True  # Return immediately without waiting
+        
+    except Exception as e:
+        print(f"Failed to start email thread: {e}")
+        # Fallback - log order for manual processing
+        with open("custom_orders.log", "a") as f:
+            f.write(f"{datetime.now()}: THREAD_FAILED - {username}, {package_type}, ${amount}, {industry}, {location}\n")
+        return False
+
+# Updated _process_payment_success function:
 def _process_payment_success(query_params: Dict, username: str) -> None:
-    """Process payment success actions"""
-    # idempotency: avoid double-inserting on reruns/back navigations
+    """Process payment success with async email notifications"""
+    
+    # Prevent duplicate processing
     stamp = query_params.get("timestamp") or query_params.get("session_id")
     if stamp:
         flag = f"_pkg_proc_{stamp}"
         if st.session_state.get(flag):
+            print(f"Already processed payment {stamp}, skipping")
             return
         st.session_state[flag] = True
 
     try:
-        if "success" in query_params and "plan" in query_params:
-            plan = query_params.get("plan", "")
-            if plan:
-                print(f"📋 Processing plan upgrade to: {plan}")
-                # Update plan in system
+        if "success" in query_params:
+            # Handle plan upgrades (unchanged)
+            if "plan" in query_params:
+                plan = query_params.get("plan", "")
+                if plan:
+                    print(f"Processing plan upgrade to: {plan}")
+                    try:
+                        from postgres_credit_system import credit_system
+                        credit_system.update_user_plan(username, plan)
+                        if 'user_data' in st.session_state:
+                            st.session_state.user_data['plan'] = plan
+                        print(f"Updated plan to: {plan}")
+                    except Exception as e:
+                        print(f"Plan update warning: {e}")
+            
+            # Handle package purchases with async email
+            elif "package" in query_params:
+                package = query_params.get("package", "")
+                amount = query_params.get("amount", "0")
+                industry = query_params.get("industry", "").replace('+', ' ')
+                location = query_params.get("location", "").replace('+', ' ')
+                session_id = query_params.get("session_id", "")
+                
+                # Check if this is a custom build
+                requires_build = str(query_params.get("requires_build", "0")).lower() in ("1", "true", "yes")
+                
+                print(f"Processing package purchase: {package} for ${amount} (custom={requires_build})")
+                
+                # Always log the transaction first
                 try:
                     from postgres_credit_system import credit_system
-                    credit_system.update_user_plan(username, plan)
+                    package_transaction = {
+                        "type": "package_purchase",
+                        "package_type": package,
+                        "amount": float(amount),
+                        "industry": industry,
+                        "location": location,
+                        "timestamp": datetime.now().isoformat(),
+                        "status": "purchased",
+                        "requires_build": requires_build,
+                        "session_id": session_id
+                    }
                     
-                    # Update session state
-                    if 'user_data' in st.session_state:
-                        st.session_state.user_data['plan'] = plan
-                    
-                    print(f"✅ Updated plan to: {plan}")
+                    user_info = credit_system.get_user_info(username)
+                    if user_info:
+                        if "transactions" not in user_info:
+                            user_info["transactions"] = []
+                        user_info["transactions"].append(package_transaction)
+                        user_info["total_packages_purchased"] = user_info.get("total_packages_purchased", 0) + 1
+                        credit_system.save_data()
+                        print(f"Logged package purchase for {username}")
                 except Exception as e:
-                    print(f"⚠️ Plan update warning: {e}")
+                    print(f"Package logging warning: {e}")
+                
+                # Branch handling based on package type
+                if requires_build:
+                    # CUSTOM PACKAGE - Send email asynchronously
+                    print(f"Custom package - sending async admin notification")
+                    
+                    try:
+                        # Get user email safely
+                        user_data = st.session_state.get("user_data") or {}
+                        user_email = user_data.get("email", f"{username}@leadgeneratorempire.com")
+                        
+                        # Get admin email from environment
+                        admin_email = os.getenv("ADMIN_EMAIL") or os.getenv("SUPPORT_EMAIL") or EMAIL_ADDRESS
+                        
+                        # Send email asynchronously - don't wait for result
+                        thread_started = send_email_async(
+                            admin_email=admin_email,
+                            username=username,
+                            user_email=user_email,
+                            package_type=package,
+                            amount=float(amount),
+                            industry=industry,
+                            location=location,
+                            session_id=session_id,
+                            timestamp=stamp or str(int(time.time()))
+                        )
+                        
+                        if thread_started:
+                            print("Admin notification queued in background")
+                        else:
+                            print("Admin notification fallback logged")
+                            
+                    except Exception as e:
+                        print(f"Async email setup error: {e}")
+                    
+                    # Store package details for UI display - DON'T add to downloads
+                    st.session_state["package_industry"] = industry
+                    st.session_state["package_location"] = location
+                    st.session_state["custom_order_pending"] = True
+                    
+                else:
+                    # PREBUILT PACKAGE - Add to downloads immediately
+                    print(f"Prebuilt package - adding to downloads")
+                    
+                    try:
+                        from package_system import add_package_to_database
+                        name_map = {
+                            "starter": "Niche Starter Pack",
+                            "deep_dive": "Industry Deep Dive",
+                            "domination": "Market Domination",
+                        }
+                        display_name = name_map.get(package, package.replace("_", " ").title())
+                        add_package_to_database(username, display_name)
+                        
+                        # Cache for UI display
+                        st.session_state["package_industry"] = industry
+                        st.session_state["package_location"] = location
+                        st.session_state["prebuilt_package_ready"] = True
+                        
+                        print(f"Added {display_name} to downloads for {username}")
+                    except Exception as e:
+                        print(f"Package DB add warning: {e}")
+
     except Exception as e:
-        print(f"⚠️ Payment success processing error: {e}")
+        print(f"Payment success processing error: {e}")
+
+# Optional: Add a function to check email queue status
+def get_email_queue_status():
+    """Check how many email threads are currently running"""
+    import threading
+    email_threads = [t for t in threading.enumerate() if t.name.startswith("EmailWorker")]
+    return len(email_threads)
 
 def show_payment_success_message() -> bool:
     """
@@ -708,6 +864,324 @@ def debug_authentication_state(simple_auth_instance, credit_system) -> None:
                     st.error("❌ User not found")
             except Exception as e:
                 st.error(f"❌ Force login failed: {e}")
+                
+def debug_email_system():
+    """Comprehensive email debugging with step-by-step testing"""
+    
+    st.subheader("Email System Debug")
+    
+    # Step 1: Check environment variables
+    st.markdown("### Step 1: Environment Variables")
+    
+    env_vars = {
+        "SENDGRID_API_KEY": os.getenv("SENDGRID_API_KEY"),
+        "ADMIN_EMAIL": os.getenv("ADMIN_EMAIL"),
+        "SUPPORT_EMAIL": os.getenv("SUPPORT_EMAIL"), 
+        "SMTP_HOST": os.getenv("SMTP_HOST"),
+        "SMTP_USER": os.getenv("SMTP_USER"),
+        "SMTP_PASS": os.getenv("SMTP_PASS"),
+        "SMTP_PORT": os.getenv("SMTP_PORT"),
+        "EMAIL_ADDRESS": getattr(__import__('emailer'), 'EMAIL_ADDRESS', 'Not found')
+    }
+    
+    for key, value in env_vars.items():
+        if value:
+            masked_value = value[:8] + "..." + value[-4:] if len(value) > 12 else "SET"
+            st.success(f"{key}: {masked_value}")
+        else:
+            st.error(f"{key}: NOT SET")
+    
+    # Step 2: Network connectivity test
+    st.markdown("### Step 2: Network Connectivity")
+    
+    if st.button("Test Network Connectivity"):
+        hosts_to_test = [
+            ("Google DNS", "8.8.8.8", 53),
+            ("Gmail SMTP", "smtp.gmail.com", 587),
+            ("SendGrid", "api.sendgrid.com", 443),
+            ("Outlook SMTP", "smtp-mail.outlook.com", 587)
+        ]
+        
+        for name, host, port in hosts_to_test:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(5)
+                result = sock.connect_ex((host, port))
+                sock.close()
+                
+                if result == 0:
+                    st.success(f"{name} ({host}:{port}): REACHABLE")
+                else:
+                    st.error(f"{name} ({host}:{port}): BLOCKED (error {result})")
+            except Exception as e:
+                st.error(f"{name} ({host}:{port}): ERROR - {str(e)}")
+    
+    # Step 3: Test SendGrid if configured
+    sendgrid_key = os.getenv("SENDGRID_API_KEY")
+    if sendgrid_key:
+        st.markdown("### Step 3: SendGrid Test")
+        
+        if st.button("Test SendGrid"):
+            try:
+                import sendgrid
+                from sendgrid.helpers.mail import Mail
+                
+                sg = sendgrid.SendGridAPIClient(api_key=sendgrid_key)
+                
+                # Test with a simple email
+                admin_email = os.getenv("ADMIN_EMAIL") or "test@example.com"
+                
+                mail = Mail(
+                    from_email=admin_email,
+                    to_emails=admin_email,
+                    subject="Test Email from Lead Generator Empire",
+                    html_content="<p>This is a test email to verify SendGrid connectivity.</p>"
+                )
+                
+                response = sg.send(mail)
+                st.success(f"SendGrid test successful! Status: {response.status_code}")
+                
+            except ImportError:
+                st.error("SendGrid library not installed. Install with: pip install sendgrid")
+            except Exception as e:
+                st.error(f"SendGrid test failed: {str(e)}")
+    
+    # Step 4: Test SMTP if configured
+    smtp_host = os.getenv("SMTP_HOST")
+    if smtp_host:
+        st.markdown("### Step 4: SMTP Test")
+        
+        if st.button("Test SMTP"):
+            try:
+                smtp_user = os.getenv("SMTP_USER")
+                smtp_pass = os.getenv("SMTP_PASS")
+                smtp_port = int(os.getenv("SMTP_PORT", "587"))
+                
+                if not all([smtp_host, smtp_user, smtp_pass]):
+                    st.error("Missing SMTP credentials (SMTP_HOST, SMTP_USER, SMTP_PASS)")
+                    return
+                
+                # Test SMTP connection
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                    st.info("Connecting to SMTP server...")
+                    server.starttls()
+                    st.info("Starting TLS...")
+                    server.login(smtp_user, smtp_pass)
+                    st.info("Login successful...")
+                    
+                    # Send test email
+                    msg = MIMEText("Test email from Lead Generator Empire")
+                    msg["Subject"] = "Test Email"
+                    msg["From"] = smtp_user
+                    msg["To"] = smtp_user
+                    
+                    server.send_message(msg)
+                    st.success("SMTP test email sent successfully!")
+                    
+            except Exception as e:
+                st.error(f"SMTP test failed: {str(e)}")
+    
+    # Step 5: Test your actual email function
+    st.markdown("### Step 5: Test Your Email Function")
+    
+    if st.button("Test send_admin_package_notification"):
+        try:
+            # Get the actual function
+            from emailer import send_admin_package_notification, EMAIL_ADDRESS
+            
+            # Test with dummy data
+            admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
+            
+            result = send_admin_package_notification(
+                admin_email=admin_email,
+                username="test_user",
+                user_email="test@example.com", 
+                package_type="deep_dive",
+                amount=297.0,
+                industry="Education & Training",
+                location="United States",
+                session_id="test_session_123",
+                timestamp=str(int(time.time()))
+            )
+            
+            if result:
+                st.success("Email function test successful!")
+            else:
+                st.error("Email function returned False")
+                
+        except Exception as e:
+            st.error(f"Email function test failed: {str(e)}")
+            st.code(str(e))  # Show full error details
+    
+    # Step 6: Railway-specific network test
+    st.markdown("### Step 6: Railway Network Test")
+    
+    if st.button("Test Railway Network"):
+        try:
+            import requests
+            
+            # Test external HTTP requests
+            test_urls = [
+                "https://api.sendgrid.com/v3/mail/send",
+                "https://httpbin.org/get", 
+                "https://jsonplaceholder.typicode.com/posts/1"
+            ]
+            
+            for url in test_urls:
+                try:
+                    response = requests.get(url, timeout=5)
+                    st.success(f"{url}: HTTP {response.status_code}")
+                except requests.exceptions.Timeout:
+                    st.error(f"{url}: TIMEOUT")
+                except requests.exceptions.ConnectionError:
+                    st.error(f"{url}: CONNECTION BLOCKED")
+                except Exception as e:
+                    st.error(f"{url}: ERROR - {str(e)}")
+                    
+        except ImportError:
+            st.error("Requests library not available")
+        except Exception as e:
+            st.error(f"Network test failed: {str(e)}")
+
+def debug_specific_email_error():
+    """Debug the exact email error you're seeing"""
+    
+    st.subheader("Specific Error Debug")
+    
+    if st.button("Replicate Email Error"):
+        try:
+            # Replicate the exact conditions when the error occurs
+            username = "jane"
+            package_type = "deep_dive" 
+            amount = 297.0
+            industry = "Education & Training"
+            location = "United States"
+            
+            # Try each email method individually
+            st.markdown("**Testing each email method:**")
+            
+            # Test 1: SendGrid
+            try:
+                sendgrid_key = os.getenv("SENDGRID_API_KEY")
+                if sendgrid_key:
+                    st.info("Testing SendGrid...")
+                    import sendgrid
+                    from sendgrid.helpers.mail import Mail
+                    
+                    sg = sendgrid.SendGridAPIClient(api_key=sendgrid_key)
+                    admin_email = os.getenv("ADMIN_EMAIL", "support@leadgeneratorempire.com")
+                    
+                    mail = Mail(
+                        from_email=admin_email,
+                        to_emails=admin_email,
+                        subject=f"TEST - Custom Order - {username}",
+                        html_content=f"<p>Test custom order: {package_type} for ${amount}</p>"
+                    )
+                    
+                    response = sg.send(mail)
+                    st.success(f"SendGrid: SUCCESS (Status {response.status_code})")
+                else:
+                    st.warning("SendGrid: Not configured")
+                    
+            except Exception as e:
+                st.error(f"SendGrid: FAILED - {str(e)}")
+            
+            # Test 2: SMTP
+            try:
+                smtp_host = os.getenv("SMTP_HOST")
+                if smtp_host:
+                    st.info("Testing SMTP...")
+                    
+                    smtp_user = os.getenv("SMTP_USER")
+                    smtp_pass = os.getenv("SMTP_PASS") 
+                    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+                    
+                    with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                        server.starttls()
+                        server.login(smtp_user, smtp_pass)
+                        
+                        msg = MIMEText(f"Test custom order: {package_type} for ${amount}")
+                        msg["Subject"] = f"TEST - Custom Order - {username}"
+                        msg["From"] = smtp_user
+                        msg["To"] = smtp_user
+                        
+                        server.send_message(msg)
+                        st.success("SMTP: SUCCESS")
+                else:
+                    st.warning("SMTP: Not configured")
+                    
+            except Exception as e:
+                st.error(f"SMTP: FAILED - {str(e)}")
+            
+            # Test 3: Your actual function
+            try:
+                st.info("Testing your send_admin_package_notification function...")
+                from emailer import send_admin_package_notification, EMAIL_ADDRESS
+                
+                admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
+                
+                result = send_admin_package_notification(
+                    admin_email=admin_email,
+                    username=username,
+                    user_email=f"{username}@test.com",
+                    package_type=package_type,
+                    amount=amount,
+                    industry=industry,
+                    location=location,
+                    session_id="debug_session",
+                    timestamp=str(int(time.time()))
+                )
+                
+                if result:
+                    st.success("Your email function: SUCCESS")
+                else:
+                    st.error("Your email function: RETURNED FALSE")
+                    
+            except Exception as e:
+                st.error(f"Your email function: FAILED - {str(e)}")
+                
+        except Exception as e:
+            st.error(f"Debug test failed: {str(e)}")
+
+def check_railway_email_limitations():
+    """Check Railway-specific email limitations"""
+    
+    st.markdown("### Railway Email Limitations")
+    st.markdown("""
+    **Common Railway email issues:**
+    - Outbound SMTP ports may be blocked (25, 465, 587)
+    - Some email providers block container IPs
+    - Railway may have network restrictions
+    
+    **Solutions:**
+    1. Use SendGrid (HTTP API, not SMTP)
+    2. Use webhooks to external email service
+    3. Use Railway's recommended email providers
+    """)
+    
+    # Test HTTP vs SMTP
+    if st.button("Compare HTTP vs SMTP"):
+        st.markdown("**HTTP-based email (SendGrid):**")
+        try:
+            import requests
+            response = requests.get("https://api.sendgrid.com", timeout=5)
+            st.success(f"SendGrid API reachable: {response.status_code}")
+        except Exception as e:
+            st.error(f"SendGrid API unreachable: {e}")
+        
+        st.markdown("**SMTP-based email:**")
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            result = sock.connect_ex(("smtp.gmail.com", 587))
+            sock.close()
+            
+            if result == 0:
+                st.success("SMTP port 587 reachable")
+            else:
+                st.error(f"SMTP port 587 blocked (error {result})")
+        except Exception as e:
+            st.error(f"SMTP test error: {e}")
                 
 def create_custom_package_session(stripe, username, industry, location):
     """Example: Create a custom package session"""
