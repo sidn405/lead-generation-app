@@ -9190,329 +9190,320 @@ with tab6:  # Settings tab
             # View statistics
             st.markdown("---")
             st.subheader("📊 Detailed Usage Statistics")
+            transactions = (user_info or {}).get("transactions", [])
+            recent_transactions = sorted(transactions, key=lambda x: x.get("timestamp", ""), reverse=True)
+            
 
-            # --- SAFE seed so totals/platforms/last_session always exist ---
-            ensure_stats_in_store(username)  # no-op if already present
-            st.session_state["stats"] = load_empire_stats(username)
-            _stats = st.session_state.get("stats")
-            if not isinstance(_stats, dict):
-                _stats = {
-                    "totals": {"leads": 0, "campaigns": 0, "credits_used": 0},
-                    "platforms": {},
-                    "last_session": {},
-                }
-
-            totals       = _stats.get("totals") or {}
-            platforms    = _stats.get("platforms") or {}
-            last_session = _stats.get("last_session") or {}
+            # View statistics
+            st.markdown("---")
+            st.subheader("📊 Detailed Usage Statistics")
 
             try:
-                user_info = credit_system.get_user_info(username)
-                if user_info:
-                    # ✅ ENHANCED USAGE METRICS WITH DYNAMIC CREDITS
-                    usage_col1, usage_col2, usage_col3, usage_col4 = st.columns(4)
-                    
-                    from datetime import datetime
-
-                    is_demo = (user_plan or "demo").lower() == "demo"
-                    txs = (user_info or {}).get("transactions", []) or []
-
-                    with usage_col1:
-                        if is_demo:
-                            try:
-                                can_demo, remaining = credit_system.can_use_demo(username)
-                                demo_used = 5 - int(remaining)
-                            except Exception:
-                                # fallback: clamp to 0..5 from any stored total
-                                demo_used = max(0, min(5, int(user_info.get("total_leads_downloaded", 0))))
-                            st.metric("Total Leads Generated", demo_used)
-                        else:
-                            st.metric("Total Leads Generated", int(user_info.get("total_leads_downloaded", 0)))
-
-                    with usage_col2:
-                        total_campaigns = len(txs)
-                        st.metric("Campaigns Run", total_campaigns)
-
-                    with usage_col3:
-                        if is_demo:
-                            try:
-                                can_demo, remaining = credit_system.can_use_demo(username)
-                                demo_used = 5 - int(remaining)
-                                st.metric("Demo Leads Used", f"{demo_used}/5")
-                            except Exception:
-                                st.metric("Demo Leads Used", "5/5")
-                        else:
-                            # Dynamic credits used = (starting credits + purchases + top-ups) - current_credits
-                            try:
-                                current_credits_now = int(current_credits if current_credits is not None else simple_auth.get_user_credits() or 0)
-                            except Exception:
-                                current_credits_now = int(user_info.get("credits", 0))
-
-                            starting_by_plan = {"starter": 250, "pro": 2000, "ultimate": 5000}
-                            starting = int(starting_by_plan.get((user_plan or "").lower(), 0))
-
-                            purchased = sum(int(tx.get("credits_added", 0) or 0) for tx in txs if tx.get("type") == "credit_purchase")
-                            # include any monthly top-ups if you log them (optional)
-                            topups = sum(int(tx.get("credits_added", 0) or 0) for tx in txs if tx.get("type") in ("subscription_topup","plan_activation"))
-
-                            total_ever = starting + purchased + topups
-                            used = max(total_ever - current_credits_now, 0)
-                            st.metric("Credits Used", used, delta=f"of {total_ever}")
-
-                    with usage_col4:
-                        created_at = (user_info or {}).get("created_at", "")
-                        if created_at:
-                            try:
-                                days_active = (datetime.now() - datetime.fromisoformat(created_at)).days
-                                st.metric("Days Active", days_active)
-                            except Exception:
-                                st.metric("Status", "Active")
-                        else:
-                            st.metric("Status", "Active")
-
-                    # ============================================================
-                    # ✅ PLATFORM PERFORMANCE + RECENT ACTIVITY + QUICK STATS
-                    # (Drop-in replacement; safe if user_info['transactions'] is missing)
-                    # ============================================================
-                    transactions = (user_info or {}).get("transactions", [])
-                    recent_transactions = sorted(transactions, key=lambda x: x.get("timestamp", ""), reverse=True)
-
-                    st.markdown("---")
-                    st.subheader("🎯 Platform Performance")
-
-                    from datetime import datetime
-                    import time
-
-                    # 1) Build per-platform lead counts from CSVs (same source as the sidebar totals)
-                    platform_leads = calculate_empire_from_csvs(current_username)  # dict: platform -> leads
-                    total_leads_pp = sum(platform_leads.values())
-
-                    # Derive a simple campaign count: number of CSV files with >0 rows for this user
-                    user_csv_files = [f for f in get_user_csv_files(current_username) if f.get("leads", 0) > 0]
-                    total_campaigns = sum(1 for f in user_csv_files if f.get("leads", 0) > 0)
-
-                    if total_leads_pp > 0:
-                        # Sort platforms by total leads
-                        sorted_platforms = sorted(platform_leads.items(), key=lambda x: x[1], reverse=True)
-
-                        platform_emojis = {
-                            'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
-                            'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
-                            'medium': '📝', 'reddit': '🗨️', 'unknown': '📱'
-                        }
-
-                        colA, colB, colC = st.columns(3)
-
-                        with colA:
-                            st.markdown("**📊 Leads by Platform**")
-                            for plat, leads in sorted_platforms[:8]:
-                                pct = (leads / total_leads_pp * 100.0) if total_leads_pp else 0.0
-                                st.metric(f"{platform_emojis.get(plat,'📱')} {plat.title()}", leads, delta=f"{pct:.1f}%")
-
-                        with colB:
-                            st.markdown("**🎯 Performance Metrics**")
-                            best = sorted_platforms[0]
-                            st.metric("🏆 Top Platform", best[0].title(), delta=f"{best[1]} leads")
-                            avg_leads = (total_leads_pp / total_campaigns) if total_campaigns else 0.0
-                            st.metric("📈 Avg Leads/Campaign", f"{avg_leads:.1f}")
-                            st.metric("🌍 Active Platforms", len([1 for _, v in platform_leads.items() if v > 0]))
-
-                        with colC:
-                            st.markdown("**⚡ Efficiency Stats**")
-                            st.metric("🚀 Total Campaigns", total_campaigns)
-                            # Success rate as "campaigns with >0 leads / total campaigns" -> here equal to 100% by construction
-                            success_rate = 100.0 if total_campaigns else 0.0
-                            st.metric("✅ Success Rate", f"{success_rate:.1f}%")
-
-                        # Simple distribution bars
-                        st.markdown("**📊 Platform Distribution**")
-                        bar_cols = st.columns(max(1, len(sorted_platforms)))
-                        max_leads = max(v for _, v in sorted_platforms)
-                        for i, (plat, leads) in enumerate(sorted_platforms):
-                            with bar_cols[i]:
-                                st.markdown(f"**{platform_emojis.get(plat,'📱')} {plat.title()}**")
-                                st.progress(leads / max_leads if max_leads else 0.0)
-                                st.caption(f"{leads} leads ({(leads/total_leads_pp*100):.1f}%)")
-
-                    else:
-                        st.info("📊 No platform performance data yet. Generate some leads to see your stats!")
-
-                    # 5) Recent Activity (DB + CSV fallback)
-                    # ----------------------------------------------------------------
-                    st.markdown("---")
-
-                    from datetime import datetime
-                    import os
-
-                    # 1) Start with DB transactions if present
-                    combined_tx = list(transactions or [])
-
-                    # 2) Fallback: synthesize "lead_download" events from user's CSV files
+                # --- helpers (safe casts) ---
+                def _as_int(x, default=0):
                     try:
-                        csv_meta = get_user_csv_files(current_username)  # [{'file','name','platform','leads','date','size_mb'}, ...]
-                        csv_tx = []
-                        for m in csv_meta:
-                            leads = int(m.get("leads", 0) or 0)
-                            if leads <= 0:
-                                continue
-                            fp = m.get("file")
-                            ts = None
-                            try:
-                                ts = datetime.fromtimestamp(os.path.getmtime(fp)).isoformat()
-                            except Exception:
-                                # fall back to the display date (less precise)
-                                ts = datetime.now().isoformat()
-                            csv_tx.append({
-                                "type": "lead_download",
-                                "timestamp": ts,
-                                "platform": m.get("platform", "unknown"),
-                                "leads_downloaded": leads,
-                            })
-                        combined_tx += csv_tx
-                    except Exception as e:
-                        print(f"[activity] CSV fallback failed: {e}")
-
-                    # 3) De-duplicate + sort (by timestamp desc)
-                    def _key(tx):
-                        return (
-                            tx.get("type", ""),
-                            tx.get("platform", ""),
-                            tx.get("timestamp", ""),
-                            int(tx.get("leads_downloaded", tx.get("credits_added", 0) or 0)),
-                        )
-
-                    seen, merged = set(), []
-                    for tx in combined_tx:
-                        k = _key(tx)
-                        if k not in seen:
-                            seen.add(k)
-                            merged.append(tx)
-
-                    # parse timestamps safely for sorting
-                    def _parse_ts(s):
+                        return int(x)
+                    except Exception:
                         try:
-                            return datetime.fromisoformat(s)
+                            return int(float(x))
                         except Exception:
-                            return datetime.min
+                            return default
 
-                    recent_transactions = sorted(merged, key=lambda x: _parse_ts(x.get("timestamp", "")), reverse=True)
+                def _first(*vals, default=0):
+                    for v in vals:
+                        if v is None:
+                            continue
+                        if isinstance(v, dict) and not v:
+                            continue
+                        return v
+                    return default
 
-                    if recent_transactions:
-                        recent_count = len(recent_transactions)
+                # --- load live + snapshot stats ---
+                ensure_stats_in_store(username)
 
-                        c1, c2, c3 = st.columns(3)
-                        with c1:
-                            st.metric("📋 Total Activities", recent_count)
+                try:
+                    if hasattr(load_empire_stats, "clear"):
+                        load_empire_stats.clear()
+                except Exception:
+                    pass
 
-                        with c2:
-                            latest = recent_transactions[0]
-                            latest_type = latest.get("type", "unknown")
-                            if latest_type == "lead_download":
-                                n = int(latest.get("leads_downloaded", latest.get("credits_added", 0) or 0))
-                                summary = f"Generated {n} leads"
-                            elif latest_type == "credit_purchase":
-                                n = int(latest.get("credits_added", 0) or 0)
-                                summary = f"Purchased {n} credits"
-                            else:
-                                summary = latest_type.replace("_", " ").title()
-                            st.metric("🕒 Latest Activity", summary)
+                st.session_state["stats"] = load_empire_stats(username)
+                _stats        = st.session_state.get("stats") or {}
+                _totals       = _stats.get("totals") or {}
+                _platforms    = _stats.get("platforms") or {}
+                _last_session = _stats.get("last_session") or {}
 
-                        with c3:
-                            ts_list = [_parse_ts(t.get("timestamp", "")) for t in recent_transactions if t.get("timestamp")]
-                            ts_list = [t for t in ts_list if t != datetime.min]
-                            if len(ts_list) >= 2:
-                                span_days = (max(ts_list) - min(ts_list)).days
-                                st.metric("📅 Activity Span", f"{span_days} days")
-                            else:
-                                st.metric("📅 Status", "Active")
+                user_info = credit_system.get_user_info(username) or {}
+                txs = (user_info.get("transactions") or [])
+                is_demo = (user_plan or "").lower() == "demo"
 
-                        with st.expander(f"📋 View Detailed Activity History ({recent_count} entries)", expanded=False):
-                            st.markdown("**Recent Activity Timeline:**")
-                            # emoji map (reuse whatever you already have if defined)
-                            platform_emojis = {
-                                "twitter": "🐦", "facebook": "📘", "linkedin": "💼",
-                                "tiktok": "🎵", "instagram": "📸", "youtube": "🎥",
-                                "medium": "📝", "reddit": "🗨️", "unknown": "📱"
-                            }
-                            for tx in recent_transactions[:15]:
-                                tx_type = tx.get("type", "unknown")
-                                ts_raw = tx.get("timestamp", "")
-                                try:
-                                    tx_date = datetime.fromisoformat(ts_raw).strftime("%m/%d %H:%M") if ts_raw else "Unknown"
-                                except Exception:
-                                    tx_date = ts_raw or "Unknown"
-
-                                if tx_type == "lead_download":
-                                    n = int(tx.get("leads_downloaded", tx.get("credits_added", 0) or 0))
-                                    plat = (tx.get("platform", "unknown") or "unknown").lower()  # ✅ no function call
-                                    emoji = platform_emojis.get(plat, "📱")
-                                    st.success(f"{emoji} **{tx_date}**: Generated **{n}** leads from {plat.title()}")
-                                elif tx_type == "credit_purchase":
-                                    n = int(tx.get("credits_added", 0) or 0)
-                                    st.info(f"💳 **{tx_date}**: Purchased **{n}** credits")
-                                else:
-                                    st.caption(f"📋 **{tx_date}**: {tx_type.replace('_',' ').title()}")
-
-                            if len(recent_transactions) > 15:
-                                st.caption(f"... and {len(recent_transactions) - 15} more activities")
-                            if st.button("📄 Export Full Activity History"):
-                                import pandas as pd
-                                export_data = [{
-                                    "Date": tx.get("timestamp", ""),
-                                    "Type": tx.get("type", ""),
-                                    "Platform": tx.get("platform", ""),
-                                    "Leads": int(tx.get("leads_downloaded", tx.get("credits_added", 0) or 0)),
-                                    "Credits": int(tx.get("credits_added", 0) or 0),
-                                } for tx in recent_transactions]
-                                st.download_button(
-                                    label="📥 Download Activity History",
-                                    data=pd.DataFrame(export_data).to_csv(index=False),
-                                    file_name=f"activity_history_{current_username}_{datetime.now().strftime('%Y%m%d')}.csv",
-                                    mime="text/csv",
-                                )
-                    else:
-                        st.info("📋 No activity yet - start generating leads to see your history!")
-
-                    st.markdown("---")
-                    st.subheader("⚡ Quick Stats Summary")
-                    
-                    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
-                    
-                    with summary_col1:
-                        leads_per_day = total_leads / max(days_active, 1) if 'days_active' in locals() else 0
-                        st.metric("📈 Leads/Day", f"{leads_per_day:.1f}")
-                    
-                    with summary_col2:
-                        if platform_leads:
-                            best_platform_name = max(platform_leads, key=platform_leads.get)
-                            st.metric("🏆 Best Platform", best_platform_name.title())
-                        else:
-                            st.metric("🏆 Best Platform", "None yet")
-                    
-                    with summary_col3:
-                        avg_campaign_size = total_leads / total_campaigns if total_campaigns > 0 else 0
-                        st.metric("🎯 Avg Campaign", f"{avg_campaign_size:.1f} leads")
-                    
-                    with summary_col4:
-                        efficiency = (total_leads / max(days_active, 1)) if 'days_active' in locals() and days_active > 0 else 0
-                        st.metric("⚡ Efficiency", f"{efficiency:.1f}/day")
-
+                # ------- Total Leads Generated -------
+                if is_demo:
+                    try:
+                        can_demo, remaining = credit_system.can_use_demo(username)
+                        total_leads = max(0, 5 - _as_int(remaining, 5))
+                    except Exception:
+                        total_leads = _as_int(user_info.get("total_leads_downloaded"),
+                                            _as_int(_totals.get("leads")))
                 else:
-                    st.warning("⚠️ Could not load usage data")
-                    
+                    total_leads = _as_int(
+                        _first(
+                            user_info.get("total_leads_downloaded"),
+                            _totals.get("leads"),
+                            sum(_as_int(v) for v in _platforms.values())
+                        )
+                    )
+
+                # ------- Campaigns Run -------
+                campaigns_run = max(len(txs), _as_int(_totals.get("campaigns")))
+
+                # ------- Credits Used (paid only) -------
+                if is_demo:
+                    try:
+                        can_demo, remaining = credit_system.can_use_demo(username)
+                        demo_used = 5 - _as_int(remaining, 5)
+                        credits_used = f"{demo_used}/5"
+                    except Exception:
+                        credits_used = "5/5"
+                else:
+                    try:
+                        current_credits_now = _as_int(
+                            current_credits if current_credits is not None else simple_auth.get_user_credits()
+                        )
+                    except Exception:
+                        current_credits_now = _as_int(user_info.get("credits"))
+
+                    starting_by_plan = {"starter": 250, "pro": 2000, "ultimate": 5000}
+                    starting = _as_int(starting_by_plan.get((user_plan or "").lower(), 0))
+                    purchased = sum(_as_int(tx.get("credits_added")) for tx in txs if tx.get("type") == "credit_purchase")
+                    topups    = sum(_as_int(tx.get("credits_added")) for tx in txs if tx.get("type") in ("subscription_topup","plan_activation"))
+                    total_ever = starting + purchased + topups
+                    used_val = max(total_ever - current_credits_now, 0)
+                    credits_used = (used_val, total_ever)
+
+                # ------- Member Since / Days Active -------
+                created_at = _first(
+                    user_info.get("created_at"),
+                    (st.session_state.get('user_data') or {}).get('created_at'),
+                    ""
+                )
+
+                # ---------------------------
+                # RENDER the four metrics
+                # ---------------------------
+                usage_col1, usage_col2, usage_col3, usage_col4 = st.columns(4)
+
+                with usage_col1:
+                    st.metric("Total Leads Generated", total_leads)
+
+                with usage_col2:
+                    st.metric("Campaigns Run", campaigns_run)
+
+                with usage_col3:
+                    if is_demo:
+                        st.metric("Demo Leads Used", credits_used)
+                    else:
+                        val, of_total = credits_used if isinstance(credits_used, tuple) else (credits_used, None)
+                        st.metric("Credits Used", _as_int(val), delta=(f"of {of_total}" if of_total is not None else None))
+
+                with usage_col4:
+                    if created_at:
+                        try:
+                            days_active = (datetime.now() - datetime.fromisoformat(created_at)).days
+                            st.metric("Days Active", _as_int(days_active))
+                        except Exception:
+                            st.metric("Status", "Active")
+                    else:
+                        st.metric("Status", "Active")
+
+                # ===== Platform Performance =====
+                st.markdown("---")
+                st.subheader("🎯 Platform Performance")
+
+                platform_leads = calculate_empire_from_csvs(username)  # dict: platform -> leads
+                total_leads_pp = sum(platform_leads.values())
+                user_csv_files = [f for f in get_user_csv_files(username) if f.get("leads", 0) > 0]
+                total_campaigns_pp = sum(1 for f in user_csv_files if f.get("leads", 0) > 0)
+
+                if total_leads_pp > 0:
+                    sorted_platforms = sorted(platform_leads.items(), key=lambda x: x[1], reverse=True)
+                    platform_emojis = {
+                        'twitter': '🐦', 'facebook': '📘', 'linkedin': '💼',
+                        'tiktok': '🎵', 'instagram': '📸', 'youtube': '🎥',
+                        'medium': '📝', 'reddit': '🗨️', 'unknown': '📱'
+                    }
+                    colA, colB, colC = st.columns(3)
+
+                    with colA:
+                        st.markdown("**📊 Leads by Platform**")
+                        for plat, leads in sorted_platforms[:8]:
+                            pct = (leads / total_leads_pp * 100.0) if total_leads_pp else 0.0
+                            st.metric(f"{platform_emojis.get(plat,'📱')} {plat.title()}", leads, delta=f"{pct:.1f}%")
+
+                    with colB:
+                        st.markdown("**🎯 Performance Metrics**")
+                        best = sorted_platforms[0]
+                        st.metric("🏆 Top Platform", best[0].title(), delta=f"{best[1]} leads")
+                        avg_leads = (total_leads_pp / total_campaigns_pp) if total_campaigns_pp else 0.0
+                        st.metric("📈 Avg Leads/Campaign", f"{avg_leads:.1f}")
+                        st.metric("🌍 Active Platforms", len([1 for _, v in platform_leads.items() if v > 0]))
+
+                    with colC:
+                        st.markdown("**⚡ Efficiency Stats**")
+                        st.metric("🚀 Total Campaigns", total_campaigns_pp)
+                        success_rate = 100.0 if total_campaigns_pp else 0.0
+                        st.metric("✅ Success Rate", f"{success_rate:.1f}%")
+
+                    st.markdown("**📊 Platform Distribution**")
+                    bar_cols = st.columns(max(1, len(sorted_platforms)))
+                    max_leads = max(v for _, v in sorted_platforms)
+                    for i, (plat, leads) in enumerate(sorted_platforms):
+                        with bar_cols[i]:
+                            st.markdown(f"**{platform_emojis.get(plat,'📱')} {plat.title()}**")
+                            st.progress(leads / max_leads if max_leads else 0.0)
+                            st.caption(f"{leads} leads ({(leads/total_leads_pp*100):.1f}%)")
+                else:
+                    st.info("📊 No platform performance data yet. Generate some leads to see your stats!")
+
+                # ===== Recent Activity =====
+                st.markdown("---")
+                transactions = (user_info or {}).get("transactions", [])
+                combined_tx = list(transactions or [])
+
+                try:
+                    csv_meta = get_user_csv_files(username)
+                    csv_tx = []
+                    for m in csv_meta:
+                        leads = int(m.get("leads", 0) or 0)
+                        if leads <= 0:
+                            continue
+                        fp = m.get("file")
+                        try:
+                            ts = datetime.fromtimestamp(os.path.getmtime(fp)).isoformat()
+                        except Exception:
+                            ts = datetime.now().isoformat()
+                        csv_tx.append({
+                            "type": "lead_download",
+                            "timestamp": ts,
+                            "platform": m.get("platform", "unknown"),
+                            "leads_downloaded": leads,
+                        })
+                    combined_tx += csv_tx
+                except Exception as e:
+                    print(f"[activity] CSV fallback failed: {e}")
+
+                def _parse_ts(s):
+                    try:
+                        return datetime.fromisoformat(s)
+                    except Exception:
+                        return datetime.min
+
+                def _key(tx):
+                    return (
+                        tx.get("type", ""),
+                        tx.get("platform", ""),
+                        tx.get("timestamp", ""),
+                        int(tx.get("leads_downloaded", tx.get("credits_added", 0) or 0)),
+                    )
+
+                seen, merged = set(), []
+                for tx in combined_tx:
+                    k = _key(tx)
+                    if k not in seen:
+                        seen.add(k)
+                        merged.append(tx)
+
+                recent_transactions = sorted(merged, key=lambda x: _parse_ts(x.get("timestamp", "")), reverse=True)
+
+                if recent_transactions:
+                    recent_count = len(recent_transactions)
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.metric("📋 Total Activities", recent_count)
+                    with c2:
+                        latest = recent_transactions[0]
+                        latest_type = latest.get("type", "unknown")
+                        if latest_type == "lead_download":
+                            n = int(latest.get("leads_downloaded", latest.get("credits_added", 0) or 0))
+                            summary = f"Generated {n} leads"
+                        elif latest_type == "credit_purchase":
+                            n = int(latest.get("credits_added", 0) or 0)
+                            summary = f"Purchased {n} credits"
+                        else:
+                            summary = latest_type.replace("_", " ").title()
+                        st.metric("🕒 Latest Activity", summary)
+                    with c3:
+                        ts_list = [_parse_ts(t.get("timestamp", "")) for t in recent_transactions if t.get("timestamp")]
+                        ts_list = [t for t in ts_list if t != datetime.min]
+                        if len(ts_list) >= 2:
+                            span_days = (max(ts_list) - min(ts_list)).days
+                            st.metric("📅 Activity Span", f"{span_days} days")
+                        else:
+                            st.metric("📅 Status", "Active")
+
+                    with st.expander(f"📋 View Detailed Activity History ({recent_count} entries)", expanded=False):
+                        platform_emojis = {
+                            "twitter": "🐦", "facebook": "📘", "linkedin": "💼",
+                            "tiktok": "🎵", "instagram": "📸", "youtube": "🎥",
+                            "medium": "📝", "reddit": "🗨️", "unknown": "📱"
+                        }
+                        for tx in recent_transactions[:15]:
+                            tx_type = tx.get("type", "unknown")
+                            ts_raw = tx.get("timestamp", "")
+                            try:
+                                tx_date = datetime.fromisoformat(ts_raw).strftime("%m/%d %H:%M") if ts_raw else "Unknown"
+                            except Exception:
+                                tx_date = ts_raw or "Unknown"
+
+                            if tx_type == "lead_download":
+                                n = int(tx.get("leads_downloaded", tx.get("credits_added", 0) or 0))
+                                plat = (tx.get("platform", "unknown") or "unknown").lower()
+                                emoji = platform_emojis.get(plat, "📱")
+                                st.success(f"{emoji} **{tx_date}**: Generated **{n}** leads from {plat.title()}")
+                            elif tx_type == "credit_purchase":
+                                n = int(tx.get("credits_added", 0) or 0)
+                                st.info(f"💳 **{tx_date}**: Purchased **{n}** credits")
+                            else:
+                                st.caption(f"📋 **{tx_date}**: {tx_type.replace('_',' ').title()}")
+
+                        if len(recent_transactions) > 15:
+                            st.caption(f"... and {len(recent_transactions) - 15} more activities")
+                else:
+                    st.info("📋 No activity yet - start generating leads to see your history!")
+
+                # ===== Quick Stats =====
+                st.markdown("---")
+                st.subheader("⚡ Quick Stats Summary")
+
+                summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+                with summary_col1:
+                    leads_per_day = total_leads / max(locals().get("days_active", 0) or 1, 1)
+                    st.metric("📈 Leads/Day", f"{leads_per_day:.1f}")
+                with summary_col2:
+                    if platform_leads:
+                        best_platform_name = max(platform_leads, key=platform_leads.get)
+                        st.metric("🏆 Best Platform", best_platform_name.title())
+                    else:
+                        st.metric("🏆 Best Platform", "None yet")
+                with summary_col3:
+                    avg_campaign_size = total_leads / (total_campaigns_pp or 1)
+                    st.metric("🎯 Avg Campaign", f"{avg_campaign_size:.1f} leads")
+                with summary_col4:
+                    efficiency = total_leads / max(locals().get("days_active", 0) or 1, 1)
+                    st.metric("⚡ Efficiency", f"{efficiency:.1f}/day")
+
             except Exception as e:
                 st.error(f"❌ Error loading usage data: {str(e)}")
-                
-                # ✅ DEBUG INFO FOR TROUBLESHOOTING
                 with st.expander("🔍 Debug Information", expanded=False):
                     st.code(f"""
-                    Error: {str(e)}
-                    Username: {username if 'username' in locals() else 'Not set'}
-                    User Plan: {user_plan if 'user_plan' in locals() else 'Not set'}
-                    Session Credits: {st.session_state.get('credits', 'Not set')}
-                    """)
-                    
-            st.markdown("---")            
+            Error: {str(e)}
+            Username: {username}
+            User Plan: {user_plan}
+            Session Credits: {st.session_state.get('credits', 'Not set')}
+            """)
+
+            st.markdown("---")
+            
             # Personal Preferences
             st.subheader("🎯 Lead Generation Preferences")
 
