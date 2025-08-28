@@ -174,100 +174,9 @@ def notify_support_order(*, username, user_email, package_type, amount, industry
     else:  # 'none'
         return True
 
-
-def send_email_async(admin_email, username, user_email, package_type, amount, industry, location, session_id, timestamp):
-    """Send email notification in background thread to avoid blocking UI"""
-    try:
-        def email_worker():
-            print(f"Background email worker starting for {username}")
-            try:
-                sent = send_admin_package_notification(
-                    admin_email=admin_email,
-                    username=username,
-                    user_email=user_email,
-                    package_type=package_type,
-                    amount=amount,
-                    industry=industry,
-                    location=location,
-                    session_id=session_id,
-                    timestamp=timestamp
-                )
-                if sent:
-                    print(f"Background email sent successfully for {username}")
-                else:
-                    print(f"Background email failed for {username}")
-            except Exception as e:
-                print(f"Background email error for {username}: {e}")
-                # Log failed email to file for manual processing
-                with open("failed_emails.log", "a") as f:
-                    f.write(f"{datetime.now()}: FAILED EMAIL - {username}, {package_type}, ${amount}, {industry}, {location} - Error: {e}\n")
-        
-        # Start email in background thread
-        email_thread = threading.Thread(target=email_worker, name=f"EmailWorker-{username}")
-        email_thread.daemon = True  # Dies when main program exits
-        email_thread.start()
-        
-        print(f"Email worker thread started for {username}")
-        return True  # Return immediately without waiting
-        
-    except Exception as e:
-        print(f"Failed to start email thread: {e}")
-        # Fallback - log order for manual processing
-        with open("custom_orders.log", "a") as f:
-            f.write(f"{datetime.now()}: THREAD_FAILED - {username}, {package_type}, ${amount}, {industry}, {location}\n")
-        return False
-    
-def send_email_async_with_fallback(admin_email, username, user_email, package_type, amount, industry, location, session_id, timestamp):
-    """Send email asynchronously with immediate fallback"""
-    
-    def email_worker():
-        try:
-            # Try email for max 10 seconds, then give up
-            import signal
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Email timeout")
-            
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(10)  # 10 second timeout
-            
-            sent = send_admin_package_notification(
-                admin_email=admin_email,
-                username=username,
-                user_email=user_email, 
-                package_type=package_type,
-                amount=amount,
-                industry=industry,
-                location=location,
-                session_id=session_id,
-                timestamp=timestamp
-            )
-            
-            signal.alarm(0)  # Cancel timeout
-            
-            if sent:
-                print(f"Email sent successfully for {username}")
-            else:
-                print(f"Email send returned False for {username}")
-                
-        except (TimeoutError, OSError) as e:
-            print(f"Email failed due to network: {e}")
-            # Log to file for manual processing
-            with open("pending_orders.log", "a") as f:
-                f.write(f"{datetime.now()}: {username}, {package_type}, ${amount}, {industry}, {location}\n")
-        except Exception as e:
-            print(f"Email error: {e}")
-    
-    # Start in background thread
-    import threading
-    thread = threading.Thread(target=email_worker, daemon=True)
-    thread.start()
-    
-    # Return immediately - don't wait for email
-    return True
-
 # Updated _process_payment_success function:
 def _process_payment_success(query_params: Dict, username: str) -> None:
-    """Process payment success with async email notifications"""
+    """Process payment success with Discord notifications only"""
     
     # Prevent duplicate processing
     stamp = query_params.get("timestamp") or query_params.get("session_id")
@@ -294,7 +203,7 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                     except Exception as e:
                         print(f"Plan update warning: {e}")
             
-            # Handle package purchases with async email
+            # Handle package purchases 
             elif "package" in query_params:
                 package = query_params.get("package", "")
                 amount = query_params.get("amount", "0")
@@ -335,20 +244,16 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                 
                 # Branch handling based on package type
                 if requires_build:
-                    print("Custom package - sending async notification")
+                    # CUSTOM PACKAGE - Send Discord notification
+                    print("Custom package - sending Discord notification")
                     
-                    # Get email details
+                    # Get user email for notification
                     user_data = st.session_state.get("user_data") or {}
                     user_email = user_data.get("email", f"{username}@leadgeneratorempire.com")
-                    admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
                     
-                    # Send email in background thread so it doesn't block UI
-                    import threading
-                    
-                    def email_worker():
+                    def discord_worker():
                         try:
-                            # Replace the failing email call with webhook notification
-                            result = notify_support_order(
+                            result = send_via_webhook(
                                 username=username,
                                 user_email=user_email,
                                 package_type=package,
@@ -358,24 +263,20 @@ def _process_payment_success(query_params: Dict, username: str) -> None:
                                 session_id=session_id,
                                 timestamp=stamp or str(int(time.time()))
                             )
-
-                            print(f"Background notification result: {result}")
+                            print(f"Discord notification result: {result}")
                             
                         except Exception as e:
-                            print(f"Background notification failed: {e}")
-                            # Final fallback - simple log
-                            with open("critical_orders.log", "a") as f:
-                                f.write(f"{datetime.now()}: CRITICAL - {username}, {package}, ${amount}, {industry}, {location}\n")
-                            # Log failed email to file
-                            with open("failed_orders.log", "a") as f:
-                                f.write(f"{datetime.now()}: EMAIL_FAILED - {username}, {package}, ${amount} - {str(e)}\n")
+                            print(f"Discord notification failed: {e}")
+                            # Fallback to file logging
+                            with open("custom_orders.log", "a") as f:
+                                f.write(f"{datetime.now()}: {username}, {package}, ${amount}, {industry}, {location}\n")
                     
-                    # Start email in background - don't wait for result
-                    email_thread = threading.Thread(target=email_worker, daemon=True)
-                    email_thread.start()
-                    print("Email queued in background thread")
+                    # Start Discord notification in background
+                    discord_thread = threading.Thread(target=discord_worker, daemon=True)
+                    discord_thread.start()
+                    print("Discord notification queued")
                     
-                    # Continue immediately without waiting
+                    # Store for UI display - DON'T add to downloads
                     st.session_state["package_industry"] = industry
                     st.session_state["package_location"] = location 
                     st.session_state["custom_order_pending"] = True
