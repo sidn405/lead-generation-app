@@ -9,6 +9,11 @@ from typing import Tuple, List, Dict
 from postgres_credit_system import credit_system
 from datetime import datetime
 
+
+STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "")
+if STRIPE_API_KEY:
+    stripe.api_key = STRIPE_API_KEY
+
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL", "https://leadgeneratorempire.com") 
 )
