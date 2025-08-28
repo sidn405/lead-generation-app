@@ -4855,22 +4855,6 @@ with st.sidebar:
                 "medium":   "📝 Medium",
                 "reddit":   "🗨️ Reddit",
             }
-            from payment_auth_recovery import send_enhanced_admin_notification
-            st.sidebar.markdown("---")
-            # Add this as a test button in your Streamlit app
-            if st.button("Test Email Notification"):
-                success = send_enhanced_admin_notification(
-                    admin_email="aileadsguy@gmail.com",
-                    username="test_user", 
-                    user_email="info@sidneym.com",
-                    package_type="domination",
-                    amount=897.0,
-                    industry="Fitness",
-                    location="New York",
-                    session_id="test_session",
-                    timestamp=str(int(time.time()))
-                )
-                st.write(f"Email test result: {success}")
 
             st.sidebar.header("🏆 Empire Statistics")
 
