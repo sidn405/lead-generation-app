@@ -9193,10 +9193,11 @@ with tab6:  # Settings tab
             # View statistics
             st.markdown("---")
             st.subheader("📊 Detailed Usage Statistics")
-            transactions = (user_info or {}).get("transactions", [])
-            recent_transactions = sorted(transactions, key=lambda x: x.get("timestamp", ""), reverse=True)
+            #transactions = (user_info or {}).get("transactions", [])
+            #recent_transactions = sorted(transactions, key=lambda x: x.get("timestamp", ""), reverse=True)
 
             try:
+                from datetime import datetime
                 # --- helpers (safe casts) ---
                 def _as_int(x, default=0):
                     try:
