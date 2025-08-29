@@ -1256,6 +1256,12 @@ def _calc_platforms(files_sig):
     counts, meta = {}, []
     for f, _, _ in files_sig:
         try:
+            # Add debugging
+            print(f"Processing file: {f} (type: {type(f)})")
+            
+            # Ensure f is a string path
+            file_path = str(f) if hasattr(f, '__fspath__') else f
+            df = pd.read_csv(file_path)
             df = pd.read_csv(f)
             n = int(len(df))
             if n == 0:
@@ -1269,23 +1275,15 @@ def _calc_platforms(files_sig):
             counts[plat] = counts.get(plat, 0) + n
             meta.append({"file": f, "platform": plat, "leads": n, "mtime": os.path.getmtime(f)})
         except Exception as e:
+            print(f"[ERROR] File: {f}")
+            print(f"[ERROR] Error: {e}")
+            print(f"[ERROR] Error type: {type(e)}")
+            import traceback
+            traceback.print_exc()
             print(f"[stats] skip {f}: {e}")
     return counts, meta
 
-def debug_calc_platforms(files_sig):
-    """Debug wrapper to find where the path error occurs"""
-    print(f"Input files_sig: {files_sig}")
-    
-    for i, (f, *rest) in enumerate(files_sig):
-        print(f"File {i}: {f} (type: {type(f)})")
-        try:
-            # Test if this is where the error happens
-            df = pd.read_csv(f)
-            print(f"✅ Successfully read {f}")
-        except Exception as e:
-            print(f"❌ Error reading {f}: {e}")
-            import traceback
-            traceback.print_exc()
+
 
 def calculate_empire_from_csvs(username: str, csv_dir: Path | None = None):
     files = _files_for_user(username, csv_dir or CSV_DIR)

@@ -2406,7 +2406,7 @@ def show_auth_section_if_needed():
                 # Add close button at top
                 col1, col2, col3 = st.columns([1, 2, 1])
                 with col3:
-                    if st.button("❌ Cancel", key="cancel_sign_in"):
+                    if st.button("❌ Close", key="close_sign_in"):
                         st.session_state.show_login = False
                         st.session_state.show_register = False
                         st.rerun()
