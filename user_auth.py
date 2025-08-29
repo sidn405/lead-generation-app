@@ -2121,8 +2121,13 @@ def integrated_show_forgot_password_form():
                 discord_success = send_password_reset_discord(username, email, token)
                 
                 if discord_success:
-                    st.success("Password reset request submitted!")
-                    st.info("Admin has been notified and will contact you with reset instructions.")
+                    st.success("✅ Password reset request submitted!")
+                    st.info("📧 Admin has been notified and will contact you with reset instructions.")
+                    
+                    # Switch to reset form
+                    st.session_state.show_forgot_password = False
+                    st.session_state.show_password_reset = True
+                    st.rerun()
                 else:
                     st.error("Reset request failed. Please try again or contact support.")
         
