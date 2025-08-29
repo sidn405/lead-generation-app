@@ -755,11 +755,12 @@ def login_and_scrape():
                 files_saved = save_leads_to_files(
                     leads=results,
                     raw_leads=raw_results,
-                    username=username,
-                    timestamp=date_str,
-                    platform_name=PLATFORM_NAME,
-                    csv_dir=CSV_DIR,          # uses your existing location
-                    save_raw=SAVE_RAW_LEADS,  # if you have this flag
+                    username=str(username),      # Explicit string conversion
+                    timestamp=str(date_str),     # Explicit string conversion  
+                    platform_name="twitter",    # Explicit string
+                    csv_dir=CSV_DIR,            # Now guaranteed to be Path object
+                    save_raw=SAVE_RAW_LEADS,
+                    record_to_credit_system=True
                 )
                 
                 # Save processed results to main CSV

@@ -562,7 +562,16 @@ def main():
             
             # Save to multiple files
             if leads or (raw_leads and SAVE_RAW_LEADS):
-                files_saved = save_leads_to_files(leads, raw_leads, username, timestamp)
+                files_saved = save_leads_to_files(
+                    leads=leads,
+                    raw_leads=raw_leads,
+                    username=username,
+                    timestamp=timestamp,
+                    platform_name="facebook",    # This was missing!
+                    csv_dir=CSV_DIR,
+                    save_raw=SAVE_RAW_LEADS,
+                    record_to_credit_system=True
+                )
                 
                 # Upload to Google Sheets and send email
                 try:
