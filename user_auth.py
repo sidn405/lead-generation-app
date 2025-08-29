@@ -1108,6 +1108,15 @@ def show_enhanced_login_with_forgot_password():
     
     with st.container():
         # Username/Email input
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col3:
+            if st.button("❌ Close", key="close_auth_forms"):
+                st.session_state.show_login = False
+                st.session_state.show_register = False
+                st.rerun()
+                
+                st.markdown("---")
+                
         new_username = st.text_input(
             "👤 Username or Email",
             value=st.session_state.login_username,
