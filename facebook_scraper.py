@@ -200,7 +200,7 @@ def extract_facebook_profiles(page):
         processed = 0
         errors = 0
         max_elements = min(500, len(elements))
-        max_results = 300  # Increased target for raw leads
+        max_results = 3000  # Increased target for raw leads
         
         print(f"📊 Processing up to {max_elements} elements...")
         
@@ -254,7 +254,7 @@ def extract_facebook_profiles(page):
                 is_relevant, relevance_score = is_relevant_to_search_term(name, text_content, "")
                 
                 # Accept almost everything for raw leads
-                if relevance_score < 1 and len(name) < 3:  # Only filter obviously bad data
+                if relevance_score < 1 and len(name) < 1:  # Only filter obviously bad data
                     continue
 
                 # Check for exclusion (with error handling)
@@ -389,7 +389,7 @@ def save_leads_to_files(
     fieldnames = [
         "name", "handle", "bio", "url", "platform", "dm", "title", "location",
         "followers", "profile_url", "contact_info", "search_term",
-        "extraction_method", "relevance_score",
+        "extraction_method", "relevance_score", "raw_text_sample", "extracted_at", "is_verified", "has_email", "has_phone"
     ]
 
     # 1) Save processed leads
@@ -430,7 +430,7 @@ def save_leads_to_files(
 def main():
     """Main function with smart user-aware deduplication"""
     
-    estimated_leads = MAX_SCROLLS * 8
+    estimated_leads = MAX_SCROLLS * 12
     can_proceed, message, username = setup_scraper_with_limits(PLATFORM_NAME, estimated_leads, SEARCH_TERM)
     
     if not can_proceed:
@@ -570,7 +570,7 @@ def main():
                     platform_name="facebook",    # This was missing!
                     csv_dir=CSV_DIR,
                     save_raw=SAVE_RAW_LEADS,
-                    record_to_credit_system=True
+                    
                 )
                 
                 # Upload to Google Sheets and send email

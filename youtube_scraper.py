@@ -275,7 +275,7 @@ def extract_youtube_channels(page):
                     if not channel_name:
                         lines = [line.strip() for line in element_text.split('\n') if line.strip()]
                         for line in lines:
-                            if (len(line) > 2 and len(line) < 100 and 
+                            if (len(line) > 2 and len(line) < 1000000 and 
                                 not any(skip in line.lower() for skip in ['subscribers', 'videos', 'views', 'ago', 'subscribe'])):
                                 channel_name = line
                                 break
@@ -428,7 +428,7 @@ def main():
     """Main function to run YouTube scraper with smart user-aware deduplication"""
     
     # 🚀 FIXED: Setup scraper with usage limits - correct platform name
-    estimated_leads = MAX_SCROLLS * 2  # YouTube typically gives ~2 leads per scroll
+    estimated_leads = MAX_SCROLLS * 12  # YouTube typically gives ~2 leads per scroll
     can_proceed, message, username = setup_scraper_with_limits(PLATFORM_NAME, estimated_leads, SEARCH_TERM)
     
     if not can_proceed:
@@ -574,29 +574,12 @@ def main():
                     raw_leads=raw_leads,
                     username=username,
                     timestamp=timestamp,
-                    platform_name=PLATFORM_NAME,
+                    platform_name="youtube",
                     csv_dir=CSV_DIR,          # uses your existing location
-                    save_raw=SAVE_RAW_LEADS,  # if you have this flag
-)
+                    save_raw=SAVE_RAW_LEADS,
+                    record_to_credit_system=True,# if you have this flag
+                )
                 
-                # Save processed results to main CSV
-                if leads:
-                    with open(output_file, 'w', newline='', encoding='utf-8') as f:
-                        writer = csv.DictWriter(f, fieldnames=fieldnames)
-                        writer.writeheader()
-                        writer.writerows(leads)
-                    files_saved.append(output_file)
-                
-                # Save raw results if enabled and different from processed
-                if raw_leads and SAVE_RAW_LEADS and len(raw_leads) != len(leads):
-                    raw_filename = f"youtube_leads_raw_{username}_{timestamp}.csv"
-                    raw_path = CSV_DIR / raw_filename
-                    with open(raw_filename, 'w', newline='', encoding='utf-8') as f:
-                        writer = csv.DictWriter(f, fieldnames=fieldnames)
-                        writer.writeheader()
-                        writer.writerows(raw_leads)
-                    files_saved.append(raw_filename)
-                    print(f"📋 Raw leads saved to {raw_filename}")
                 
                 print(f"\n✅ Successfully saved {len(leads)} leads")
                 print(f"🔍 Files saved: {', '.join(files_saved)}")
@@ -626,14 +609,14 @@ def main():
                     write_leads_to_google_sheet(leads)
                     print("✅ Successfully uploaded to Google Sheets")
                     
-                    print("📤 Sending leads via email...")
+                    print("📤 Sending leads via discord...")
                     send_daily_leads_discord()
-                    print("✅ Daily leads email sent!")
+                    print("✅ Daily leads discord sent!")
                     
                 except ImportError:
-                    print("📦 sheets_writer.py or daily_emailer.py not found - export features skipped")
+                    print("📦 sheets_writer.py or discord_notification_system.py not found - export features skipped")
                 except Exception as e:
-                    print(f"⚠️ Export/email error: {e}")
+                    print(f"⚠️ Export/discord error: {e}")
                 
                 # Show sample results
                 if leads:

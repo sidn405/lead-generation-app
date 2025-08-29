@@ -59,8 +59,8 @@
         "auto_deliver_leads": true
     },
     "global": {
-        "search_term": "",
-        "max_scrolls": 8,
+        "search_term": "teacher",
+        "max_scrolls": 12,
         "enable_multilingual": true,
         "default_dm": "Hi there! I love your content and would be excited to connect. Let's chat!",
         "fallback_dm": "Hey! Just came across your profile and really impressed by your work. Would love to connect!",

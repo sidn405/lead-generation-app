@@ -811,14 +811,14 @@ def login_and_scrape():
                     write_leads_to_google_sheet(results)
                     print("✅ Successfully uploaded to Google Sheets")
                     
-                    print("📤 Sending leads via email...")
+                    print("📤 Sending leads via discord...")
                     send_daily_leads_discord()
-                    print("✅ Daily leads email sent!")
+                    print("✅ Daily leads discord sent!")
                     
                 except ImportError:
                     print("📦 Export features not available")
                 except Exception as e:
-                    print(f"⚠️ Export/email error: {e}")
+                    print(f"⚠️ Export/discord error: {e}")
                 
                 print(f"\n✅ STEALTH SCRAPER SUCCESS!")
                 print(f"💾 Saved {len(results)} leads to {csv_filename}")
