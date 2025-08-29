@@ -614,7 +614,7 @@ def consume_user_resources(username, leads_generated, platform):
         user_info = credit_system.get_user_info(username)
         
         if not user_info:
-            print(f"⚠️ Could not find user {username} for resource consumption")
+            print(f"Could not find user {username} for resource consumption")
             return False
         
         user_plan = user_info.get('plan', 'demo')
@@ -623,13 +623,13 @@ def consume_user_resources(username, leads_generated, platform):
         if user_plan == 'demo':
             # Consume demo leads
             consumed = 0
-            for _ in range(leads_count):
+            for _ in range(leads_count):  # Fixed: was 'for * in range(leads*count)'
                 if credit_system.consume_demo_lead(username):
                     consumed += 1
                 else:
                     break
             
-            print(f"📱 Demo consumption: {consumed} demo leads used for {platform}")
+            print(f"Demo consumption: {consumed} demo leads used for {platform}")
             return consumed > 0
         
         else:
@@ -637,14 +637,18 @@ def consume_user_resources(username, leads_generated, platform):
             success = credit_system.consume_credits(username, leads_count, leads_count, platform)
             
             if success:
-                print(f"💎 Consumed {leads_count} credits for {platform}")
+                print(f"Consumed {leads_count} credits for {platform}")
+                # Force save to database
+                credit_system.save_data()
             else:
-                print(f"❌ Failed to consume credits for {platform}")
+                print(f"Failed to consume credits for {platform}")
             
             return success
     
     except Exception as e:
-        print(f"⚠️ Resource consumption error: {e}")
+        print(f"Resource consumption error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def run_platform_scraper(platform):
