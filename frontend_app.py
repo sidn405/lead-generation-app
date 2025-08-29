@@ -1256,12 +1256,6 @@ def _calc_platforms(files_sig):
     counts, meta = {}, []
     for f, _, _ in files_sig:
         try:
-            # Add debugging
-            print(f"Processing file: {f} (type: {type(f)})")
-            
-            # Ensure f is a string path
-            file_path = str(f) if hasattr(f, '__fspath__') else f
-            df = pd.read_csv(file_path)
             df = pd.read_csv(f)
             n = int(len(df))
             if n == 0:
@@ -1275,11 +1269,6 @@ def _calc_platforms(files_sig):
             counts[plat] = counts.get(plat, 0) + n
             meta.append({"file": f, "platform": plat, "leads": n, "mtime": os.path.getmtime(f)})
         except Exception as e:
-            print(f"[ERROR] File: {f}")
-            print(f"[ERROR] Error: {e}")
-            print(f"[ERROR] Error type: {type(e)}")
-            import traceback
-            traceback.print_exc()
             print(f"[stats] skip {f}: {e}")
     return counts, meta
 

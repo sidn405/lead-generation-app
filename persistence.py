@@ -68,7 +68,7 @@ def save_leads_to_files(
     # 2) raw (only if different length or no processed)
     if raw_leads and save_raw and (not leads or len(raw_leads) != len(leads)):
         raw_name = f"{platform_key}_leads_raw_{username}_{timestamp}.csv"
-        raw_path = out_dir / raw_name
+        raw_path = Path(csv_dir) / raw_name
         with raw_path.open('w', newline='', encoding='utf-8') as f:
             w = csv.DictWriter(f, fieldnames=fieldnames)
             w.writeheader()
