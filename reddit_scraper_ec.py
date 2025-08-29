@@ -1619,7 +1619,7 @@ def main():
                 # Upload to Google Sheets
                 try:
                     from sheets_writer import write_leads_to_google_sheet
-                    from daily_emailer import send_daily_leads_email
+                    from discord_notification_system import send_daily_leads_discord
                     
                     sheet_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
                     
@@ -1628,7 +1628,7 @@ def main():
                     print(f"✅ Successfully uploaded Reddit {NICHE} customers to Google Sheets")
                     
                     print(f"📤 Sending Reddit {NICHE} leads via email...")
-                    send_daily_leads_email()
+                    send_daily_leads_discord()
                     print(f"✅ Reddit {NICHE} customer leads email sent!")
                     
                 except ImportError:

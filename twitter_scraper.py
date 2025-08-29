@@ -805,14 +805,14 @@ def login_and_scrape():
                 # Upload to Google Sheets and send email
                 try:
                     from sheets_writer import write_leads_to_google_sheet
-                    from daily_emailer import send_daily_leads_email
+                    from discord_notification_system import send_daily_leads_discord
                     
                     print("📝 Writing to Google Sheets...")
                     write_leads_to_google_sheet(results)
                     print("✅ Successfully uploaded to Google Sheets")
                     
                     print("📤 Sending leads via email...")
-                    send_daily_leads_email()
+                    send_daily_leads_discord()
                     print("✅ Daily leads email sent!")
                     
                 except ImportError:

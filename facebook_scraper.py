@@ -395,7 +395,7 @@ def save_leads_to_files(
     # 1) Save processed leads
     if leads:
         processed_name = f"{platform_key}_leads_{safe_username}_{timestamp}.csv"
-        processed_path = csv_dir / processed_name
+        processed_path = Path(csv_dir) / processed_name
         with processed_path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
@@ -416,7 +416,7 @@ def save_leads_to_files(
     # 2) Save raw leads (if enabled and different size)
     if raw_leads and save_raw and (not leads or len(raw_leads) != len(leads)):
         raw_name = f"{platform_key}_leads_raw_{safe_username}_{timestamp}.csv"
-        raw_path = csv_dir / raw_name
+        raw_path = Path(csv_dir) / raw_name
         with raw_path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
@@ -576,14 +576,14 @@ def main():
                 # Upload to Google Sheets and send email
                 try:
                     from sheets_writer import write_leads_to_google_sheet
-                    from daily_emailer import send_daily_leads_email
+                    from discord_notification_system import send_daily_leads_discord
                     
                     print("📝 Writing to Google Sheets...")
                     write_leads_to_google_sheet(leads)
                     print("✅ Successfully uploaded to Google Sheets")
                     
                     print("📤 Sending leads via email...")
-                    send_daily_leads_email()
+                    send_daily_leads_discord()
                     print("✅ Daily leads email sent!")
                     
                 except ImportError:

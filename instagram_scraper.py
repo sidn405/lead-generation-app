@@ -779,14 +779,14 @@ def main():
                 # Upload to Google Sheets and send email
                 try:
                     from sheets_writer import write_leads_to_google_sheet
-                    from daily_emailer import send_daily_leads_email
+                    from discord_notification_system import send_daily_leads_discord
                     
                     print("📝 Writing to Google Sheets...")
                     write_leads_to_google_sheet(leads)
                     print("✅ Successfully uploaded to Google Sheets")
                     
                     print("📤 Sending Instagram leads via email...")
-                    send_daily_leads_email()
+                    send_daily_leads_discord()
                     print("✅ Instagram leads email sent!")
                     
                 except ImportError:
