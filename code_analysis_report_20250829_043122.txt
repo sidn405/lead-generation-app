@@ -1,0 +1,2282 @@
+================================================================================
+PYTHON CODE ANALYSIS REPORT
+================================================================================
+Generated: 2025-08-29 04:31:22
+Files analyzed: 70
+Total issues found: 507
+
+SUMMARY BY SEVERITY:
+----------------------------------------
+CRITICAL  : 365 issues
+ERROR     :   0 issues
+WARNING   : 142 issues
+INFO      :   0 issues
+
+DETAILED ANALYSIS:
+--------------------------------------------------------------------------------
+
+FILE: frontend_app.py
+Issues: 156
+------------------------------------------------------------
+  Line 182 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page_icon="assets/favicon-16x16.png",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 252 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: for c in ("/client_configs", "/app/client_configs", "/data", "/app/data"):
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 274 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: glob.glob(str(base / pattern)),
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 274 | WARNING  | Division operation detected - verify operand types
+      Code: glob.glob(str(base / pattern)),
+      Fix:  Ensure both operands are numeric types
+
+  Line 300 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: def _stats_path(u: str) -> Path: return STATS_DIR / f"empire_stats_{(u or 'anonymous').strip()}.json"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 300 | WARNING  | Division operation detected - verify operand types
+      Code: def _stats_path(u: str) -> Path: return STATS_DIR / f"empire_stats_{(u or 'anonymous').strip()}.json"
+      Fix:  Ensure both operands are numeric types
+
+  Line 470 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: glob.glob(str(CSV_DIR / pattern)) + glob.glob(str(CSV_DIR / "**" / pattern), recursive=True),
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 470 | WARNING  | Division operation detected - verify operand types
+      Code: glob.glob(str(CSV_DIR / pattern)) + glob.glob(str(CSV_DIR / "**" / pattern), recursive=True),
+      Fix:  Ensure both operands are numeric types
+
+  Line 470 | WARNING  | Division operation detected - verify operand types
+      Code: glob.glob(str(CSV_DIR / pattern)) + glob.glob(str(CSV_DIR / "**" / pattern), recursive=True),
+      Fix:  Ensure both operands are numeric types
+
+  Line 470 | WARNING  | Division operation detected - verify operand types
+      Code: glob.glob(str(CSV_DIR / pattern)) + glob.glob(str(CSV_DIR / "**" / pattern), recursive=True),
+      Fix:  Ensure both operands are numeric types
+
+  Line 477 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(fp, nrows=5)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 493 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: return DM_DIR / f"{safe}_dm_library.json"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 493 | WARNING  | Division operation detected - verify operand types
+      Code: return DM_DIR / f"{safe}_dm_library.json"
+      Fix:  Ensure both operands are numeric types
+
+  Line 499 | WARNING  | Division operation detected - verify operand types
+      Code: p = Path("dm_library") / f"{username}_dm_library.json"
+      Fix:  Ensure both operands are numeric types
+
+  Line 594 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "payment_success" in qp                      # credits/subs success
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 595 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: or qp.get("success") in ("1", "0")           # package confirm/cancel
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 647 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: return STATS_DIR / f"empire_stats_{u}.json"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 647 | WARNING  | Division operation detected - verify operand types
+      Code: return STATS_DIR / f"empire_stats_{u}.json"
+      Fix:  Ensure both operands are numeric types
+
+  Line 904 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: show_auth_section_if_needed()  # it can handle forgot/reset flows etc.
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1011 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Update demo remaining/used in session from DB."""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1259 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(f)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 1297 | WARNING  | Division operation detected - verify operand types
+      Code: "size_mb": round(os.path.getsize(path)/(1024*1024), 3),
+      Fix:  Ensure both operands are numeric types
+
+  Line 1306 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - If missing/stale/empty, rebuild from CSV_DIR and rewrite cache.
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1315 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: cache_file = EMPIRE_CACHE_DIR / f"empire_totals_{u}.json"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1315 | WARNING  | Division operation detected - verify operand types
+      Code: cache_file = EMPIRE_CACHE_DIR / f"empire_totals_{u}.json"
+      Fix:  Ensure both operands are numeric types
+
+  Line 1403 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1427 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="application/zip",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1583 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Return leads/min, success rate, platforms_active, attempts."""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1594 | WARNING  | CSV read without explicit data types
+      Code: n = len(pd.read_csv(f))
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 1607 | WARNING  | Division operation detected - verify operand types
+      Code: minutes = (max(mtimes) - min(mtimes)) / 60.0
+      Fix:  Ensure both operands are numeric types
+
+  Line 1608 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: minutes = max(minutes, 1.0)  # avoid div/0 + silly spikes
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1609 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: leads_per_min = round(total_leads / minutes, 1)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1609 | WARNING  | Division operation detected - verify operand types
+      Code: leads_per_min = round(total_leads / minutes, 1)
+      Fix:  Ensure both operands are numeric types
+
+  Line 1614 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: success_rate = f"{round((successes / max(attempts, 1)) * 100)}%"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1614 | WARNING  | Division operation detected - verify operand types
+      Code: success_rate = f"{round((successes / max(attempts, 1)) * 100)}%"
+      Fix:  Ensure both operands are numeric types
+
+  Line 1627 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: ver_path = Path("assets/versions.json")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1641 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <link rel="icon" type="image/png" sizes="32x32" href="./{v('favicon-32x32.png')}?v={CACHE_VERSION}">
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1642 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <link rel="icon" type="image/png" sizes="16x16" href="./{v('favicon-16x16.png')}?v={CACHE_VERSION}">
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1649 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: if not fav32.exists():   # hashed lives in assets/dist/; try that path
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1650 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: fav32 = Path("./assets/dist") / Path(v('favicon-32x32.png')).name
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1650 | WARNING  | Division operation detected - verify operand types
+      Code: fav32 = Path("./assets/dist") / Path(v('favicon-32x32.png')).name
+      Fix:  Ensure both operands are numeric types
+
+  Line 1653 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.markdown(f'<link rel="icon" type="image/png" href="data:image/png;base64,{b64}">', unsafe_allow_html=True)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1658 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <link rel="icon" href="assets/favicon.ico" sizes="any">
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1659 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1660 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1661 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1664 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <link rel="manifest" href="assets/manifest-fullscreen.json">
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1691 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: LOGO_SRC = Path("assets/logo-192.png")  # or logo-288.png
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1701 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <img src="data:image/png;base64,{b64}" width="{width}" height="{width}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1718 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: --accent: #00C896;      /* teal accent for links/success */
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1893 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: base_glob = str(CSV_DIR / pattern)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1893 | WARNING  | Division operation detected - verify operand types
+      Code: base_glob = str(CSV_DIR / pattern)
+      Fix:  Ensure both operands are numeric types
+
+  Line 1894 | WARNING  | Division operation detected - verify operand types
+      Code: rec_glob  = str(CSV_DIR / "**" / pattern)
+      Fix:  Ensure both operands are numeric types
+
+  Line 1894 | WARNING  | Division operation detected - verify operand types
+      Code: rec_glob  = str(CSV_DIR / "**" / pattern)
+      Fix:  Ensure both operands are numeric types
+
+  Line 2430 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "cost_per_credit": round(price / credits, 2) if credits > 0 else 0,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 2430 | WARNING  | Division operation detected - verify operand types
+      Code: "cost_per_credit": round(price / credits, 2) if credits > 0 else 0,
+      Fix:  Ensure both operands are numeric types
+
+  Line 2652 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "cost_per_credit": round(amount / credits, 2) if credits > 0 else 0,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 2652 | WARNING  | Division operation detected - verify operand types
+      Code: "cost_per_credit": round(amount / credits, 2) if credits > 0 else 0,
+      Fix:  Ensure both operands are numeric types
+
+  Line 3211 | WARNING  | to_numeric without error handling
+      Code: df[col] = pd.to_numeric(df[col], errors='coerce').fillna(1000).astype(int)
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line 3214 | WARNING  | to_numeric without error handling
+      Code: df['engagement_rate'] = pd.to_numeric(df['engagement_rate'], errors='coerce').fillna(5.0).astype(float)
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line 3372 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'PYTHONIOENCODING': 'utf-8',           # Force UTF-8 for all I/O
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 3715 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: files = sorted(glob.glob(str(CSV_DIR / pattern)), key=os.path.getmtime, reverse=True)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 3715 | WARNING  | Division operation detected - verify operand types
+      Code: files = sorted(glob.glob(str(CSV_DIR / pattern)), key=os.path.getmtime, reverse=True)
+      Fix:  Ensure both operands are numeric types
+
+  Line 3796 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'message': '🎯 Starter Plan - 250 leads/month across core platforms',
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 3801 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'message': '💎 Pro Plan - 2,000 leads/month with advanced platforms',
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 3862 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.metric("Platform Access", "8/8", help="All platforms unlocked")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 3881 | WARNING  | Division operation detected - verify operand types
+      Code: demo_progress = (5 - remaining) / 5
+      Fix:  Ensure both operands are numeric types
+
+  Line 4011 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - Upgrade to Pro/Ultimate
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 4255 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'N/A': '0',
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 4262 | WARNING  | to_numeric without error handling
+      Code: df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(5.0).astype(float)
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line 4264 | WARNING  | to_numeric without error handling
+      Code: df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(1000).astype(int)
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line 4625 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: logo_path = Path("assets/logo-192.png")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 4632 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <img src="data:image/png;base64,{logo_b64}" width="36" height="36" alt="" style="border-radius:8px"/>
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 4783 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.success("✅ 21.3 leads/minute")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 4828 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: progress = demo_used / 5
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 4828 | WARNING  | Division operation detected - verify operand types
+      Code: progress = demo_used / 5
+      Fix:  Ensure both operands are numeric types
+
+  Line 4888 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.sidebar.metric("Leads/Minute", leads_per_min)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5233 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.info("📱 Starter Plan: 2 platforms • 250 leads/month")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5235 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.success("💎 Pro Plan: 6 platforms • 2,000 leads/month")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5432 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - 🇪🇸 **Spanish**: Formal/informal variants + regional expressions
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5434 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - 🇩🇪 **German**: Sie/Du distinctions + business etiquette
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5435 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - 🇵🇹 **Portuguese**: BR/PT variants + cultural context
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5438 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - 🇰🇷 **Korean**: Formal/informal speech levels + cultural courtesy
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5574 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.metric("Speed", "21.3/min")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5576 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.metric("Quality", "9.2/10")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5784 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.info("💎 Pro Plan: 2,000 leads/month")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 5936 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(fpath)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 6604 | WARNING  | Division operation detected - verify operand types
+      Code: hours_old = (current_time - file_time).total_seconds() / 3600
+      Fix:  Ensure both operands are numeric types
+
+  Line 6607 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(latest_file)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 6642 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.metric("🎯 Quality Score", "8.5/10")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 6681 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 6698 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: **💎 Pro Plan - $197/month**
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 6700 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - ✅ 2,000 leads/month
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 6706 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: **👑 Ultimate Plan - $497/month**
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 6739 | WARNING  | Division operation detected - verify operand types
+      Code: hours_old = (current_time - file_time).total_seconds() / 3600
+      Fix:  Ensure both operands are numeric types
+
+  Line 6838 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(latest_user_file)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 6846 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(latest_user_file)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 6932 | WARNING  | Division operation detected - verify operand types
+      Code: f.get("size_mb", os.path.getsize(f.get("file",""))/(1024*1024))
+      Fix:  Ensure both operands are numeric types
+
+  Line 6954 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7046 | WARNING  | Division operation detected - verify operand types
+      Code: row.get("size_mb", os.path.getsize(row.get("file",""))/(1024*1024))
+      Fix:  Ensure both operands are numeric types
+
+  Line 7076 | WARNING  | Division operation detected - verify operand types
+      Code: size_mb = os.path.getsize(file_path) / (1024 * 1024)
+      Fix:  Ensure both operands are numeric types
+
+  Line 7107 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7145 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: percentage = (count / total_leads) * 100 if total_leads > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7145 | WARNING  | Division operation detected - verify operand types
+      Code: percentage = (count / total_leads) * 100 if total_leads > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+  Line 7180 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: files = sorted(glob.glob(str(base / pattern)), key=os.path.getmtime, reverse=True)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7180 | WARNING  | Division operation detected - verify operand types
+      Code: files = sorted(glob.glob(str(base / pattern)), key=os.path.getmtime, reverse=True)
+      Fix:  Ensure both operands are numeric types
+
+  Line 7202 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(latest_file)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 7231 | WARNING  | Division operation detected - verify operand types
+      Code: quality_score = 8.5 + (len(df) / 50)  # Base quality + volume bonus
+      Fix:  Ensure both operands are numeric types
+
+  Line 7237 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: dm_percentage = (dm_ready / len(df)) * 100
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7237 | WARNING  | Division operation detected - verify operand types
+      Code: dm_percentage = (dm_ready / len(df)) * 100
+      Fix:  Ensure both operands are numeric types
+
+  Line 7253 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: percentage = (count / len(df)) * 100
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7253 | WARNING  | Division operation detected - verify operand types
+      Code: percentage = (count / len(df)) * 100
+      Fix:  Ensure both operands are numeric types
+
+  Line 7354 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7385 | WARNING  | CSV read without explicit data types
+      Code: df_temp = pd.read_csv(latest_file)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 7426 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - 🇵🇹 **Portuguese**: BR/PT distinctions
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7433 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - 🇰🇷 **Korean**: Formal/informal levels
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7491 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(latest_file)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 7624 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(file_path)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 7680 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(uploaded_file)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 7781 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: estimated_time = max(1, total_contacts / 10)  # ~10 contacts per minute
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7781 | WARNING  | Division operation detected - verify operand types
+      Code: estimated_time = max(1, total_contacts / 10)  # ~10 contacts per minute
+      Fix:  Ensure both operands are numeric types
+
+  Line 7817 | WARNING  | Division operation detected - verify operand types
+      Code: progress.progress((i + 1) / total_iterations)
+      Fix:  Ensure both operands are numeric types
+
+  Line 7862 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: percentage = (count / len(all_results)) * 100
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7862 | WARNING  | Division operation detected - verify operand types
+      Code: percentage = (count / len(all_results)) * 100
+      Fix:  Ensure both operands are numeric types
+
+  Line 7893 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "Search in names/DMs:",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7932 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7946 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 7972 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8127 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8204 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8383 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - 2,000 credits/month
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8502 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: if st.button("📱 Starter ($29/mo)", type="primary", use_container_width=True, key="starter4"):
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8507 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: if st.button("💎 Pro ($197/mo)", use_container_width=True):
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8512 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: if st.button("👑 Ultimate ($497/mo)", use_container_width=True):
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8716 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "🔍 Specific Keywords/Terms:",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8750 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "Professional/Business Focus"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 8960 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - Phone/email enrichment when available
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9265 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: credits_used = "5/5"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9338 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: pct = (leads / total_leads_pp * 100.0) if total_leads_pp else 0.0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9338 | WARNING  | Division operation detected - verify operand types
+      Code: pct = (leads / total_leads_pp * 100.0) if total_leads_pp else 0.0
+      Fix:  Ensure both operands are numeric types
+
+  Line 9345 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: avg_leads = (total_leads_pp / total_campaigns_pp) if total_campaigns_pp else 0.0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9345 | WARNING  | Division operation detected - verify operand types
+      Code: avg_leads = (total_leads_pp / total_campaigns_pp) if total_campaigns_pp else 0.0
+      Fix:  Ensure both operands are numeric types
+
+  Line 9346 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.metric("📈 Avg Leads/Campaign", f"{avg_leads:.1f}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9361 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.progress(leads / max_leads if max_leads else 0.0)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9361 | WARNING  | Division operation detected - verify operand types
+      Code: st.progress(leads / max_leads if max_leads else 0.0)
+      Fix:  Ensure both operands are numeric types
+
+  Line 9362 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.caption(f"{leads} leads ({(leads/total_leads_pp*100):.1f}%)")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9362 | WARNING  | Division operation detected - verify operand types
+      Code: st.caption(f"{leads} leads ({(leads/total_leads_pp*100):.1f}%)")
+      Fix:  Ensure both operands are numeric types
+
+  Line 9478 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: leads_per_day = total_leads / max(locals().get("days_active", 0) or 1, 1)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9478 | WARNING  | Division operation detected - verify operand types
+      Code: leads_per_day = total_leads / max(locals().get("days_active", 0) or 1, 1)
+      Fix:  Ensure both operands are numeric types
+
+  Line 9479 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.metric("📈 Leads/Day", f"{leads_per_day:.1f}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9487 | WARNING  | Division operation detected - verify operand types
+      Code: avg_campaign_size = total_leads / (total_campaigns_pp or 1)
+      Fix:  Ensure both operands are numeric types
+
+  Line 9490 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: efficiency = total_leads / max(locals().get("days_active", 0) or 1, 1)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 9490 | WARNING  | Division operation detected - verify operand types
+      Code: efficiency = total_leads / max(locals().get("days_active", 0) or 1, 1)
+      Fix:  Ensure both operands are numeric types
+
+  Line 9573 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: config_file = f"client_configs/client_{st.session_state.username}_config.json"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 10027 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="application/json",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 10206 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"client_configs/client_{username}_config.json",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: linkedin_scraper.py
+Issues: 34
+------------------------------------------------------------
+  Line  17 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  92 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'login' in current_url and 'linkedin.com/login' in current_url,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 244 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "url": "https://linkedin.com/in/profile-not-found"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 326 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "url": "https://linkedin.com/in/profile-not-found"  # LinkedIn profile URLs are hard to extract
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 417 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 452 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("🖱️ Found LinkedIn /hp page - looking for 'Sign in as Sidney'...")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 479 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"🖱️ Clicking Sidney profile on /hp page: {selector}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 482 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("✅ Clicked Sidney profile on /hp page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 488 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("⚠️ Could not find Sidney profile box on /hp page - trying fallback")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 492 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("✅ Fallback click attempted on /hp page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 494 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("⚠️ Fallback click failed on /hp page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 497 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("⏳ Waiting 5 seconds for redirect to /login page...")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 501 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("⚠️ 'Sign in as Sidney' not found on /hp page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 504 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Error handling /hp page: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 511 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("🖱️ Now on LinkedIn /login page - waiting for page to fully load...")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 535 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("✅ Found Sidney profile on /login page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 559 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"🖱️ Clicking Sidney profile on /login page: {selector}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 562 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("✅ Clicked Sidney profile on /login page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 568 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("⚠️ Could not find Sidney profile box on /login page - trying fallback")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 572 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("✅ Fallback click attempted on /login page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 574 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("⚠️ Fallback click failed on /login page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 581 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("⚠️ Sidney profile not found on /login page")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 585 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Error handling /login page: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 588 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Expected /login URL but got: {current_url}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 619 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: search_url = f"https://www.linkedin.com/search/results/people/?keywords={SEARCH_TERM.replace(' ', '%20')}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 703 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: try_manual = input(f"🤔 Try manual navigation to page {page_num}? (y/n): ")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 771 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(len(unique_results) / len(all_raw_results) * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 851 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 851 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Ensure both operands are numeric types
+
+  Line 869 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 869 | WARNING  | Division operation detected - verify operand types
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Ensure both operands are numeric types
+
+  Line 889 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Export/email error: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 898 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"     Score: {result.get('relevance_score', 'N/A')}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 910 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: continue_manual = input(f"\n🤔 Keep browser open for more manual extraction? (y/n): ")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: leads\enhanced_lead_analyzer.py
+Issues: 30
+------------------------------------------------------------
+  Line 168 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(filepath)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 276 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(filepath)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 287 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  Duplicate rate: {(len(duplicates)/original_count)*100:.1f}%")
+      Fix:  Ensure both operands are numeric types
+
+  Line 323 | WARNING  | Division operation detected - verify operand types
+      Code: 'duplicate_rate': (len(duplicates)/original_count)*100
+      Fix:  Ensure both operands are numeric types
+
+  Line 500 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"  Duplicate Rate: {(total_duplicates_removed/total_original_leads*100) if total_original_leads > 0 else 0:.1f}%")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 500 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  Duplicate Rate: {(total_duplicates_removed/total_original_leads*100) if total_original_leads > 0 else 0:.1f}%")
+      Fix:  Ensure both operands are numeric types
+
+  Line 501 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"  Tool Buyers: {total_businesses:,} ({total_businesses/total_leads*100 if total_leads > 0 else 0:.1f}%)")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 501 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  Tool Buyers: {total_businesses:,} ({total_businesses/total_leads*100 if total_leads > 0 else 0:.1f}%)")
+      Fix:  Ensure both operands are numeric types
+
+  Line 502 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"  Lead Inventory: {total_end_customers:,} ({total_end_customers/total_leads*100 if total_leads > 0 else 0:.1f}%)")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 502 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  Lead Inventory: {total_end_customers:,} ({total_end_customers/total_leads*100 if total_leads > 0 else 0:.1f}%)")
+      Fix:  Ensure both operands are numeric types
+
+  Line 511 | WARNING  | Division operation detected - verify operand types
+      Code: duplicate_rate = (dup_stats['total_duplicates'] / dup_stats['original_count'] * 100)
+      Fix:  Ensure both operands are numeric types
+
+  Line 518 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: dup_stats['duplicate_file'].split('/')[-1] if dup_stats['duplicate_file'] else "N/A"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 533 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: percentage = (count / total_leads * 100) if total_leads > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 533 | WARNING  | Division operation detected - verify operand types
+      Code: percentage = (count / total_leads * 100) if total_leads > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+  Line 541 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: platform_type = "Mixed/Business"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 561 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: percentage = (count / total_leads * 100) if total_leads > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 561 | WARNING  | Division operation detected - verify operand types
+      Code: percentage = (count / total_leads * 100) if total_leads > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+  Line 578 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: leads_per_client = total_end_customers / total_businesses
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 578 | WARNING  | Division operation detected - verify operand types
+      Code: leads_per_client = total_end_customers / total_businesses
+      Fix:  Ensure both operands are numeric types
+
+  Line 583 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: ["Tool Subscription Revenue", f"${tool_revenue:,}/month", f"{total_businesses:,} prospects @ $97/month"],
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 607 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: file_type = "End Customers" if stats.get('is_end_customer_file', False) else "Mixed/Business"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 664 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"   • Duplicate rate: {(total_duplicates_removed/total_original_leads*100):.1f}%")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 664 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"   • Duplicate rate: {(total_duplicates_removed/total_original_leads*100):.1f}%")
+      Fix:  Ensure both operands are numeric types
+
+  Line 667 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: leads_per_client = total_end_customers / total_businesses
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 667 | WARNING  | Division operation detected - verify operand types
+      Code: leads_per_client = total_end_customers / total_businesses
+      Fix:  Ensure both operands are numeric types
+
+  Line 710 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: platform_type = "End Customers" if 'end_customer' in platform else "Mixed/Business"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 717 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'percentage': (count / sum(self.platform_stats.values()) * 100) if sum(self.platform_stats.values()) > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 717 | WARNING  | Division operation detected - verify operand types
+      Code: 'percentage': (count / sum(self.platform_stats.values()) * 100) if sum(self.platform_stats.values()) > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+  Line 728 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'percentage': (count / sum(self.niche_stats.values()) * 100) if sum(self.niche_stats.values()) > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 728 | WARNING  | Division operation detected - verify operand types
+      Code: 'percentage': (count / sum(self.niche_stats.values()) * 100) if sum(self.niche_stats.values()) > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: reddit_scraper_ec.py
+Issues: 24
+------------------------------------------------------------
+  Line  16 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 279 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"  💬 Max Comments/Post: {MAX_COMMENTS_PER_POST}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 558 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"https://www.reddit.com/r/{subreddit}/search/?q={search_term.replace(' ', '%20')}&restrict_sr=1&sort=relevance&t=month",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 560 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"https://www.reddit.com/r/{subreddit}/hot/",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 562 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"https://www.reddit.com/r/{subreddit}/new/"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 618 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"https://www.reddit.com/search/?q={search_term.replace(' ', '%20')}&sort=relevance&t=month",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 619 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"https://www.reddit.com/search/?q={search_term.replace(' ', '%20')}&sort=hot&t=week",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 620 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"https://www.reddit.com/search/?q={search_term.replace(' ', '%20')}&sort=new&t=week"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 655 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: url = f"https://www.reddit.com/r/{subreddit}/hot/"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 944 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"    ⏭️ Skipping deleted/removed author")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1240 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "url": f"https://www.reddit.com/user/{username}",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1265 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'profile_url': f"https://www.reddit.com/user/{username}",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1357 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("   • Users in posts/comments are professionals, not customers")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1384 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("    🖱️ Clicking continue/skip button")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1463 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1467 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1534 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(len(unique_leads) / len(raw_leads) * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 1596 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1596 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Ensure both operands are numeric types
+
+  Line 1615 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1615 | WARNING  | Division operation detected - verify operand types
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Ensure both operands are numeric types
+
+  Line 1637 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Export/email error: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1672 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"🔍 Target: People who BUY {NICHE} products/services")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1673 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"🚫 Exclude: {NICHE} professionals/coaches")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: twitter_scraper.py
+Issues: 20
+------------------------------------------------------------
+  Line  16 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  69 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  70 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  71 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  72 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 159 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: timezone_id='America/New_York',
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 264 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://twitter.com/home", timeout=30000)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 277 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: warmup_pages = ["https://twitter.com/explore", "https://twitter.com/notifications"]
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 593 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://httpbin.org/get", timeout=30000)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 637 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://twitter.com/home", timeout=30000)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 653 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: search_url = f"https://twitter.com/search?q={SEARCH_TERM.replace(' ', '%20')}&src=typed_query&f=user"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 725 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(len(unique_results) / len(raw_results) * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 786 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 786 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Ensure both operands are numeric types
+
+  Line 801 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 801 | WARNING  | Division operation detected - verify operand types
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Ensure both operands are numeric types
+
+  Line 821 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Export/email error: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 825 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"📊 Results: {len(results)/max(successful_scrolls,1):.1f} leads per scroll")
+      Fix:  Ensure both operands are numeric types
+
+  Line 832 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"  {i+1}. {result['name']} ({result.get('username', 'N/A')}) - {result.get('location', 'N/A')}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 834 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"     URL: {result.get('url', 'N/A')}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: medium_scraper_ec.py
+Issues: 18
+------------------------------------------------------------
+  Line  16 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 724 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'article_url': f"https://medium.com/story/{article_title.replace(' ', '-').lower()}",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 797 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: enhanced_bio = f"Medium reader/writer - {', '.join(bio_parts)}" if bio_parts else bio
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 804 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "url": profile_url or f"https://medium.com/search?q={name}",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 824 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "comment_preview": customer_data.get('comment_preview', 'N/A'),
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 832 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'source_article_url': customer_data.get('article_url', 'N/A')
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 905 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 909 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 916 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: search_url = f"https://medium.com/search?q={CURRENT_SEARCH.replace(' ', '%20')}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 987 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(len(unique_leads) / len(raw_leads) * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 1048 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1048 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Ensure both operands are numeric types
+
+  Line 1067 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1067 | WARNING  | Division operation detected - verify operand types
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Ensure both operands are numeric types
+
+  Line 1089 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Export/email error: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1124 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"🔍 Target: People who READ/WRITE about {NICHE} struggles & solutions")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1125 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"🚫 Exclude: {NICHE} professionals/coaches")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1138 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"  • Article title/preview analysis")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: instagram_scraper.py
+Issues: 14
+------------------------------------------------------------
+  Line  15 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  59 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: ENRICH_PROFILES = True          # turn on/off enrichment
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 251 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: Open each profile in a NEW tab, read og:title/og:description and a best-effort bio,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 610 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 616 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 625 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: search_url = f"https://www.instagram.com/explore/tags/{hashtag_clean}/"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 700 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(len(unique_leads) / len(raw_leads) * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 754 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 754 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Ensure both operands are numeric types
+
+  Line 774 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 774 | WARNING  | Division operation detected - verify operand types
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Ensure both operands are numeric types
+
+  Line 795 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Export/email error: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 804 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"     Relevance Score: {lead.get('relevance_score', 'N/A')}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 806 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"     URL: {lead.get('url', 'N/A')}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: tiktok_scraper.py
+Issues: 11
+------------------------------------------------------------
+  Line  16 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 346 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 352 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 359 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: search_url = f"https://www.tiktok.com/search/user?q={SEARCH_TERM.replace(' ', '%20')}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 432 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(len(unique_leads) / len(raw_leads) * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 483 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 483 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Ensure both operands are numeric types
+
+  Line 501 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 501 | WARNING  | Division operation detected - verify operand types
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Ensure both operands are numeric types
+
+  Line 521 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Export/email error: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 529 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"     URL: {lead.get('url', 'N/A')}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: tools\build_cache_bust.py
+Issues: 11
+------------------------------------------------------------
+  Line   7 | WARNING  | Division operation detected - verify operand types
+      Code: ASSETS = ROOT / "assets"
+      Fix:  Ensure both operands are numeric types
+
+  Line   8 | WARNING  | Division operation detected - verify operand types
+      Code: DIST = ASSETS / "dist"
+      Fix:  Ensure both operands are numeric types
+
+  Line  32 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: src = ASSETS / name
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  32 | WARNING  | Division operation detected - verify operand types
+      Code: src = ASSETS / name
+      Fix:  Ensure both operands are numeric types
+
+  Line  37 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: copy2(src, DIST / name)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  37 | WARNING  | Division operation detected - verify operand types
+      Code: copy2(src, DIST / name)
+      Fix:  Ensure both operands are numeric types
+
+  Line  41 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: copy2(src, DIST / hashed)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  41 | WARNING  | Division operation detected - verify operand types
+      Code: copy2(src, DIST / hashed)
+      Fix:  Ensure both operands are numeric types
+
+  Line  42 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: versions[name] = f"assets/dist/{hashed}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  45 | WARNING  | Division operation detected - verify operand types
+      Code: mf = DIST / "manifest-fullscreen.json"
+      Fix:  Ensure both operands are numeric types
+
+  Line  62 | WARNING  | Division operation detected - verify operand types
+      Code: (ASSETS / "versions.json").write_text(json.dumps(out, indent=2))
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: facebook_scraper.py
+Issues: 10
+------------------------------------------------------------
+  Line  17 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: CSV_DIR = Path(os.getenv("CSV_DIR", "/app/client_configs"))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 154 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: if any(indicator in current_url.lower() for indicator in ['login', 'checkpoint', 'help', 'error', 'facebook.com/login']):
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 371 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - If username is falsy (backend/cron), we tag files as 'system'.
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 398 | WARNING  | Division operation detected - verify operand types
+      Code: processed_path = Path(csv_dir) / processed_name
+      Fix:  Ensure both operands are numeric types
+
+  Line 419 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = Path(csv_dir) / raw_name
+      Fix:  Ensure both operands are numeric types
+
+  Line 454 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 461 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: search_url = f"https://www.facebook.com/search/people/?q={SEARCH_TERM.replace(' ', '%20')}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 539 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(len(unique_leads) / len(raw_leads) * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 592 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Export/email error: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 600 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"     URL: {lead.get('profile_url', 'N/A')}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: user_lead_manager.py
+Issues: 10
+------------------------------------------------------------
+  Line 211 | WARNING  | CSV read without explicit data types
+      Code: df_sample = pd.read_csv(filepath, nrows=5)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 221 | WARNING  | Division operation detected - verify operand types
+      Code: age_minutes = (datetime.now().timestamp() - mod_time) / 60
+      Fix:  Ensure both operands are numeric types
+
+  Line 230 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(filepath)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 256 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'N/A': '0',
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 262 | WARNING  | to_numeric without error handling
+      Code: df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(5.0)
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line 264 | WARNING  | to_numeric without error handling
+      Code: df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(1000).astype(int)
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line 388 | WARNING  | Division operation detected - verify operand types
+      Code: quality_score = min(8.5 + (len(df) / 50), 10.0)
+      Fix:  Ensure both operands are numeric types
+
+  Line 393 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: dm_pct = (dm_ready / len(df)) * 100 if len(df) > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 393 | WARNING  | Division operation detected - verify operand types
+      Code: dm_pct = (dm_ready / len(df)) * 100 if len(df) > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+  Line 427 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="text/csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: save_instagram_auth_state.py
+Issues: 9
+------------------------------------------------------------
+  Line  29 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  35 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://www.instagram.com/accounts/login/")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  41 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("2. ✅ Complete any 2FA/verification if prompted")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  42 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("3. ✅ Wait until you can see your Instagram feed/homepage")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  57 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: proceed = input("Continue anyway? (y/N): ").lower().strip()
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  66 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://www.instagram.com/explore/search/keyword/?q=fitness")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 129 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 133 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://www.instagram.com/explore/search/keyword/?q=fitness")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 168 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("   - Don't use incognito/private browsing")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: save_tiktok_auth_state.py
+Issues: 9
+------------------------------------------------------------
+  Line  29 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  35 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://www.tiktok.com/login/phone-or-email/email")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  41 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("2. ✅ Complete any 2FA/verification if prompted")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  42 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("3. ✅ Wait until you can see your TikTok feed/homepage")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  55 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: proceed = input("Continue anyway? (y/N): ").lower().strip()
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  64 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://www.tiktok.com/search/user?q=test")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 127 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 131 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://www.tiktok.com/search/user?q=fitness")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 166 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print("   - Don't use incognito/private browsing")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: usage_tracker.py
+Issues: 9
+------------------------------------------------------------
+  Line 245 | WARNING  | Division operation detected - verify operand types
+      Code: platform_data['total_leads'] / platform_data['scraping_sessions'], 1
+      Fix:  Ensure both operands are numeric types
+
+  Line 324 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: usage_percentage = (current_usage / 2000) * 100 if current_usage > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 324 | WARNING  | Division operation detected - verify operand types
+      Code: usage_percentage = (current_usage / 2000) * 100 if current_usage > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+  Line 333 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: usage_percentage = (current_usage / download_limit) * 100 if download_limit > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 333 | WARNING  | Division operation detected - verify operand types
+      Code: usage_percentage = (current_usage / download_limit) * 100 if download_limit > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+  Line 342 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: usage_percentage = (current_usage / 2000) * 100 if current_usage > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 342 | WARNING  | Division operation detected - verify operand types
+      Code: usage_percentage = (current_usage / 2000) * 100 if current_usage > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+  Line 352 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: usage_percentage = (current_usage / download_limit) * 100 if download_limit > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 352 | WARNING  | Division operation detected - verify operand types
+      Code: usage_percentage = (current_usage / download_limit) * 100 if download_limit > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: youtube_scraper.py
+Issues: 9
+------------------------------------------------------------
+  Line 147 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: base_url = "https://www.youtube.com/results"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 452 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 541 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(len(unique_leads) / len(raw_leads) * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 593 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 593 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = CSV_DIR / raw_filename
+      Fix:  Ensure both operands are numeric types
+
+  Line 612 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 612 | WARNING  | Division operation detected - verify operand types
+      Code: (CSV_DIR / f"empire_totals_{username}.json").write_text(json.dumps(snapshot))
+      Fix:  Ensure both operands are numeric types
+
+  Line 636 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Export/email error: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 645 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"     Relevance Score: {lead.get('relevance_score', 'N/A')}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: sheets_writer.py
+Issues: 8
+------------------------------------------------------------
+  Line  25 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "auth_uri": os.getenv("GOOGLE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth"),
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  26 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "token_uri": os.getenv("GOOGLE_TOKEN_URI", "https://oauth2.googleapis.com/token"),
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  27 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  28 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "client_x509_cert_url": f"https://www.googleapis.com/robot/v1/metadata/x509/{os.getenv('GOOGLE_CLIENT_EMAIL')}",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  32 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  40 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  76 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⚠️ Header check/add failed: {e}")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  90 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: lead.get("headline", lead.get("title", "")),  # Handle LinkedIn/Facebook differences
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: csv_analyzer.py
+Issues: 7
+------------------------------------------------------------
+  Line  25 | WARNING  | to_numeric without error handling
+      Code: 'suggestion': 'Use pd.to_numeric() or float() to convert strings to numbers before division'
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line  31 | WARNING  | to_numeric without error handling
+      Code: 'suggestion': 'Add dtype parameter or use pd.to_numeric() after reading'
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line  49 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'suggestion': 'Add errors="coerce" parameter or use try/except block'
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 225 | WARNING  | to_numeric without error handling
+      Code: report_lines.append("   - Use pd.to_numeric(df['column'], errors='coerce')")
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line 229 | WARNING  | CSV read without explicit data types
+      Code: report_lines.append("   - Add dtype parameter: pd.read_csv('file.csv', dtype={'col': float})")
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line 230 | WARNING  | to_numeric without error handling
+      Code: report_lines.append("   - Or convert after reading: df['col'] = pd.to_numeric(df['col'])")
+      Fix:  Add errors="coerce" parameter or use try/except block
+
+  Line 233 | CRITICAL | Using input() result in mathematical operations
+      Code: report_lines.append("   - Convert input: result = float(input('Enter number: ')) / 2")
+      Fix:  Convert input to number: float(input()) or int(input())
+
+
+FILE: payment_auth_recovery.py
+Issues: 7
+------------------------------------------------------------
+  Line 404 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Create Stripe session for package purchases with custom/prebuilt distinction"""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 474 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Show payment success message with custom/prebuilt distinction"""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 555 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - ✅ Phone/email enrichment included
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 643 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: {"name": "Session ID", "value": session_id or "N/A", "inline": False}
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 711 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - Add Gmail/Slack/etc action
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 716 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - Add email/notification actions
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 731 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - Forward notifications via email/SMS
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: stripe_checkout.py
+Issues: 7
+------------------------------------------------------------
+  Line  30 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "starter": "leads/fitness_wellness_500.csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  31 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "deep_dive": "leads/fitness_wellness_2000.csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  32 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "domination": "leads/fitness_wellness_5000.csv"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 105 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Finalize purchase from query params, update Postgres, refresh session/UI."""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 497 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "description": f"{credits} credits/month • Monthly subscription • NO REFUNDS",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 647 | WARNING  | Division operation detected - verify operand types
+      Code: cost_per_credit = tier['price'] / tier['credits']
+      Fix:  Ensure both operands are numeric types
+
+  Line 777 | WARNING  | Division operation detected - verify operand types
+      Code: cost_per_lead = tier['price'] / tier['credits']
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: stripe_checkout_backup.py
+Issues: 7
+------------------------------------------------------------
+  Line  25 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "starter": "leads/fitness_wellness_500.csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  26 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "deep_dive": "leads/fitness_wellness_2000.csv",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  27 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "domination": "leads/fitness_wellness_5000.csv"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 100 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Finalize purchase from query params, update Postgres, refresh session/UI."""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 492 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "description": f"{credits} credits/month • Monthly subscription • NO REFUNDS",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 642 | WARNING  | Division operation detected - verify operand types
+      Code: cost_per_credit = tier['price'] / tier['credits']
+      Fix:  Ensure both operands are numeric types
+
+  Line 772 | WARNING  | Division operation detected - verify operand types
+      Code: cost_per_lead = tier['price'] / tier['credits']
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: user_auth_backup.py
+Issues: 6
+------------------------------------------------------------
+  Line 724 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "🏢 Company/Business Name",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 772 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "📘 Facebook Username/Profile",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 784 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "📝 Medium Username/Profile",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 833 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "🗨️ Reddit Username/Profile",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1834 | WARNING  | Division operation detected - verify operand types
+      Code: remaining = int((blocked_until_dt - now).total_seconds() / 60)
+      Fix:  Ensure both operands are numeric types
+
+  Line 2023 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 🚀 Conquering 8 platforms with 21.3 leads/minute!
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: csv_user_debug.py
+Issues: 5
+------------------------------------------------------------
+  Line  35 | WARNING  | CSV read without explicit data types
+      Code: df = pd.read_csv(filepath, nrows=5000)
+      Fix:  Add dtype parameter or use pd.to_numeric() after reading
+
+  Line  80 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: base_glob = str(CSV_DIR / pat)
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  80 | WARNING  | Division operation detected - verify operand types
+      Code: base_glob = str(CSV_DIR / pat)
+      Fix:  Ensure both operands are numeric types
+
+  Line  81 | WARNING  | Division operation detected - verify operand types
+      Code: rec_glob  = str(CSV_DIR / "**" / pat)
+      Fix:  Ensure both operands are numeric types
+
+  Line  81 | WARNING  | Division operation detected - verify operand types
+      Code: rec_glob  = str(CSV_DIR / "**" / pat)
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: persistence.py
+Issues: 5
+------------------------------------------------------------
+  Line   7 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Prefer caller-provided path; else env; else /client_configs."""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  27 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - If csv_dir is None, uses env CSV_DIR or /client_configs.
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  47 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: out_path = out_dir / out_name
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  47 | WARNING  | Division operation detected - verify operand types
+      Code: out_path = out_dir / out_name
+      Fix:  Ensure both operands are numeric types
+
+  Line  71 | WARNING  | Division operation detected - verify operand types
+      Code: raw_path = Path(csv_dir) / raw_name
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: smart_duplicate_handler.py
+Issues: 5
+------------------------------------------------------------
+  Line 198 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"  📈 Efficiency: {(stats['unique_leads'] / stats['raw_leads'] * 100):.1f}% kept")
+      Fix:  Ensure both operands are numeric types
+
+  Line 271 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: {"name": "John Smith", "profile_url": "https://facebook.com/john.smith.123", "bio": "Love cooking"},
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 272 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: {"name": "John Smith", "profile_url": "https://facebook.com/john.smith.456", "bio": "Software engineer"},
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 273 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: {"name": "John Smith", "profile_url": "https://facebook.com/john.smith.123", "bio": "Love cooking"},  # True duplicate
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 275 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: {"name": "Jane Doe", "profile_url": "https://facebook.com/jane.doe.real", "bio": "Professional baker"},
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: stripe_integration.py
+Issues: 5
+------------------------------------------------------------
+  Line  19 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "file_path": "leads/fitness_wellness_500.csv"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  23 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "file_path": "leads/fitness_wellness_2000.csv"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  27 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "file_path": "leads/fitness_wellness_5000.csv"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  96 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: session.amount_total / 100,  # Convert cents to dollars
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  96 | WARNING  | Division operation detected - verify operand types
+      Code: session.amount_total / 100,  # Convert cents to dollars
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: user_auth.py
+Issues: 5
+------------------------------------------------------------
+  Line 721 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "🏢 Company/Business Name",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 769 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "📘 Facebook Username/Profile",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 781 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "📝 Medium Username/Profile",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 830 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "🗨️ Reddit Username/Profile",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1883 | WARNING  | Division operation detected - verify operand types
+      Code: remaining = int((blocked_until_dt - now).total_seconds() / 60)
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: config_loader.py
+Issues: 4
+------------------------------------------------------------
+  Line  72 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "success_url": "https://leadgeneratorempire.com/success",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  73 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "cancel_url": "https://leadgeneratorempire.com/cancel",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 421 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "success_url": "https://leadgeneratorempire.com/success",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 422 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "cancel_url": "https://leadgeneratorempire.com/cancel",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: dm_sequences.py
+Issues: 4
+------------------------------------------------------------
+  Line  58 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "youtube": "Focus on creator collaboration and networking. Mention their content/channel positively. Use terms like 'subscribe', 'content', 'collaborate'.",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  60 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "reddit": "Be direct and authentic. No emojis or overly casual language. Sound genuine and community-minded. Mention their posts/contributions.",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 153 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: bio: Bio/description text
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 156 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: auto_detect_language: Whether to auto-detect language from bio/name
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: exclusion_manager.py
+Issues: 4
+------------------------------------------------------------
+  Line 122 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: platform = input("Platform (twitter/facebook/instagram/etc): ").strip().lower()
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 126 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: platform = input("Platform (twitter/facebook/instagram/etc): ").strip().lower()
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 130 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: platform = input("Platform (twitter/facebook/instagram/etc): ").strip().lower()
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 144 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: platform = input("Platform (twitter/facebook/instagram/etc): ").strip().lower()
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: package_system.py
+Issues: 4
+------------------------------------------------------------
+  Line 114 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.info("💡 Your API key is invalid. Get a new one from: https://dashboard.stripe.com/apikeys")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 271 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "Phone/email enrichment when available",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 511 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <a href="data:file/csv;base64,{b64}" download="{filename}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 569 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <a href="data:file/csv;base64,{b64}" download="{filename}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: package_system_backup.py
+Issues: 4
+------------------------------------------------------------
+  Line 114 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.info("💡 Your API key is invalid. Get a new one from: https://dashboard.stripe.com/apikeys")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 271 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "Phone/email enrichment when available",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 511 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <a href="data:file/csv;base64,{b64}" download="{filename}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 569 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: <a href="data:file/csv;base64,{b64}" download="{filename}"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: pdf_invoice.py
+Issues: 4
+------------------------------------------------------------
+  Line 223 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: name = lead.get('name', 'N/A')
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 224 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: bio = lead.get('bio', 'N/A')
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 291 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="application/pdf",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 315 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: mime="application/pdf",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: purchases_tracker.py
+Issues: 4
+------------------------------------------------------------
+  Line 103 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "cost_per_credit": round(amount / credits, 2) if credits > 0 else 0,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 103 | WARNING  | Division operation detected - verify operand types
+      Code: "cost_per_credit": round(amount / credits, 2) if credits > 0 else 0,
+      Fix:  Ensure both operands are numeric types
+
+  Line 241 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: purchase['cost_per_credit'] = round(amount / estimated_credits, 2) if estimated_credits > 0 else 0
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 241 | WARNING  | Division operation detected - verify operand types
+      Code: purchase['cost_per_credit'] = round(amount / estimated_credits, 2) if estimated_credits > 0 else 0
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: dm_csv_exporter.py
+Issues: 3
+------------------------------------------------------------
+  Line 177 | WARNING  | Division operation detected - verify operand types
+      Code: 'avg_length': sum(r.get('length', 0) for r in dm_results) / len(dm_results),
+      Fix:  Ensure both operands are numeric types
+
+  Line 215 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: percentage = (count / stats['total_dms']) * 100
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 215 | WARNING  | Division operation detected - verify operand types
+      Code: percentage = (count / stats['total_dms']) * 100
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: emailer.py
+Issues: 3
+------------------------------------------------------------
+  Line 184 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"Industry: {industry or 'n/a'}",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 185 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"Location: {location or 'n/a'}",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 186 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"Stripe Session: {session_id or 'n/a'}",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: postgres_credit_system.py
+Issues: 3
+------------------------------------------------------------
+  Line 551 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: Delegates to an update/set method if available,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 688 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: Return (active, status_string). If Stripe says the sub is canceled/past_due,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1075 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Force create/update user with specific data (for fixing sync issues)"""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: postgres_credit_system_backup.py
+Issues: 3
+------------------------------------------------------------
+  Line 551 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: Delegates to an update/set method if available,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 688 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: Return (active, status_string). If Stripe says the sub is canceled/past_due,
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1075 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Force create/update user with specific data (for fixing sync issues)"""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: save_medium_auth_state.py
+Issues: 3
+------------------------------------------------------------
+  Line  27 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  30 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: timezone_id='America/New_York'
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  35 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: save_reddit_auth_state.py
+Issues: 3
+------------------------------------------------------------
+  Line  27 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  30 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: timezone_id='America/New_York'
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  35 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: parallel_scraper_runner.py
+Issues: 2
+------------------------------------------------------------
+  Line 481 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⏰ Total time: {total_duration:.1f} seconds ({total_duration/60:.1f} minutes)")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 481 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"⏰ Total time: {total_duration:.1f} seconds ({total_duration/60:.1f} minutes)")
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: parallel_scraper_runner_backup.py
+Issues: 2
+------------------------------------------------------------
+  Line 427 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"⏰ Total time: {total_duration:.1f} seconds ({total_duration/60:.1f} minutes)")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 427 | WARNING  | Division operation detected - verify operand types
+      Code: print(f"⏰ Total time: {total_duration:.1f} seconds ({total_duration/60:.1f} minutes)")
+      Fix:  Ensure both operands are numeric types
+
+
+FILE: run_daily_scraper_complete.py
+Issues: 2
+------------------------------------------------------------
+  Line 943 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"parenting {' '.join(keywords[1:])}",  # Remove 'mommy/mom'
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1180 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"[TARGET] Niche: Any industry/vertical supported")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: run_daily_scraper_complete_backup.py
+Issues: 2
+------------------------------------------------------------
+  Line 900 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: f"parenting {' '.join(keywords[1:])}",  # Remove 'mommy/mom'
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line 1134 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: print(f"[TARGET] Niche: Any industry/vertical supported")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: save_youtube_auth_state.py
+Issues: 2
+------------------------------------------------------------
+  Line  17 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: return os.path.expanduser("~/Library/Application Support/Google/Chrome")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+  Line  19 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: return os.path.expanduser("~/.config/google-chrome")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: payments_finish.py
+Issues: 1
+------------------------------------------------------------
+  Line  35 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: st.warning("Purchase detected but plan/credits missing in redirect URL.")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: payment_auth_recovery_backup.py
+Issues: 1
+------------------------------------------------------------
+  Line 448 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: - ✅ Phone/email enrichment when available
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: personas.py
+Issues: 1
+------------------------------------------------------------
+  Line  97 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: "goal": "spark a conversation about real estate trends, buying/selling, or investment",
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: platform_migration.py
+Issues: 1
+------------------------------------------------------------
+  Line 236 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: confirm = input("\nProceed with migration? (yes/no): ").lower().strip()
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: save_auth_state.py
+Issues: 1
+------------------------------------------------------------
+  Line  14 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://twitter.com/login")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: save_facebook_auth_state.py
+Issues: 1
+------------------------------------------------------------
+  Line  15 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: page.goto("https://www.facebook.com/login")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: save_linkedin_auth_state.py
+Issues: 1
+------------------------------------------------------------
+  Line   6 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: LOGIN_URL = "https://www.linkedin.com/login"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: simple_credit_system.py
+Issues: 1
+------------------------------------------------------------
+  Line 648 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: """Force create/update user with specific data (for fixing sync issues)"""
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: streamlit_config_utils.py
+Issues: 1
+------------------------------------------------------------
+  Line  11 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: config_file = f"client_configs/client_{username}_config.json"
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+FILE: stripe_webhooks.py
+Issues: 1
+------------------------------------------------------------
+  Line  28 | CRITICAL | Potential string division - variables may be strings instead of numbers
+      Code: @app.post("/stripe/webhook")
+      Fix:  Use pd.to_numeric() or float() to convert strings to numbers before division
+
+
+MOST COMMON ISSUES:
+----------------------------------------
+string_division          : 364 occurrences
+ast_division             : 114 occurrences
+csv_no_dtype             :  18 occurrences
+missing_error_handling   :  10 occurrences
+input_math               :   1 occurrences
+
+
+QUICK FIX SUGGESTIONS:
+----------------------------------------
+1. For string division errors:
+   - Use pd.to_numeric(df['column'], errors='coerce')
+   - Or df['column'].astype(float)
+
+2. For CSV data type issues:
+   - Add dtype parameter: pd.read_csv('file.csv', dtype={'col': float})
+   - Or convert after reading: df['col'] = pd.to_numeric(df['col'])
+
+3. For input() in math operations:
+   - Convert input: result = float(input('Enter number: ')) / 2
