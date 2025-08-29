@@ -2048,20 +2048,38 @@ def handle_password_reset_request(email):
         return False, "Reset request failed"
     
 def send_password_reset_discord(username, email, reset_code):
-    """Send password reset notification to Discord"""
+    """Send password reset notification with customer email template"""
     
-    description = f"Password reset requested for {username} ({email}). Reset code: {reset_code}"
+    # Customer email template to include in Discord
+    customer_email_template = f"""Hi {username},
+
+You requested a password reset for your Lead Generator Empire account.
+
+Your reset code is: {reset_code}
+
+To reset your password:
+1. Go to the login page
+2. Click "Forgot Password"  
+3. Enter this reset code when prompted
+4. Create your new password
+
+This code expires in 24 hours. If you didn't request this reset, please ignore this message.
+
+Best regards,
+Lead Generator Empire Team"""
+
+    description = f"Password reset requested for {username} at {email}"
     
     fields = [
         {"name": "Username", "value": username, "inline": True},
         {"name": "Email", "value": email, "inline": True}, 
-        {"name": "Reset Code", "value": reset_code, "inline": False},
-        {"name": "Customer Message", "value": f"Hi {username}, your password reset code is: {reset_code}. This expires in 24 hours.", "inline": False}
+        {"name": "Reset Code", "value": reset_code, "inline": True},
+        {"name": "Email Template for Customer", "value": customer_email_template, "inline": False}
     ]
     
     return send_discord_notification(
         webhook_type="customer",
-        title="Password Reset Request",
+        title="Password Reset Request - Send to Customer", 
         description=description,
         fields=fields,
         color=16776960
@@ -2074,6 +2092,14 @@ def integrated_show_forgot_password_form():
     """Forgot password form using your email system"""
     st.markdown("### 🔐 Reset Your Password")
     st.markdown("Enter your email address to receive a password reset code")
+    
+    # Add "I have a code" button above the form
+    if st.button("🎫 I already have a reset code", key="have_code_btn"):
+        st.session_state.show_forgot_password = False
+        st.session_state.show_password_reset = True
+        st.rerun()
+    
+    st.markdown("---")
     
     with st.form("integrated_forgot_password_form"):
         identifier = st.text_input(
