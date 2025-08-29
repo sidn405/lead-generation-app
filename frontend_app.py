@@ -51,9 +51,9 @@ from pdf_invoice import download_invoice_button, download_delivery_confirmation_
 from payment_recovery import automatic_payment_recovery, try_save_user_to_database
 
 # Import your existing emailer
-from emailer import EMAIL_ADDRESS, EMAIL_PASSWORD
+from discord_notification_system import send_linkedin_results_discord, send_linkedin_confirmation_discord
 import smtplib
-from email.message import EmailMessage
+
 
 # 🌍 Import multilingual capabilities
 try:
@@ -1272,108 +1272,29 @@ def _calc_platforms(files_sig):
             print(f"[stats] skip {f}: {e}")
     return counts, meta
 
-from pathlib import Path
-import os, glob, re
-
-# ---------- helpers (add once) ----------
-def _csv_root(base) -> Path:
-    root = base if isinstance(base, Path) else Path(base or "client_configs")
-    root.mkdir(parents=True, exist_ok=True)
-    return root
-
-def _infer_platform(filename: str) -> str:
-    name = filename.lower()
-    for plat in ("twitter","facebook","linkedin","tiktok","instagram","youtube","medium","reddit"):
-        if name.startswith(f"{plat}_leads_"):
-            return plat
-    return "unknown"
-
-def _files_for_user(username: str, base) -> list[Path]:
-    """Return absolute Paths to this user's CSVs under base."""
-    root = _csv_root(base)
-    uname = username or ""
-    patterns = [
-        f"twitter_leads_*{uname}*.csv",
-        f"facebook_leads_*{uname}*.csv",
-        f"linkedin_leads_*{uname}*.csv",
-        f"tiktok_leads_*{uname}*.csv",
-        f"instagram_leads_*{uname}*.csv",
-        f"youtube_leads_*{uname}*.csv",
-        f"medium_leads_*{uname}*.csv",
-        f"reddit_leads_*{uname}*.csv",
-    ]
-    candidates = []
-    for pat in patterns:
-        candidates += glob.glob(str(root / pat))
-        candidates += glob.glob(str(root / "**" / pat), recursive=True)
-
-    files = sorted({Path(p).resolve() for p in candidates if os.path.isfile(p)},
-                   key=os.path.getmtime, reverse=True)
-    return files
-
-def _calc_platforms(sig: list[tuple[Path,int,int]]):
-    """Given (path, mtime, size) tuples, compute per-platform counts + meta."""
-    counts: dict[str,int] = {}
-    meta   = []
-
-    for p, mtime, size in sig:
-        plat = _infer_platform(p.name)
-        leads = 0
-        # Count rows (CSV header tolerant)
-        try:
-            import pandas as pd  # use pandas if available
-            df = pd.read_csv(p)
-            leads = int(len(df.index))
-        except Exception:
-            # fallback: line-count minus header
-            try:
-                with open(p, "r", encoding="utf-8", errors="ignore") as f:
-                    n = sum(1 for _ in f)
-                leads = max(n - 1, 0)
-            except Exception:
-                leads = 0
-
-        counts[plat] = counts.get(plat, 0) + leads
-        meta.append({"file": str(p), "platform": plat, "leads": leads, "mtime": mtime})
-
-    return counts, meta
-# ---------- /helpers ----------
-
 def calculate_empire_from_csvs(username: str, csv_dir: Path | None = None):
-    """Return {platform: total_leads} for the user from CSVs under csv_dir."""
-    root = _csv_root(csv_dir or CSV_DIR)
-    files = _files_for_user(username, root)  # -> List[Path]
-    sig = tuple((p, int(p.stat().st_mtime), int(p.stat().st_size)) for p in files)
+    files = _files_for_user(username, csv_dir or CSV_DIR)
+    sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
     counts, _ = _calc_platforms(sig)
     return counts
 
 def get_user_csv_files(username: str, csv_dir: Path | None = None):
-    """Return file metadata list for the user's CSVs (used by UI tables)."""
     from datetime import datetime
-    root = _csv_root(csv_dir or CSV_DIR)
-    files = _files_for_user(username, root)  # -> List[Path]
-    sig = tuple((p, int(p.stat().st_mtime), int(p.stat().st_size)) for p in files)
+    files = _files_for_user(username, csv_dir or CSV_DIR)
+    sig = tuple((f, int(os.path.getmtime(f)), os.path.getsize(f)) for f in files)
     _, meta = _calc_platforms(sig)
-
     out = []
     for m in meta:
-        path = Path(m["file"])
-        try:
-            size_mb = round(path.stat().st_size / (1024 * 1024), 3)
-            mtime   = datetime.fromtimestamp(path.stat().st_mtime).strftime("%m/%d %H:%M")
-        except Exception:
-            size_mb = 0.0
-            mtime   = ""
+        path = m["file"]
         out.append({
-            "file": str(path),
-            "name": path.name,
+            "file": path,
+            "name": os.path.basename(path),
             "platform": m["platform"],
             "leads": int(m["leads"]),
-            "date": mtime,
-            "size_mb": size_mb,
+            "date": datetime.fromtimestamp(m["mtime"]).strftime("%m/%d %H:%M"),
+            "size_mb": round(os.path.getsize(path)/(1024*1024), 3),
         })
     return out
-
 
 
 def load_accurate_empire_stats(username: str):

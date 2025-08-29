@@ -15,11 +15,9 @@ import secrets
 import time
 import re
 import json
-#from simple_credit_system import credit_system
 from postgres_credit_system import credit_system
 from cryptography.fernet import Fernet
-from email.message import EmailMessage
-from emailer import EMAIL_ADDRESS, EMAIL_PASSWORD
+from discord_notification_system import send_discord_notification, send_linkedin_results_discord, send_linkedin_confirmation_discord
 
 def load_legal_document(filename):
     """Load legal document from markdown file"""
@@ -2030,57 +2028,44 @@ class IntegratedPasswordReset:
         except Exception as e:
             print(f"❌ Failed to mark token as used: {e}")
             return False
-
-def send_password_reset_email(user_email: str, username: str, reset_token: str) -> bool:
-    """Send password reset email using your existing email system"""
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = f"🔐 Password Reset - Lead Generator Empire"
-        msg["From"] = EMAIL_ADDRESS
-        msg["To"] = user_email
         
-        # Create email body in your style
-        email_body = f"""
-Hi {username}!
-
-We received a request to reset your Lead Generator Empire password.
-
-🔑 **Your Reset Code:** {reset_token}
-
-⏰ **Important:**
-• This code expires in 1 hour
-• Can only be used once
-• Never share this code with anyone
-
-🔧 **To Reset Your Password:**
-1. Go back to the Lead Generator Empire login page
-2. Click "Reset Password" 
-3. Enter this code: {reset_token}
-4. Create your new password
-
-If you didn't request this password reset, please ignore this email or contact support.
-
-Best regards,
-Lead Generator Empire Team
-🚀 Conquering 8 platforms with 21.3 leads/minute!
-
----
-Need help? Reply to this email or contact support.
-        """.strip()
+from discord_notification_system import send_password_reset_discord
         
-        msg.set_content(email_body)
-        
-        # Send using your existing SMTP setup
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            smtp.send_message(msg)
-        
-        print(f"✅ Password reset email sent to {user_email}")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Password reset email failed: {e}")
-        return False
+def handle_password_reset_request(email):
+    user_data, username, source_file = load_user_from_both_files(email)
+    
+    if not user_data:
+        return False, "Email not found"
+    
+    reset_code = generate_reset_token()
+    
+    # Send Discord notification instead of email
+    discord_sent = send_password_reset_discord(username, email, reset_code)
+    
+    if discord_sent:
+        return True, f"Reset request sent to admin. You'll be contacted with instructions."
+    else:
+        return False, "Reset request failed"
+    
+def send_password_reset_discord(username, email, reset_code):
+    """Send password reset notification to Discord"""
+    
+    description = f"Password reset requested for {username} ({email}). Reset code: {reset_code}"
+    
+    fields = [
+        {"name": "Username", "value": username, "inline": True},
+        {"name": "Email", "value": email, "inline": True}, 
+        {"name": "Reset Code", "value": reset_code, "inline": False},
+        {"name": "Customer Message", "value": f"Hi {username}, your password reset code is: {reset_code}. This expires in 24 hours.", "inline": False}
+    ]
+    
+    return send_discord_notification(
+        webhook_type="customer",
+        title="Password Reset Request",
+        description=description,
+        fields=fields,
+        color=16776960
+    )
 
 # Initialize the system
 password_reset_system = IntegratedPasswordReset()
@@ -2115,12 +2100,12 @@ def integrated_show_forgot_password_form():
                 if not user_data:
                     # For security, don't reveal if email exists
                     st.success("✅ If an account with this email exists, a reset code has been sent")
-                    st.info("📧 Check your email for the reset code")
+                    st.info("📧 Request submitted. Admin has been notified and will contact you.")
                     return
                 
                 email = user_data.get('email', '')
                 if not email:
-                    st.success("✅ If an account with this email exists, a reset code has been sent")
+                    st.success("If an account with this email exists, a reset code has been sent")
                     return
                 
                 # Create reset token
@@ -2130,19 +2115,16 @@ def integrated_show_forgot_password_form():
                     st.error(f"❌ {message}")
                     return
                 
-                # Send email using your system
-                email_success = send_password_reset_email(email, username, token)
+                # Replace email with Discord notification
+                from discord_notification_system import send_password_reset_discord
+
+                discord_success = send_password_reset_discord(username, email, token)
                 
-                if email_success:
-                    st.success("✅ Password reset code sent to your email!")
-                    st.info("📧 Check your email for the reset code")
-                    
-                    # Switch to reset form
-                    st.session_state.show_forgot_password = False
-                    st.session_state.show_password_reset = True
-                    st.rerun()
+                if discord_success:
+                    st.success("Password reset request submitted!")
+                    st.info("Admin has been notified and will contact you with reset instructions.")
                 else:
-                    st.error("❌ Failed to send email. Please try again.")
+                    st.error("Reset request failed. Please try again or contact support.")
         
         with col2:
             if st.form_submit_button("🔙 Back to Login", use_container_width=True):
@@ -2333,33 +2315,6 @@ def integrated_show_password_reset_form():
             st.session_state.show_password_reset = False
             st.session_state.show_login = True
             st.rerun()
-
-
-def test_integrated_email_system():
-    """Test function for your email system"""
-    st.subheader("🧪 Test Password Reset Email")
-    
-    test_email = st.text_input("Test email address:")
-    test_username = st.text_input("Test username:", value="TestUser")
-    
-    if st.button("📧 Send Test Reset Email"):
-        if test_email and test_username:
-            # Create test token
-            success, message, token = password_reset_system.create_reset_token(test_username, test_email)
-            
-            if success:
-                # Send test email
-                email_success = send_password_reset_email(test_email, test_username, token)
-                
-                if email_success:
-                    st.success("✅ Test email sent successfully!")
-                    st.info(f"📧 Reset code: {token}")
-                else:
-                    st.error("❌ Email sending failed")
-            else:
-                st.error(f"❌ Token creation failed: {message}")
-        else:
-            st.error("❌ Please enter both email and username")
 
 # Cleanup function (run periodically)
 def cleanup_expired_tokens():

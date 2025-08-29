@@ -5,7 +5,7 @@ Payment Authentication Recovery Module
 Handles authentication restoration after Stripe payment returns
 """
 import streamlit as st
-from emailer import send_admin_package_notification, EMAIL_ADDRESS
+from discord_notification_system import send_discord_notification, send_linkedin_results_discord, send_linkedin_confirmation_discord
 import os
 import socket
 import smtplib
@@ -152,27 +152,6 @@ def _set_session_state(username: str, user_data: Dict) -> None:
         pass
     except:
         pass
-    
-def notify_support_order(*, username, user_email, package_type, amount, industry, location, session_id, timestamp):
-    if NOTIFY_MODE == "webhook":
-        # your Discord webhook (with file fallback) — already implemented
-        return send_notification_with_fallback(username, user_email, package_type, amount, industry, location, session_id, timestamp)
-    elif NOTIFY_MODE == "email":
-        # legacy email path if you ever want it again
-        admin_email = os.getenv("ADMIN_EMAIL") or EMAIL_ADDRESS
-        return send_admin_package_notification(
-            admin_email=admin_email,
-            username=username,
-            user_email=user_email,
-            package_type=package_type,
-            amount=amount,
-            industry=industry,
-            location=location,
-            session_id=session_id,
-            timestamp=timestamp
-        )
-    else:  # 'none'
-        return True
 
 # Updated _process_payment_success function:
 def _process_payment_success(query_params: Dict, username: str) -> None:
@@ -362,24 +341,6 @@ def show_payment_success_message() -> bool:
                 or st.session_state.get("package_location")
                 or ""
             )
-
-
-            if stamp and not st.session_state.get(notice_flag):
-                admin_email = os.getenv("ADMIN_EMAIL", EMAIL_ADDRESS)
-                sent = send_admin_package_notification(
-                    admin_email=admin_email,
-                    username=username,
-                    user_email=user_email,
-                    package_type=package,
-                    amount=amount_val,
-                    industry=industry,
-                    location=location,
-                    session_id=session_id,
-                    timestamp=stamp
-                )
-                st.session_state[notice_flag] = True
-                if sent:
-                    st.info("📨 Admin has been notified. We’re preparing your package now.")
             
             if st.button("🏠 Back to Dashboard", type="primary"):
                 st.query_params.clear()
