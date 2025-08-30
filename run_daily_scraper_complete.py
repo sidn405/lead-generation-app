@@ -619,6 +619,10 @@ def debug_credit_flow(username, results, platform):
 
 def consume_user_resources(username, leads_generated, platform):
     print(f"[CONSUME] Starting for user: {username}")
+    print(f"[CREDIT DEBUG] consume_user_resources called")
+    print(f"[CREDIT DEBUG] Username: {username}")
+    print(f"[CREDIT DEBUG] Platform: {platform}")  
+    print(f"[CREDIT DEBUG] Leads count: {len(leads_generated) if leads_generated else 0}")
     
     if not username or username == 'anonymous' or not leads_generated:
         print(f"[CONSUME] Skipping - no username or empty results")
@@ -656,13 +660,18 @@ def consume_user_resources(username, leads_generated, platform):
         
         if success:
             # Force save and verify
-            print(f"[CONSUME] Forcing database save...")
+            print(f"Consumed {leads_count} credits for {platform}")
             credit_system.save_data()
             
             # Get AFTER state
             user_info_after = credit_system.get_user_info(username)
             credits_after = user_info_after.get('credits', 0) if user_info_after else 0
-            
+           # Verify the save worked
+            updated_info = credit_system.get_user_info(username)
+            new_credits = updated_info.get('credits', 0) if updated_info else 0
+            print(f"[VERIFICATION] Credits after save: {new_credits}")
+        else:
+            print(f"Failed to consume credits for {platform}") 
             print(f"[CONSUME] AFTER: credits={credits_after}")
             print(f"[CONSUME] CHANGE: {credits_before} -> {credits_after} (diff: {credits_before - credits_after})")
             
@@ -673,54 +682,6 @@ def consume_user_resources(username, leads_generated, platform):
         
     except Exception as e:
         print(f"[CONSUME] EXCEPTION: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-def consume_user_resources(username, leads_generated, platform):
-    """Consume credits or demo leads after successful scraping"""
-    
-    if not username or username == 'anonymous' or not leads_generated:
-        return True  # Skip consumption for anonymous or empty results
-    
-    try:
-        from postgres_credit_system import credit_system
-        user_info = credit_system.get_user_info(username)
-        
-        if not user_info:
-            print(f"Could not find user {username} for resource consumption")
-            return False
-        
-        user_plan = user_info.get('plan', 'demo')
-        leads_count = len(leads_generated)
-        
-        if user_plan == 'demo':
-            # Consume demo leads
-            consumed = 0
-            for _ in range(leads_count):  # Fixed: was 'for * in range(leads*count)'
-                if credit_system.consume_demo_lead(username):
-                    consumed += 1
-                else:
-                    break
-            
-            print(f"Demo consumption: {consumed} demo leads used for {platform}")
-            return consumed > 0
-        
-        else:
-            # Consume regular credits
-            success = credit_system.consume_credits(username, leads_count, leads_count, platform)
-            
-            if success:
-                print(f"Consumed {leads_count} credits for {platform}")
-                # Force save to database
-                credit_system.save_data()
-            else:
-                print(f"Failed to consume credits for {platform}")
-            
-            return success
-    
-    except Exception as e:
-        print(f"Resource consumption error: {e}")
         import traceback
         traceback.print_exc()
         return False
