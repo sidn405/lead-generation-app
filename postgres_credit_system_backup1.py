@@ -4,7 +4,6 @@ import json
 import hashlib
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import psycopg2.pool
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple, List
 
@@ -12,51 +11,31 @@ class CreditSystem:
     """PostgreSQL-based credit system - 100% compatible with original"""
     
     def __init__(self):
-        """Initialize PostgreSQL connection pool"""
-        print("Credit system initializing...")
+        """Initialize PostgreSQL connection and create tables"""
+        print("🔧 Credit system initializing...")
         
+        # Check if we should use PostgreSQL or fallback to JSON
         self.database_url = os.getenv('DATABASE_URL')
         self.use_postgres = bool(self.database_url)
         
         if self.use_postgres:
             try:
-                # Use connection pool instead of single connection
-                from psycopg2 import pool
-                self.connection_pool = pool.ThreadedConnectionPool(
-                    1, 20,  # min=1, max=20 connections
-                    self.database_url
-                )
+                self.conn = psycopg2.connect(self.database_url)
+                self.conn.autocommit = True
                 self._create_tables()
-                print("PostgreSQL credit system initialized with connection pool")
+                print(f"✅ PostgreSQL credit system initialized: connected to database")
             except Exception as e:
-                print(f"PostgreSQL failed, falling back to JSON: {e}")
+                print(f"❌ PostgreSQL failed, falling back to JSON: {e}")
                 self.use_postgres = False
                 self._init_json_fallback()
         else:
+            print("⚠️ No DATABASE_URL found, using JSON fallback")
             self._init_json_fallback()
         
         if self.use_postgres:
             self._load_users_count()
         
         print(f"🔧 Credit system initialized: {len(self.get_all_users_dict())} users loaded")
-        
-    def get_user_info(self, username):
-        if not self.use_postgres:
-            return self.json_data.get(username)
-        
-        conn = None
-        try:
-            conn = self.connection_pool.getconn()
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-                result = cursor.fetchone()
-                return dict(result) if result else None
-        except Exception as e:
-            print(f"Database query error: {e}")
-            return None
-        finally:
-            if conn:
-                self.connection_pool.putconn(conn)
     
     def _init_json_fallback(self):
         """Initialize JSON fallback system"""
