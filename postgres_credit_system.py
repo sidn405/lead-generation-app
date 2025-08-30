@@ -4,7 +4,6 @@ import json
 import hashlib
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import psycopg2.pool
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple, List
 
@@ -64,8 +63,9 @@ class CreditSystem:
         self.transactions_file = "transactions.json"
         self.load_data()
     
-    def _create_tables(self):
+    def _create_tables(self):        
         """Create PostgreSQL tables"""
+        
         tables_sql = [
             """
             CREATE TABLE IF NOT EXISTS users (
@@ -123,20 +123,23 @@ class CreditSystem:
         for sql in tables_sql:
             self._execute_query(sql)
     
-    def _execute_query(self, query, params=None, fetch=False):
-        """Execute SQL query"""
+    def _execute_query(self, query, params=None):
         if not self.use_postgres:
-            return [] if fetch else 0
-        
+            return None
+            
+        conn = None
         try:
-            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(query, params)
-                if fetch:
-                    return cur.fetchall()
-                return cur.rowcount
+            conn = self.connection_pool.getconn()
+            with conn.cursor() as cursor:
+                cursor.execute(query, params)
+                conn.commit()
+                return cursor.fetchall() if cursor.description else None
         except Exception as e:
-            print(f"❌ Query error: {e}")
-            return [] if fetch else 0
+            print(f"Query error: {e}")
+            return None
+        finally:
+            if conn:
+                self.connection_pool.putconn(conn)
     
     def _load_users_count(self):
         """Load user count for initialization"""
