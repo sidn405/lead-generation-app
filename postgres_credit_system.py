@@ -123,17 +123,22 @@ class CreditSystem:
         for sql in tables_sql:
             self._execute_query(sql)
     
-    def _execute_query(self, query, params=None):
+    def _execute_query(self, query, params=None, fetch=False):
         if not self.use_postgres:
             return None
             
         conn = None
         try:
             conn = self.connection_pool.getconn()
-            with conn.cursor() as cursor:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
                 cursor.execute(query, params)
-                conn.commit()
-                return cursor.fetchall() if cursor.description else None
+                
+                if fetch:
+                    return cursor.fetchall()
+                else:
+                    conn.commit()
+                    return cursor.rowcount if cursor.rowcount else None
+                    
         except Exception as e:
             print(f"Query error: {e}")
             return None
