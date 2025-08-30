@@ -603,6 +603,80 @@ def get_safe_estimate_for_user(platform, max_scrolls, username, user_plan):
     # For paid users, use base estimate (they have higher limits)
     return base_estimate
 
+def debug_credit_flow(username, results, platform):
+    print(f"=== CREDIT DEBUG START ===")
+    print(f"Username: {username}")
+    print(f"Platform: {platform}")
+    print(f"Results count: {len(results) if results else 0}")
+    print(f"Results type: {type(results)}")
+    
+    # Call the consumption function with full logging
+    consumption_result = consume_user_resources(username, results, platform)
+    print(f"Consumption result: {consumption_result}")
+    print(f"=== CREDIT DEBUG END ===")
+    
+    return consumption_result
+
+def consume_user_resources(username, leads_generated, platform):
+    print(f"[CONSUME] Starting for user: {username}")
+    
+    if not username or username == 'anonymous' or not leads_generated:
+        print(f"[CONSUME] Skipping - no username or empty results")
+        return True
+    
+    try:
+        from postgres_credit_system import credit_system
+        
+        # Get BEFORE state
+        user_info_before = credit_system.get_user_info(username)
+        if not user_info_before:
+            print(f"[CONSUME] ERROR: User {username} not found")
+            return False
+        
+        credits_before = user_info_before.get('credits', 0)
+        plan = user_info_before.get('plan', 'demo')
+        leads_count = len(leads_generated)
+        
+        print(f"[CONSUME] BEFORE: credits={credits_before}, plan={plan}, consuming={leads_count}")
+        
+        if plan == 'demo':
+            # Demo consumption logic
+            consumed = 0
+            for _ in range(leads_count):
+                if credit_system.consume_demo_lead(username):
+                    consumed += 1
+                else:
+                    break
+            print(f"[CONSUME] Demo: consumed {consumed} leads")
+            success = consumed > 0
+        else:
+            # Regular credit consumption
+            success = credit_system.consume_credits(username, leads_count, leads_count, platform)
+            print(f"[CONSUME] Regular: consume_credits returned {success}")
+        
+        if success:
+            # Force save and verify
+            print(f"[CONSUME] Forcing database save...")
+            credit_system.save_data()
+            
+            # Get AFTER state
+            user_info_after = credit_system.get_user_info(username)
+            credits_after = user_info_after.get('credits', 0) if user_info_after else 0
+            
+            print(f"[CONSUME] AFTER: credits={credits_after}")
+            print(f"[CONSUME] CHANGE: {credits_before} -> {credits_after} (diff: {credits_before - credits_after})")
+            
+            if credits_before == credits_after and plan != 'demo':
+                print(f"[CONSUME] WARNING: Credits didn't change! Database save failed?")
+        
+        return success
+        
+    except Exception as e:
+        print(f"[CONSUME] EXCEPTION: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def consume_user_resources(username, leads_generated, platform):
     """Consume credits or demo leads after successful scraping"""
     
@@ -773,7 +847,8 @@ def run_platform_scraper(platform):
         
         # Process results
         if results:
-            consumption_success = consume_user_resources(username, results, platform)
+            debug_credit_flow(username, results, platform)
+            # consumption_success = consume_user_resources(username, results, platform)
             print(f"✅ {platform.title()}: {len(results)} leads scraped")
             return results
         else:
