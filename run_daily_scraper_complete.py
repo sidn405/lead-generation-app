@@ -1122,11 +1122,11 @@ def report_final_results(all_results, platforms, search_term):
         suggest_better_search_terms(search_term, platforms)
 
 def finalize_scraping_session(username, user_plan, all_results, search_term):
-    """Fix credits and dashboard sync"""
+    """Finalize scraping session - handle credits and dashboard updates"""
     
-    print(f"\n🎯 FINALIZING SESSION...")
+    print(f"🎯 FINALIZING SCRAPING SESSION")
     
-    # Step 1: Force credit consumption
+    # Step 1: Consume credits for each platform
     if isinstance(all_results, dict):
         total_leads = sum(len(results) if results else 0 for results in all_results.values())
         
@@ -1139,26 +1139,41 @@ def finalize_scraping_session(username, user_plan, all_results, search_term):
                 current_credits = user_info.get('credits', 0) if user_info else 0
                 print(f"💎 Current credits: {current_credits}")
                 
-                # Consume credits for this session
-                success = credit_system.consume_credits(username, total_leads, 'session')
+                total_consumed = 0
+                for platform, results in all_results.items():
+                    if results and len(results) > 0:
+                        leads_count = len(results)
+                        
+                        # Consume credits for this platform
+                        success = credit_system.consume_credits(
+                            username, 
+                            leads_count, 
+                            leads_count, 
+                            platform
+                        )
+                        
+                        if success:
+                            total_consumed += leads_count
+                            print(f"✅ {platform}: {leads_count} credits consumed")
+                        else:
+                            print(f"❌ {platform}: Credit consumption failed")
                 
-                if success:
-                    credit_system.save_data()  # Force save
+                # Force save and verify
+                if total_consumed > 0:
+                    credit_system.save_data()
                     
-                    # Verify consumption
+                    # Verify consumption worked
                     updated_info = credit_system.get_user_info(username)
                     new_credits = updated_info.get('credits', 0) if updated_info else 0
-                    consumed = current_credits - new_credits
+                    actual_consumed = current_credits - new_credits
                     
-                    print(f"✅ Credits consumed: {consumed}")
+                    print(f"✅ Total credits consumed: {actual_consumed}")
                     print(f"💎 Remaining credits: {new_credits}")
-                else:
-                    print(f"❌ Credit consumption failed")
-                    
+                
             except Exception as e:
-                print(f"❌ Credit error: {e}")
+                print(f"❌ Credit finalization error: {e}")
     
-    # Step 2: Update dashboard data
+    # Step 2: Update dashboard data (your existing code)
     try:
         dashboard_data = {
             'timestamp': datetime.now().isoformat(),
@@ -1169,31 +1184,10 @@ def finalize_scraping_session(username, user_plan, all_results, search_term):
             'session_complete': True
         }
         
-        # Save session data for dashboard
         with open('latest_session.json', 'w') as f:
             json.dump(dashboard_data, f, indent=2)
         
-        # Update empire totals
-        empire_file = f'empire_totals_{username}.json'
-        if os.path.exists(empire_file):
-            with open(empire_file, 'r') as f:
-                empire_totals = json.load(f)
-        else:
-            empire_totals = {'total_empire': 0, 'platforms': {}}
-        
-        # Add this session's results
-        for platform, results in all_results.items():
-            count = len(results) if results else 0
-            empire_totals['platforms'][platform] = empire_totals['platforms'].get(platform, 0) + count
-            empire_totals['total_empire'] += count
-        
-        empire_totals['last_updated'] = datetime.now().isoformat()
-        
-        with open(empire_file, 'w') as f:
-            json.dump(empire_totals, f, indent=2)
-        
-        print(f"📊 Dashboard updated!")
-        print(f"🏆 Total Empire: {empire_totals['total_empire']}")
+        print("📊 Dashboard updated!")
         
     except Exception as e:
         print(f"❌ Dashboard error: {e}")
