@@ -3848,8 +3848,8 @@ def show_simple_credit_status():
         
         # Get current empire stats for dynamic data
         try:
-            empire_stats = calculate_empire_from_csvs(username)
-            total_current = sum(empire_stats.values())
+            credits = user_info.get('credits', 0)  # This should be 3977
+            total_generated = user_info.get('total_leads_generated', 0)
             monthly_limit = 250 if plan == 'starter' else 2000
         except:
             total_current = total_generated
@@ -3859,8 +3859,8 @@ def show_simple_credit_status():
         with col1:
             st.metric(
                 "Credits Available", 
-                f"{total_current:,} leads", 
-                help="Total leads generated across all platforms"
+                f"{credits:,}",  # Use actual credits (3977), not total_generated
+                help="Credits remaining for lead generation"
             )
         with col2:
             st.metric(

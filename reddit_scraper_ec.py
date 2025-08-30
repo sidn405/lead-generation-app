@@ -1577,7 +1577,7 @@ def main():
                     raw_leads=raw_leads,
                     username=username,
                     timestamp=timestamp,
-                    platform_name=PLATFORM_NAME,
+                    platform_name="reddit",
                     csv_dir=CSV_DIR,          # uses your existing location
                     save_raw=SAVE_RAW_LEADS,  # if you have this flag
 )

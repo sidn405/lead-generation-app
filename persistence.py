@@ -32,7 +32,8 @@ def save_leads_to_files(
     fieldnames = [
         'name','handle','bio','url','platform','dm','title','location',
         'followers','profile_url','contact_info','search_term',
-        'extraction_method','relevance_score','is_verified','has_email','has_phone', 'subscriber_count', 'description', 'video_count', 'subscribers', 'channel_url', 'username', 'raw_text_sample', 'extracted_at'
+        'extraction_method','relevance_score','is_verified','has_email','has_phone', 'subscriber_count', 'description', 'video_count', 'subscribers', 'channel_url', 'username', 'raw_text_sample', 'extracted_at',
+        'transformation_stage', 'content_preview', 'post_title', 'pain_points', 'post_type', 'source_type', 'support_seeking', 'product_interest', 'source_post_url', 'search_source', 'lead_quality', 'customer_type', 'niche_goals'
     ]
 
     # 1) processed
