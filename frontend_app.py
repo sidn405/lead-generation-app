@@ -3843,25 +3843,31 @@ def show_simple_credit_status():
         except:
             st.metric("Demo Status", "Active")
     
-    elif plan in ['starter', 'pro']:
-        credits = user_info.get('credits', 0)
+    else:  # ultimate/unlimited
+        total_generated = user_info.get('total_leads_generated', 0)
+        
+        # Get current empire stats for dynamic data
+        try:
+            empire_stats = calculate_empire_from_csvs(username)
+            total_current = sum(empire_stats.values())
+            active_platforms = len([p for p, count in empire_stats.items() if count > 0])
+        except:
+            total_current = total_generated
+            active_platforms = 0
+        
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Credits Available", credits, help="Credits for lead generation")
+            st.metric(
+                "Total Empire", 
+                f"{total_current:,} leads", 
+                help="Total leads generated across all platforms"
+            )
         with col2:
-            if plan == 'starter':
-                st.metric("Monthly Limit", "250 leads", help="Starter plan limit")
-            else:
-                st.metric("Monthly Limit", "2,000 leads", help="Pro plan limit")
-    
-    else:  # ultimate
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Access Level", "Unlimited", help="No limits on lead generation")
-        with col2:
-            st.metric("Platform Access", "8/8", help="All platforms unlocked")
-    
-    return True
+            st.metric(
+                "Platform Usage", 
+                f"{active_platforms}/8 active", 
+                help="Platforms with generated leads"
+            )
 
 def show_enhanced_demo_status(username):
     """Enhanced demo status display"""
