@@ -3849,26 +3849,26 @@ def show_simple_credit_status():
         # Get current empire stats for dynamic data
         try:
             empire_stats = calculate_empire_from_csvs(username)
-            credits = user_info.get('credits', 0)
+            total_current = sum(empire_stats.values())
             monthly_limit = 250 if plan == 'starter' else 2000
         except:
             total_current = total_generated
-            active_platforms = 0
+            
         
         col1, col2 = st.columns(2)
         with col1:
             st.metric(
                 "Credits Available", 
-                f"{credits:,}", 
-                help="Credits remaining for lead generation"
+                f"{total_current:,} leads", 
+                help="Total leads generated across all platforms"
             )
         with col2:
             st.metric(
                 "Monthly Limit", 
                 f"{monthly_limit:,} leads", 
-                help=f"{plan.title()} plan monthly allowance"
+            help=f"{plan.title()} plan monthly allowance"
             )
-
+            
 def show_enhanced_demo_status(username):
     """Enhanced demo status display"""
     try:
