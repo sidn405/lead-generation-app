@@ -542,14 +542,42 @@ class ParallelScraperRunner:
         from pathlib import Path
         import json
 
-        # total leads produced by all platform scrapers
         total_leads = sum(r.get("leads", 0) for r in (self.results or {}).values())
         now_iso = datetime.utcnow().isoformat()
 
-        # --- DEMO CREDIT CONSUMPTION ---
         consumed = 0
         plan_lc = (self.user_plan or "demo").lower()
-        if plan_lc == "demo" and total_leads > 0:
+        
+        # ADD THIS SECTION FOR PRO USERS:
+        if plan_lc != "demo" and total_leads > 0:
+            try:
+                from postgres_credit_system import credit_system
+                print(f"PRO CREDIT CONSUMPTION: {total_leads} leads for {self.username}")
+                
+                # Get current credits
+                user_info = credit_system.get_user_info(self.username)
+                current_credits = user_info.get('credits', 0) if user_info else 0
+                print(f"Current credits: {current_credits}")
+                
+                # Consume credits
+                success = credit_system.consume_credits(self.username, total_leads, total_leads, "multi")
+                if success:
+                    credit_system.save_data()
+                    
+                    # Verify consumption
+                    updated_info = credit_system.get_user_info(self.username)
+                    new_credits = updated_info.get('credits', 0) if updated_info else 0
+                    consumed = current_credits - new_credits
+                    
+                    print(f"SUCCESS: Consumed {consumed} credits, remaining: {new_credits}")
+                else:
+                    print(f"FAILED: Credit consumption returned False")
+                    
+            except Exception as e:
+                print(f"PRO CREDIT ERROR: {e}")
+        
+        # Existing demo logic:
+        elif plan_lc == "demo" and total_leads > 0:
             try:
                 from postgres_credit_system import credit_system
                 remaining = credit_system.get_demo_leads_remaining(self.username)
