@@ -454,12 +454,7 @@ def safe_subprocess_run(*args, **kwargs):
     except Exception as e:
         print(f"[ERROR] Subprocess error: {e}")
         return None
-
-def get_available_platforms_by_plan(user_plan):
-    """Get platforms available for user's plan from centralized config"""
-    usage_limits = config_loader.get_usage_limits(user_plan)
-    return usage_limits.get('platforms_allowed', ['twitter', 'facebook'])
-
+    
 def get_available_platforms_by_plan(user_plan):
     """Get platforms available for user's plan - UPDATED with demo support"""
     
@@ -619,10 +614,6 @@ def debug_credit_flow(username, results, platform):
 
 def consume_user_resources(username, leads_generated, platform):
     print(f"[CONSUME] Starting for user: {username}")
-    print(f"[CREDIT DEBUG] consume_user_resources called")
-    print(f"[CREDIT DEBUG] Username: {username}")
-    print(f"[CREDIT DEBUG] Platform: {platform}")  
-    print(f"[CREDIT DEBUG] Leads count: {len(leads_generated) if leads_generated else 0}")
     
     if not username or username == 'anonymous' or not leads_generated:
         print(f"[CONSUME] Skipping - no username or empty results")
@@ -631,7 +622,6 @@ def consume_user_resources(username, leads_generated, platform):
     try:
         from postgres_credit_system import credit_system
         
-        # Get BEFORE state
         user_info_before = credit_system.get_user_info(username)
         if not user_info_before:
             print(f"[CONSUME] ERROR: User {username} not found")
@@ -644,46 +634,32 @@ def consume_user_resources(username, leads_generated, platform):
         print(f"[CONSUME] BEFORE: credits={credits_before}, plan={plan}, consuming={leads_count}")
         
         if plan == 'demo':
-            # Demo consumption logic
             consumed = 0
             for _ in range(leads_count):
                 if credit_system.consume_demo_lead(username):
                     consumed += 1
                 else:
                     break
-            print(f"[CONSUME] Demo: consumed {consumed} leads")
             success = consumed > 0
         else:
-            # Regular credit consumption
             success = credit_system.consume_credits(username, leads_count, leads_count, platform)
-            print(f"[CONSUME] Regular: consume_credits returned {success}")
         
         if success:
-            # Force save and verify
             print(f"Consumed {leads_count} credits for {platform}")
             credit_system.save_data()
             
-            # Get AFTER state
-            user_info_after = credit_system.get_user_info(username)
-            credits_after = user_info_after.get('credits', 0) if user_info_after else 0
-           # Verify the save worked
+            # Verify consumption
             updated_info = credit_system.get_user_info(username)
             new_credits = updated_info.get('credits', 0) if updated_info else 0
-            print(f"[VERIFICATION] Credits after save: {new_credits}")
+            difference = credits_before - new_credits
+            print(f"[CONSUME] AFTER: {new_credits} credits (consumed {difference})")
         else:
-            print(f"Failed to consume credits for {platform}") 
-            print(f"[CONSUME] AFTER: credits={credits_after}")
-            print(f"[CONSUME] CHANGE: {credits_before} -> {credits_after} (diff: {credits_before - credits_after})")
-            
-            if credits_before == credits_after and plan != 'demo':
-                print(f"[CONSUME] WARNING: Credits didn't change! Database save failed?")
+            print(f"Failed to consume credits for {platform}")
         
         return success
         
     except Exception as e:
         print(f"[CONSUME] EXCEPTION: {e}")
-        import traceback
-        traceback.print_exc()
         return False
 
 def run_platform_scraper(platform):
@@ -809,7 +785,7 @@ def run_platform_scraper(platform):
         # Process results
         if results:
             debug_credit_flow(username, results, platform)
-            # consumption_success = consume_user_resources(username, results, platform)
+            consumption_success = consume_user_resources(username, results, platform)
             print(f"✅ {platform.title()}: {len(results)} leads scraped")
             return results
         else:
