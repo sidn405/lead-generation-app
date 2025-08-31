@@ -1120,93 +1120,27 @@ def report_final_results(all_results, platforms, search_term):
         
         # ✅ FIXED: Call the suggestions function properly
         suggest_better_search_terms(search_term, platforms)
+        
+    username   = env_username()
+    user_plan  = env_plan()
+        
+    # Test if the function exists and can be called
+    print(f"ABOUT TO CALL finalize_scraping_session")
+    print(f"Function exists: {callable(finalize_scraping_session)}")
+    print(f"Parameters: username={username}, user_plan={user_plan}")
+    print(f"all_results type: {type(all_results)}")
+
+    try:
+        print(f"CALLING FUNCTION NOW...")
+        finalize_scraping_session(username, user_plan, all_results, search_term)
+        print(f"FUNCTION CALL COMPLETED")
+    except Exception as e:
+        print(f"FUNCTION CALL FAILED: {e}")
+        import traceback
+        traceback.print_exc()
 
 def finalize_scraping_session(username, user_plan, all_results, search_term):
     """Finalize scraping session - handle credits and dashboard updates"""
-    
-    print(f"\n" + "="*60)
-    print(f"FINALIZE SESSION DEBUG")
-    print(f"Username: {username}")
-    print(f"Plan: {user_plan}")
-    print(f"Results type: {type(all_results)}")
-    print(f"="*60)
-    
-    if isinstance(all_results, dict):
-        total_leads = sum(len(results) if results else 0 for results in all_results.values())
-        print(f"Total leads calculated: {total_leads}")
-        
-        if total_leads > 0 and user_plan != 'demo':
-            print(f"Proceeding with credit consumption for {total_leads} leads")
-            
-            try:
-                from postgres_credit_system import credit_system
-                print(f"Credit system imported successfully")
-                
-                # Get BEFORE state
-                user_info = credit_system.get_user_info(username)
-                print(f"User info retrieved: {user_info is not None}")
-                
-                if user_info:
-                    current_credits = user_info.get('credits', 0)
-                    print(f"BEFORE consumption: {current_credits} credits")
-                    
-                    for platform, results in all_results.items():
-                        if results and len(results) > 0:
-                            leads_count = len(results)
-                            print(f"\nProcessing {platform}: {leads_count} leads")
-                            
-                            try:
-                                # Test the consume_credits method directly
-                                print(f"Calling consume_credits({username}, {leads_count}, {leads_count}, {platform})")
-                                success = credit_system.consume_credits(username, leads_count, leads_count, platform)
-                                print(f"consume_credits returned: {success}")
-                                
-                                if success:
-                                    print(f"SUCCESS: {platform} credits consumed")
-                                else:
-                                    print(f"FAILED: {platform} credit consumption returned False")
-                                    
-                            except Exception as platform_error:
-                                print(f"EXCEPTION in {platform}: {platform_error}")
-                                import traceback
-                                traceback.print_exc()
-                    
-                    # Force save
-                    print(f"\nForcing database save...")
-                    try:
-                        credit_system.save_data()
-                        print(f"save_data() completed")
-                    except Exception as save_error:
-                        print(f"save_data() failed: {save_error}")
-                    
-                    # Get AFTER state
-                    print(f"Getting updated user info...")
-                    updated_info = credit_system.get_user_info(username)
-                    if updated_info:
-                        new_credits = updated_info.get('credits', 0)
-                        difference = current_credits - new_credits
-                        print(f"AFTER consumption: {new_credits} credits")
-                        print(f"DIFFERENCE: {difference} credits consumed")
-                        
-                        if difference == 0:
-                            print(f"WARNING: NO CREDITS WERE ACTUALLY CONSUMED!")
-                        else:
-                            print(f"SUCCESS: {difference} credits properly consumed")
-                    else:
-                        print(f"ERROR: Could not retrieve updated user info")
-                else:
-                    print(f"ERROR: No user info found for {username}")
-                    
-            except Exception as e:
-                print(f"MAJOR ERROR in credit consumption: {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-            print(f"Skipping credit consumption - total_leads={total_leads}, plan={user_plan}")
-    else:
-        print(f"Skipping - all_results is not a dict")
-    
-    print(f"="*60)
     
     # Step 1: Consume credits for each platform
     if isinstance(all_results, dict):
