@@ -498,7 +498,33 @@ class ParallelScraperRunner:
         except Exception as e: print(f"[test_method] ignored: {e}")
         try: self.save_session_summary(total_duration, successful_platforms, total_leads)
         except Exception as e: print(f"[save_session_summary] ignored: {e}")
-        try: self.finalize_session()
+        print("ATTEMPTING FINALIZE_SESSION...")
+        try:
+            self.finalize_session()
+            print("FINALIZE_SESSION COMPLETED SUCCESSFULLY")
+        except Exception as e:
+            print(f"FINALIZE_SESSION FAILED: {e}")
+            import traceback
+            traceback.print_exc()
+            print("ATTEMPTING MANUAL CREDIT CONSUMPTION...")
+            
+            # Manual fallback credit consumption
+            try:
+                from postgres_credit_system import credit_system
+                total_leads = sum(r.get('leads', 0) for r in self.results.values())
+                if total_leads > 0 and self.user_plan != 'demo':
+                    current_credits = credit_system.get_user_info(self.username).get('credits', 0)
+                    print(f"MANUAL: Before={current_credits}, consuming={total_leads}")
+                    
+                    success = credit_system.consume_credits(self.username, total_leads, total_leads, "multi")
+                    if success:
+                        credit_system.save_data()
+                        new_credits = credit_system.get_user_info(self.username).get('credits', 0)
+                        print(f"MANUAL: After={new_credits}, consumed={current_credits-new_credits}")
+                    else:
+                        print("MANUAL: consume_credits returned False")
+            except Exception as manual_error:
+                print(f"MANUAL CREDIT CONSUMPTION FAILED: {manual_error}")
         except Exception as e: print(f"[finalize_session] ignored: {e}")
 
         total_leads = sum(r['leads'] for r in self.results.values())
