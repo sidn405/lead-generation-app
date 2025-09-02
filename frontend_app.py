@@ -9271,34 +9271,17 @@ with tab6:  # Settings tab
                     except Exception:
                         credits_used = "5/5"
                 else:
-                    try:
-                        current_credits_now = _as_int(
-                            current_credits if current_credits is not None else simple_auth.get_user_credits()
-                        )
-                    except Exception:
-                        current_credits_now = _as_int(user_info.get("credits"))
+                    # For paid users: credits used = total leads generated (1 credit per lead)
+                    credits_used = (total_leads, None)
 
                     starting_by_plan = {"starter": 250, "pro": 2000, "ultimate": 5000}
                     starting = _as_int(starting_by_plan.get((user_plan or "").lower(), 0))
                     purchased = sum(_as_int(tx.get("credits_added")) for tx in txs if tx.get("type") == "credit_purchase")
                     topups    = sum(_as_int(tx.get("credits_added")) for tx in txs if tx.get("type") in ("subscription_topup","plan_activation"))
                     total_ever = starting + purchased + topups
-                    used_val = max(total_ever - current_credits_now, 0)
-                    # Get actual usage from database instead of calculating from plan defaults
-                    try:
-                        user_stats = user_info.get('stats', {}).get('totals', {})
-                        total_leads_from_stats = user_stats.get('leads', 0)
-                        credits_used = (total_leads_from_stats, None)  # Match your tuple format
-                    except:
-                        # Fallback to old calculation if stats aren't available
-                        starting_by_plan = {"starter": 250, "pro": 2000, "ultimate": 5000}
-                        starting = _as_int(starting_by_plan.get((user_plan or "").lower(), 0))
-                        purchased = sum(_as_int(tx.get("credits_added")) for tx in txs if tx.get("type") == "credit_purchase")
-                        topups = sum(_as_int(tx.get("credits_added")) for tx in txs if tx.get("type") in ("subscription_topup","plan_activation"))
-                        total_ever = starting + purchased + topups
-                        used_val = max(total_ever - current_credits_now, 0)
-                        credits_used = (used_val, total_ever)
-
+                    #used_val = max(total_ever - current_credits_now, 0)
+                    #credits_used = (used_val, total_ever)
+                    
                 # ------- Member Since / Days Active -------
                 created_at = _first(
                     user_info.get("created_at"),
