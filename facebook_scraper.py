@@ -582,14 +582,14 @@ def main():
                     write_leads_to_google_sheet(leads)
                     print("✅ Successfully uploaded to Google Sheets")
                     
-                    print("📤 Sending leads via email...")
-                    send_daily_leads_discord()
-                    print("✅ Daily leads email sent!")
+                    print("📤 Sending leads via discord...")
+                    send_daily_leads_discord('csv_filename', 'recipient_email', 'lead_count')
+                    print("✅ Daily leads discord sent!")
                     
                 except ImportError:
                     print("📦 Export features not available")
                 except Exception as e:
-                    print(f"⚠️ Export/email error: {e}")
+                    print(f"⚠️ Export/discord error: {e}")
                 
                 # Show sample results
                 if leads:
