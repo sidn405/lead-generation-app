@@ -84,7 +84,7 @@ class ParallelScraperRunner:
             
             duration = time.time() - start_time
             
-            if platform == 'facebook' and result['leads'] == 0:
+            if platform == 'facebook' and isinstance(result, dict) and result.get('leads', 0) == 0:
                 print(f"Facebook debug stdout: {result.get('stdout', 'No output')}")
                 print(f"Facebook debug stderr: {result.get('stderr', 'No errors')}")
             
