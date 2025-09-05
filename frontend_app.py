@@ -3333,10 +3333,10 @@ def run_empire_scraper_fixed(selected_platforms, search_term, max_scrolls, usern
         print(f"   Scrolls: {max_scrolls}")
         
         # Filter out LinkedIn (manual processing)
-        instant_platforms = [p.lower() for p in selected_platforms if p.lower() != 'linkedin']
+        instant_platforms = [p for p in selected_platforms if p not in ['linkedin', 'facebook']]
         
         if not instant_platforms:
-            print("📧 Only LinkedIn selected - no instant processing needed")
+            print("📧 LinkedIn or Facebook selected - no instant processing needed")
             return True
         
         print(f"⚡ Processing platforms: {instant_platforms}")
@@ -5668,7 +5668,7 @@ with tab1:
                     
                     LinkedIn actively blocks automated scraping. Instead of failing, we provide premium manual service:
                     
-                    ⚡ **Other Platforms** (Instant): Twitter, Facebook, Instagram, TikTok, YouTube, Reddit
+                    ⚡ **Other Platforms** (Instant): Twitter, Instagram, TikTok, YouTube, Reddit
                     📧 **LinkedIn** (Manual - 2-4 hours): Manually processed and emailed to you
                     
                     **💎 Premium LinkedIn Benefits:**
@@ -5690,6 +5690,40 @@ with tab1:
                     st.error("❌ Please enter a valid email address")
             else:
                 linkedin_email = None
+
+            # Facebook email input (if Facebook is selected)
+            if use_facebook:
+                st.markdown("---")
+                st.warning("🛡️ **Facebook Cloud Limitation Notice**")
+                
+                with st.expander("📘 Facebook Processing Details", expanded=True):
+                    st.markdown("""
+                    **🔒 Why Facebook Requires Email Delivery:**
+                    
+                    Facebook's anti-bot detection blocks cloud-based scraping within 2 minutes. We provide manual service instead:
+                    
+                    ⚡ **Other Platforms** (Instant): Twitter, LinkedIn, Instagram, TikTok, YouTube, Reddit
+                    📧 **Facebook** (Manual - 2-4 hours): Manually processed and emailed to you
+                    
+                    **💎 Premium Facebook Benefits:**
+                    • Bypasses all anti-bot restrictions
+                    • Access to full 7+ minute scraping sessions
+                    • Higher lead volumes (50-100+ vs 0 from automation)
+                    • Human verification of profile quality
+                    """)
+                
+                facebook_email = st.text_input(
+                    "📧 Email for Facebook Results:",
+                    value=st.session_state.get('user_data', {}).get('email', ''),
+                    placeholder="your.email@company.com", 
+                    help="Facebook results will be manually processed and emailed within 2-4 hours",
+                    key="facebook_email_final"
+                )
+                
+                if facebook_email and '@' not in facebook_email:
+                    st.error("❌ Please enter a valid email address")
+            else:
+                facebook_email = None
 
             st.markdown("### 🚀 Empire Launch Control")
             
@@ -5751,19 +5785,41 @@ with tab1:
                     st.button("🚀 Launch Lead Empire", disabled=True, use_container_width=True)
                 else:
                     # Show delivery plan
-                    instant_platforms = [p for p in selected_platforms if p != 'LinkedIn']
-                    if use_linkedin and instant_platforms:
+                    instant_platforms = [p for p in selected_platforms if p not in ['linkedin', 'facebook']]
+                    manual_platforms = [p for p in selected_platforms if p in ['linkedin', 'facebook']]
+                    
+                    # Build email list for manual platforms
+                    manual_emails = []
+                    if use_linkedin and linkedin_email:
+                        manual_emails.append(f"LinkedIn to {linkedin_email}")
+                    if use_facebook and facebook_email:
+                        manual_emails.append(f"Facebook to {facebook_email}")
+                    
+                    if instant_platforms and manual_platforms:
                         st.info(f"""
                         **📦 Your Delivery Plan:**
                         ⚡ **Instant:** {', '.join(instant_platforms)}  
-                        📧 **Email:** LinkedIn to {linkedin_email}
+                        📧 **Email:** {', '.join(manual_emails)}
                         """)
-                    elif use_linkedin:
+                    elif manual_platforms and len(manual_emails) > 1:
                         st.info(f"""
-                        **📧 LinkedIn-Only Request**
-                        LinkedIn leads will be manually processed and emailed to: **{linkedin_email}**
+                        **📧 Manual Processing Request**
+                        Both platforms will be manually processed and emailed:
+                        • {manual_emails[0]}
+                        • {manual_emails[1]}
                         """)
-                    
+                    elif manual_platforms and manual_emails:
+                        platform_name = "LinkedIn" if use_linkedin else "Facebook"
+                        st.info(f"""
+                        **📧 {platform_name}-Only Request**
+                        {platform_name} leads will be manually processed and emailed to: **{manual_emails[0].split(' to ')[1]}**
+                        """)
+                    elif instant_platforms:
+                        st.info(f"""
+                        **⚡ Instant Delivery**
+                        Results will be generated immediately for: {', '.join(instant_platforms)}
+                        """)
+                                    
                     # Check cooldown
                     last_launch = st.session_state.get('last_launch_time', 0)
                     current_time = time.time()
@@ -6050,7 +6106,7 @@ with tab1:
                                 st.success(f"🚀 {user_plan.title()} Empire Launch Initiated...")
                                 
                                 # Get selected platforms (excluding LinkedIn for instant processing)
-                                instant_platforms = [p.lower() for p in selected_platforms if p != 'LinkedIn']
+                                instant_platforms = [p for p in selected_platforms if p not in ['linkedin', 'facebook']]
                                 
                                 # Show progress
                                 progress_placeholder = st.empty()
