@@ -84,10 +84,6 @@ class ParallelScraperRunner:
             
             duration = time.time() - start_time
             
-            if platform == 'facebook' and isinstance(result, dict) and result.get('leads', 0) == 0:
-                print(f"Facebook debug stdout: {result.get('stdout', 'No output')}")
-                print(f"Facebook debug stderr: {result.get('stderr', 'No errors')}")
-            
             if result.returncode == 0:
                 # Try to count leads from output files
                 leads_count = self.count_recent_leads(platform)

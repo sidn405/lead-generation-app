@@ -49,11 +49,6 @@ from config_loader import get_platform_config, config_loader
 enhanced_config_loader = ConfigLoader()
 config = config_loader.get_platform_config('facebook')
 
-def get_delay_multiplier():
-    if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('HEROKU_APP_NAME'):
-        return 3.0  # 3x slower in cloud
-    return 1.0
-
 # ✅ FIXED: Extract all config values properly
 SEARCH_TERM = config["search_term"]
 MAX_SCROLLS = config["max_scrolls"]
@@ -62,9 +57,6 @@ DELAY_MIN = config.get("delay_min", 2)
 DELAY_MAX = config.get("delay_max", 5)
 LEAD_OUTPUT_FILE = config["lead_output_file"]
 EXTRACTION_TIMEOUT = config.get("extraction_timeout", 45000)
-
-# Get delay multiplier for cloud environments (don't sleep here!)
-delay_multiplier = get_delay_multiplier()
 
 # 🚀 NEW: Deduplication configuration
 DEDUP_MODE = config.get("deduplication_mode", "smart_user_aware")  # Can be: keep_all, session_only, smart_user_aware, aggressive
@@ -493,7 +485,7 @@ def main():
                     print(f"  🔄 Scroll checkpoint {i + 1}/{MAX_SCROLLS}")
                     time.sleep(random.uniform(3, 6))
                 else:
-                    time.sleep(random.uniform(DELAY_MIN * delay_multiplier, DELAY_MAX * delay_multiplier))
+                    time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
             
             print("⏳ Stabilizing content...")
             time.sleep(5)
