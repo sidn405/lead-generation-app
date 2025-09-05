@@ -3333,7 +3333,7 @@ def run_empire_scraper_fixed(selected_platforms, search_term, max_scrolls, usern
         print(f"   Scrolls: {max_scrolls}")
         
         # Filter out LinkedIn (manual processing)
-        instant_platforms = [p for p in selected_platforms if p not in ['linkedin', 'facebook']]
+        instant_platforms = [p.lower() for p in selected_platforms if p.lower() not in ['linkedin', 'facebook']]
         
         if not instant_platforms:
             print("📧 LinkedIn or Facebook selected - no instant processing needed")
@@ -5785,7 +5785,7 @@ with tab1:
                     st.button("🚀 Launch Lead Empire", disabled=True, use_container_width=True)
                 else:
                     # Show delivery plan
-                    instant_platforms = [p for p in selected_platforms if p not in ['linkedin', 'facebook']]
+                    instant_platforms = [p.lower() for p in selected_platforms if p.lower() not in ['linkedin', 'facebook']]
                     manual_platforms = [p for p in selected_platforms if p in ['linkedin', 'facebook']]
                     
                     # Build email list for manual platforms
@@ -6106,7 +6106,7 @@ with tab1:
                                 st.success(f"🚀 {user_plan.title()} Empire Launch Initiated...")
                                 
                                 # Get selected platforms (excluding LinkedIn for instant processing)
-                                instant_platforms = [p for p in selected_platforms if p not in ['linkedin', 'facebook']]
+                                instant_platforms = [p.lower() for p in selected_platforms if p.lower() not in ['linkedin', 'facebook']]
                                 
                                 # Show progress
                                 progress_placeholder = st.empty()

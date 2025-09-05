@@ -37,6 +37,7 @@ class ParallelScraperRunner:
     def run_single_scraper(self, platform):
         """Run a single platform scraper"""
         print(f"🚀 Starting {platform.title()} scraper...")
+        print(f"DEBUG: Platform received: '{platform}' (type: {type(platform)})")
         
         start_time = time.time()
         env = self.setup_environment()
@@ -54,7 +55,9 @@ class ParallelScraperRunner:
         }
         
         scraper_file = scraper_files.get(platform)
+        print(f"DEBUG: Mapped to file: {scraper_file}")
         if not scraper_file:
+            print(f"DEBUG: Available platforms: {list(scraper_files.keys())}")
             return {
                 'platform': platform,
                 'success': False,
