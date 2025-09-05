@@ -177,6 +177,12 @@ class ParallelScraperRunner:
         
         return 0
     
+    def _safe_result_dict(self, result):
+        """Ensure result is always a proper dictionary"""
+        if isinstance(result, dict):
+            return result
+        return {'success': False, 'leads': 0, 'duration': 0, 'error': 'Invalid result format'}
+
     def save_session_summary(self, total_duration, successful_platforms, total_leads):
         """Save session summary for the frontend"""
         try:
@@ -192,9 +198,9 @@ class ParallelScraperRunner:
                 'successful_platforms': successful_platforms,
                 'results_by_platform': {
                     platform: {
-                        'success': result['success'],
-                        'leads': result['leads'],
-                        'duration': result['duration']
+                        'success': self._safe_result_dict(result)['success'],
+                        'leads': self._safe_result_dict(result)['leads'],
+                        'duration': self._safe_result_dict(result)['duration']
                     }
                     for platform, result in self.results.items()
                 }
