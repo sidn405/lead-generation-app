@@ -29,7 +29,10 @@ def create_package_download(username: str, package_type: str, industry: str, loc
         package_files = {
             "starter": "leads/fitness_wellness_500.csv",
             "deep_dive": "leads/fitness_wellness_2000.csv", 
-            "domination": "leads/fitness_wellness_5000.csv"
+            "domination": "leads/fitness_wellness_5000.csv",
+            "pro_starter": "fitness_business_professionals_500.csv",
+            "pro_growth": "fitness_business_professionals_2500.csv",
+            "pro_empire": "fitness_business_professionals_5000.csv"
         }
         
         # Get source file
