@@ -373,158 +373,151 @@ def show_package_store(username: str, user_authenticated: bool):
                     st.session_state.show_login = True
                     st.rerun()
 
-        # Add this after your existing packages section
-
-        # Professional packages section
-        st.markdown("---")
-        st.success("💼 **FITNESS BUSINESS PROFESSIONALS PRE-BUILT & READY** — Instant download available")
-        st.markdown("---")
-
-        # Professional package definitions
-        professional_packages = [
-            {
-                "key": "professional_starter",
-                "name": "Professional Starter",
-                "badge": "B2B STARTER",
-                "badge_color": "#6f42c1",
-                "leads": 500,
-                "price": 97,
-                "features": [
-                    "500 fitness business professionals",
-                    "Gym owners, trainers, coaches",
-                    "Business contact information",
-                    "CSV + Google Sheets delivery",
-                    "Instant delivery"
-                ],
-                "perfect_for": "B2B outreach, partnership building"
-            },
-            {
-                "key": "professional_growth",
-                "name": "Professional Growth",
-                "badge": "B2B POPULAR",
-                "badge_color": "#dc3545",
-                "leads": 2500,
-                "price": 397,
-                "features": [
-                    "2,500 fitness industry professionals",
-                    "Comprehensive business data",
-                    "Multiple fitness business types",
-                    "Enhanced contact details",
-                    "Social media profiles included",
-                    "Industry-specific outreach templates",
-                    "Instant delivery"
-                ],
-                "perfect_for": "B2B campaigns, industry networking"
-            },
-            {
-                "key": "professional_empire",
-                "name": "Professional Empire",
-                "badge": "B2B ENTERPRISE",
-                "badge_color": "#6c757d",
-                "leads": 5000,
-                "price": 897,
-                "features": [
-                    "5,000 premium fitness business leads",
-                    "Multi-tier business professionals",
-                    "Geographic targeting available",
-                    "Phone/email enrichment included",
-                    "Custom B2B outreach sequences",
-                    "30-day refresh guarantee",
-                    "Instant delivery"
-                ],
-                "perfect_for": "Enterprise B2B, market expansion"
-            }
-        ]
-
-        # Render the professional packages row
-        cols_pro = st.columns(3)
-        for pkg, col in zip(professional_packages, cols_pro):
-            with col:
-                # Badge
-                st.markdown(f"""
-                    <div style="
-                        background-color: {pkg['badge_color']};
-                        color: white;
-                        padding: 8px 16px;
-                        border-radius: 8px;
-                        text-align: center;
-                        font-weight: bold;
-                        margin-bottom: 16px;
-                    ">
-                        {pkg['badge']}
-                    </div>
-                """, unsafe_allow_html=True)
-
-                # Name, price, lead count
-                st.markdown(f"### {pkg['name']}")
-                st.markdown(f"## ${pkg['price']}")
-                st.markdown(f"**{pkg['leads']:,} verified leads**")
-                st.markdown("---")
-
-                # Features
-                st.markdown("**📦 What's Included:**")
-                for feat in pkg["features"]:
-                    st.markdown(f"• {feat}")
-                st.info(f"**Perfect for:** {pkg['perfect_for']}")
-
-                # Checkbox + Buy/Sign-In button
-                agree_key = f"agree_professional_{pkg['key']}"
+    # Add this after your existing packages section
+    # Professional packages section
+    st.markdown("---")
+    st.success("💼 **FITNESS BUSINESS PROFESSIONALS PRE-BUILT & READY** — Instant download available")
+    st.markdown("---")
+    # Professional package definitions
+    professional_packages = [
+        {
+            "key": "professional_starter",
+            "name": "Professional Starter",
+            "badge": "B2B STARTER",
+            "badge_color": "#6f42c1",
+            "leads": 500,
+            "price": 97,
+            "features": [
+                "500 fitness business professionals",
+                "Gym owners, trainers, coaches",
+                "Business contact information",
+                "CSV + Google Sheets delivery",
+                "Instant delivery"
+            ],
+            "perfect_for": "B2B outreach, partnership building"
+        },
+        {
+            "key": "professional_growth",
+            "name": "Professional Growth",
+            "badge": "B2B POPULAR",
+            "badge_color": "#dc3545",
+            "leads": 2500,
+            "price": 397,
+            "features": [
+                "2,500 fitness industry professionals",
+                "Comprehensive business data",
+                "Multiple fitness business types",
+                "Enhanced contact details",
+                "Social media profiles included",
+                "Industry-specific outreach templates",
+                "Instant delivery"
+            ],
+            "perfect_for": "B2B campaigns, industry networking"
+        },
+        {
+            "key": "professional_empire",
+            "name": "Professional Empire",
+            "badge": "B2B ENTERPRISE",
+            "badge_color": "#6c757d",
+            "leads": 5000,
+            "price": 897,
+            "features": [
+                "5,000 premium fitness business leads",
+                "Multi-tier business professionals",
+                "Geographic targeting available",
+                "Phone/email enrichment included",
+                "Custom B2B outreach sequences",
+                "30-day refresh guarantee",
+                "Instant delivery"
+            ],
+            "perfect_for": "Enterprise B2B, market expansion"
+        }
+    ]
+    # Render the professional packages row
+    cols_pro = st.columns(3)
+    for pkg, col in zip(professional_packages, cols_pro):
+        with col:
+            # Badge
+            st.markdown(f"""
+                <div style="
+                    background-color: {pkg['badge_color']};
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                    text-align: center;
+                    font-weight: bold;
+                    margin-bottom: 16px;
+                ">
+                    {pkg['badge']}
+                </div>
+            """, unsafe_allow_html=True)
+            # Name, price, lead count
+            st.markdown(f"### {pkg['name']}")
+            st.markdown(f"## ${pkg['price']}")
+            st.markdown(f"**{pkg['leads']:,} verified leads**")
+            st.markdown("---")
+            # Features
+            st.markdown("**📦 What's Included:**")
+            for feat in pkg["features"]:
+                st.markdown(f"• {feat}")
+            st.info(f"**Perfect for:** {pkg['perfect_for']}")
+            # Checkbox + Buy/Sign-In button
+            agree_key = f"agree_professional_{pkg['key']}"
+            
+            # Initialize checkbox state if not exists
+            if agree_key not in st.session_state:
+                st.session_state[agree_key] = False
+            
+            agreed = st.checkbox(
+                "✅ Agree to terms",
+                key=agree_key,
+                help="I agree to the Terms of Service & No-Refund Policy",
+                value=st.session_state.get(agree_key, False)
+            )
+            if user_authenticated:
+                buy_key = f"buy_professional_{pkg['key']}"
                 
-                # Initialize checkbox state if not exists
-                if agree_key not in st.session_state:
-                    st.session_state[agree_key] = False
+                # Style the button based on agreement status
+                button_type = "primary" if agreed else "secondary"
+                button_text = f"🛒 Buy {pkg['name']}" if agreed else f"🛒 Buy {pkg['name']} (Agree to terms first)"
                 
-                agreed = st.checkbox(
-                    "✅ Agree to terms",
-                    key=agree_key,
-                    help="I agree to the Terms of Service & No-Refund Policy",
-                    value=st.session_state.get(agree_key, False)
-                )
-
-                if user_authenticated:
-                    buy_key = f"buy_professional_{pkg['key']}"
-                    
-                    # Style the button based on agreement status
-                    button_type = "primary" if agreed else "secondary"
-                    button_text = f"🛒 Buy {pkg['name']}" if agreed else f"🛒 Buy {pkg['name']} (Agree to terms first)"
-                    
-                    if st.button(
-                        button_text,
-                        key=buy_key,
-                        disabled=not agreed,
-                        use_container_width=True,
-                        type=button_type
-                    ):
-                        if agreed:
-                            st.write(f"🔄 Processing purchase for {pkg['name']}...")
-                            
-                            # Create checkout session
-                            session = create_package_stripe_session(
-                                STRIPE_API_KEY,
-                                username,
-                                pkg["key"],
-                                pkg["price"],
-                                pkg["name"]
-                            )
-                            
-                            if session:
-                                # Don't rerun here - let the session state handle the redirect
-                                pass
-                            else:
-                                st.error("❌ Failed to create checkout session")
+                if st.button(
+                    button_text,
+                    key=buy_key,
+                    disabled=not agreed,
+                    use_container_width=True,
+                    type=button_type
+                ):
+                    if agreed:
+                        st.write(f"🔄 Processing purchase for {pkg['name']}...")
+                        
+                        # Create checkout session
+                        session = create_package_stripe_session(
+                            STRIPE_API_KEY,
+                            username,
+                            pkg["key"],
+                            pkg["price"],
+                            pkg["name"]
+                        )
+                        
+                        if session:
+                            # Don't rerun here - let the session state handle the redirect
+                            pass
                         else:
-                            st.warning("⚠️ Please agree to terms first")
-                            
-                else:
-                    signin_key = f"signin_{pkg['key']}"
-                    if st.button(
-                        "🔑 Sign In to Buy",
-                        key=signin_key,
-                        use_container_width=True
-                    ):
-                        # flip the top-level flag; main app will render the form
-                        st.session_state.show_login = True
-                        st.rerun()
+                            st.error("❌ Failed to create checkout session")
+                    else:
+                        st.warning("⚠️ Please agree to terms first")
+                        
+            else:
+                signin_key = f"signin_{pkg['key']}"
+                if st.button(
+                    "🔑 Sign In to Buy",
+                    key=signin_key,
+                    use_container_width=True
+                ):
+                    # flip the top-level flag; main app will render the form
+                    st.session_state.show_login = True
+                    st.rerun()
 
     with st.expander("📋 Digital Product Terms"):
         st.markdown("""
