@@ -383,7 +383,7 @@ def show_package_store(username: str, user_authenticated: bool):
         # Professional package definitions
         professional_packages = [
             {
-                "key": "pro_starter",
+                "key": "professional_starter",
                 "name": "Professional Starter",
                 "badge": "B2B STARTER",
                 "badge_color": "#6f42c1",
@@ -399,7 +399,7 @@ def show_package_store(username: str, user_authenticated: bool):
                 "perfect_for": "B2B outreach, partnership building"
             },
             {
-                "key": "pro_growth",
+                "key": "professional_growth",
                 "name": "Professional Growth",
                 "badge": "B2B POPULAR",
                 "badge_color": "#dc3545",
@@ -417,7 +417,7 @@ def show_package_store(username: str, user_authenticated: bool):
                 "perfect_for": "B2B campaigns, industry networking"
             },
             {
-                "key": "pro_empire",
+                "key": "professional_empire",
                 "name": "Professional Empire",
                 "badge": "B2B ENTERPRISE",
                 "badge_color": "#6c757d",
@@ -468,7 +468,7 @@ def show_package_store(username: str, user_authenticated: bool):
                 st.info(f"**Perfect for:** {pkg['perfect_for']}")
 
                 # Checkbox + Buy/Sign-In button
-                agree_key = f"agree_{pkg['key']}"
+                agree_key = f"agree_professional_{pkg['key']}"
                 
                 # Initialize checkbox state if not exists
                 if agree_key not in st.session_state:
@@ -482,7 +482,7 @@ def show_package_store(username: str, user_authenticated: bool):
                 )
 
                 if user_authenticated:
-                    buy_key = f"buy_{pkg['key']}"
+                    buy_key = f"buy_professional_{pkg['key']}"
                     
                     # Style the button based on agreement status
                     button_type = "primary" if agreed else "secondary"
