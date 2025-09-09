@@ -10373,10 +10373,107 @@ with tab6:  # Settings tab
 
 st.markdown(
     """
-    <!-- Social Media Icons Section for Footer -->
-    <div class="social-media-section">
-        <h3>Follow Us</h3>
-        <div class="social-icons">
+    <style>
+      /* make room for the footer so it doesn't cover content */
+      .appview-container .main {
+        padding-bottom: 80px;  
+      }
+      
+      /* footer styling */
+      .footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 70px;
+        background: rgba(0, 0, 0, 0.9);
+        color: #aaa;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2rem;
+        font-size: 0.9rem;
+        z-index: 1000;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+      }
+      
+      .footer-brand {
+        font-weight: 500;
+        color: #fff;
+      }
+      
+      .footer-social {
+        display: flex;
+        gap: 0.8rem;
+        align-items: center;
+      }
+      
+      .footer-social-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: #aaa;
+        background-color: rgba(255,255,255,0.1);
+      }
+      
+      .footer-social-icon:hover {
+        transform: translateY(-2px);
+        color: white;
+      }
+      
+      .footer-social-icon.facebook:hover { background-color: #1877f2; }
+      .footer-social-icon.instagram:hover { background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); }
+      .footer-social-icon.twitter:hover { background-color: #000000; }
+      .footer-social-icon.linkedin:hover { background-color: #0077b5; }
+      .footer-social-icon.tiktok:hover { background-color: #000000; }
+      .footer-social-icon.youtube:hover { background-color: #ff0000; }
+      .footer-social-icon.pinterest:hover { background-color: #bd081c; }
+      .footer-social-icon.medium:hover { background-color: #000000; }
+      .footer-social-icon.reddit:hover { background-color: #ff4500; }
+      
+      /* Mobile responsive */
+      @media (max-width: 768px) {
+        .footer {
+          padding: 0 1rem;
+          height: 60px;
+        }
+        .footer-brand {
+          font-size: 0.8rem;
+        }
+        .footer-social {
+          gap: 0.5rem;
+        }
+        .footer-social-icon {
+          width: 28px;
+          height: 28px;
+        }
+        .appview-container .main {
+          padding-bottom: 70px;  
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .footer {
+          flex-direction: column;
+          height: 80px;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+        }
+        .appview-container .main {
+          padding-bottom: 90px;  
+        }
+      }
+    </style>
+    <div class="footer">
+      <div class="footer-brand">
+        Lead Generator Empire | Secure &amp; Private
+      </div>
+      <div class="footer-social">
             <!-- Facebook -->
             <a href="https://facebook.com/leadgeneratorempire" target="_blank" rel="noopener noreferrer" class="social-icon facebook">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
