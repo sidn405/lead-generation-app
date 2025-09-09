@@ -88,7 +88,8 @@
             "location_csv": "locations.csv",
             "max_scrolls": 8,
             "excluded_accounts": [
-                "Sidney Muhammad"
+                "Sidney Muhammad",
+                "Lead Generator Empire"
             ]
         },
         "linkedin": {
@@ -97,7 +98,8 @@
             "location_csv": "locations.csv",
             "max_scrolls": 8,
             "excluded_accounts": [
-                "4dgamingllc"
+                "4dgamingllc",
+                "Lead Generator Empire"
             ]
         },
         "tiktok": {
@@ -116,7 +118,8 @@
             "location_csv": "locations.csv",
             "max_scrolls": 8,
             "excluded_accounts": [
-                "4dgamingllc"
+                "4dgamingllc",
+                "Lead Generator Empire"
             ]
         },
         "medium": {
@@ -134,7 +137,8 @@
             "location_csv": "locations.csv",
             "max_scrolls": 8,
             "excluded_accounts": [
-                "4smart_itech"
+                "4smart_itech",
+                "Leadempiretools"
             ]
         },
         "reddit": {
