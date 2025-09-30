@@ -10374,6 +10374,9 @@ with tab6:  # Settings tab
 st.markdown(
     """
     <style>
+      /* Font Awesome for icons */
+      @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+      
       /* make room for the footer so it doesn't cover content */
       .appview-container .main {
         padding-bottom: 60px;  
@@ -10390,13 +10393,53 @@ st.markdown(
         display: flex;
         align-items: center;
         justify-content: center;
+        gap: 20px;
         font-size: 0.9rem;
         z-index: 1000;
       }
+      .footer a {
+        color: #f6ad55;
+        text-decoration: none;
+        margin: 0 8px;
+        transition: color 0.3s;
+      }
+      .footer a:hover {
+        color: #ed8936;
+      }
+      .social-icons {
+        display: flex;
+        gap: 15px;
+        margin-left: 20px;
+      }
     </style>
-
     <div class="footer">
-       Lead Generator Empire | Secure &amp; Private
+       <span>Lead Generator Empire | Secure &amp; Private</span>
+       <div class="social-icons">
+         <a href="https://instagram.com/leadempiretools" target="_blank" aria-label="Instagram">
+           <i class="fab fa-instagram fa-lg"></i>
+         </a>
+         <a href="https://twitter.com/aileadsguy" target="_blank" aria-label="Twitter">
+           <i class="fab fa-twitter fa-lg"></i>
+         </a>
+         <a href="https://tiktok.com/@leadempiretools" target="_blank" aria-label="TikTok">
+           <i class="fab fa-tiktok fa-lg"></i>
+         </a>
+         <a href="https://youtube.com/leadgeneratorempire" target="_blank" aria-label="Youtube">
+           <i class="fab fa-youtube fa-lg"></i>
+         </a>
+         <a href="https://medium.com/leadgeneratorempire" target="_blank" aria-label="Medium">
+           <i class="fab fa-medium fa-lg"></i>
+         </a>
+         <a href="https://reddit.com/@AI-Leads-Guy" target="_blank" aria-label="Reddit">
+           <i class="fab fa-reddit fa-lg"></i>
+         </a>
+         <a href="https://facebook.com/company/leadgeneratorempire" target="_blank" aria-label="Facebook">
+           <i class="fab fa-facebook fa-lg"></i>
+         </a>
+         <a href="https://pinterest.com/company/leadgeneratorempire" target="_blank" aria-label="Pinterest">
+           <i class="fab fa-pinterest fa-lg"></i>
+         </a>
+       </div>
     </div>
     """,
     unsafe_allow_html=True,
