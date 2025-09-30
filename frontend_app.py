@@ -10430,13 +10430,13 @@ st.markdown(
          <a href="https://medium.com/@heartfull_asparagus_ox_941" target="_blank" aria-label="Medium">
            <i class="fab fa-medium fa-lg"></i>
          </a>
-         <a href="https://reddit.com/@AI-Leads-Guy" target="_blank" aria-label="Reddit">
+         <a href="https://reddit.com/u/ai-leads-guy" target="_blank" aria-label="Reddit">
            <i class="fab fa-reddit fa-lg"></i>
          </a>
          <a href="https://facebook.com/leadgeneratorempire" target="_blank" aria-label="Facebook">
            <i class="fab fa-facebook fa-lg"></i>
          </a>
-         <a href="https://pinterest.com/company/leadgeneratorempire" target="_blank" aria-label="Pinterest">
+         <a href="https://pinterest.com/aileadsguy" target="_blank" aria-label="Pinterest">
            <i class="fab fa-pinterest fa-lg"></i>
          </a>
        </div>
