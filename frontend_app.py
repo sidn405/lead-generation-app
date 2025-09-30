@@ -10424,16 +10424,16 @@ st.markdown(
          <a href="https://tiktok.com/@leadempiretools" target="_blank" aria-label="TikTok">
            <i class="fab fa-tiktok fa-lg"></i>
          </a>
-         <a href="https://youtube.com/leadgeneratorempire" target="_blank" aria-label="Youtube">
+         <a href="https://youtube.com/@leadgeneratorempire" target="_blank" aria-label="Youtube">
            <i class="fab fa-youtube fa-lg"></i>
          </a>
-         <a href="https://medium.com/leadgeneratorempire" target="_blank" aria-label="Medium">
+         <a href="https://medium.com/@heartfull_asparagus_ox_941" target="_blank" aria-label="Medium">
            <i class="fab fa-medium fa-lg"></i>
          </a>
          <a href="https://reddit.com/@AI-Leads-Guy" target="_blank" aria-label="Reddit">
            <i class="fab fa-reddit fa-lg"></i>
          </a>
-         <a href="https://facebook.com/company/leadgeneratorempire" target="_blank" aria-label="Facebook">
+         <a href="https://facebook.com/leadgeneratorempire" target="_blank" aria-label="Facebook">
            <i class="fab fa-facebook fa-lg"></i>
          </a>
          <a href="https://pinterest.com/company/leadgeneratorempire" target="_blank" aria-label="Pinterest">
